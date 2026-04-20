@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cotizador – Transportes CYC</title>
+<style>
+  :root {
+    --orange:#E8651A; --dark:#222; --g1:#F5F5F5; --g2:#EEEEEE;
+    --g3:#AAAAAA; --g4:#666; --g5:#444; --border:#DDD; --text:#222;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#E4E4E4;
+       color:var(--text);font-size:14px;display:flex;flex-direction:column;}
+
+  .topbar{background:var(--dark);color:white;height:52px;flex-shrink:0;
+    display:flex;align-items:center;padding:0 20px;gap:14px;
+    box-shadow:0 2px 6px rgba(0,0,0,.5);}
+  .brand{font-size:16px;font-weight:700;color:var(--orange);}
+  .brand-sub{font-size:11px;color:#999;}
+  .spacer{flex:1;}
+  .badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+  .badge-ok{background:#1b4d2e;color:#6fcf97;}
+  .badge-warn{background:#4d2b12;color:#f4a261;}
+
+  .layout{display:flex;flex:1;overflow:hidden;}
+  .main{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;}
+  .sidebar{width:400px;flex-shrink:0;background:white;
+    border-left:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;}
+
+  .card{background:white;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.1);overflow:hidden;}
+  .card-hdr{background:var(--g5);color:white;padding:9px 14px;font-size:12px;
+    font-weight:700;display:flex;align-items:center;gap:8px;cursor:pointer;
+    user-select:none;letter-spacing:.3px;}
+  .card-hdr .arrow{margin-left:auto;font-size:11px;opacity:.7;}
+  .card-body{padding:14px;}
+  .card-body.hidden{display:none;}
+
+  .fg2{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;}
+  .full{grid-column:1/-1;}
+  .fg{display:flex;flex-direction:column;gap:3px;}
+  .fg label{font-size:11px;font-weight:600;color:var(--g4);}
+  .fg input,.fg select,.fg textarea{padding:6px 9px;border:1px solid var(--border);
+    border-radius:4px;font-size:13px;font-family:inherit;background:white;
+    color:var(--text);transition:border .15s;}
+  .fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--orange);}
+  .fg textarea{resize:vertical;min-height:54px;}
+
+  .search-wrap{position:relative;margin-bottom:9px;}
+  .search-wrap input{width:100%;padding:8px 12px;border:1px solid var(--border);
+    border-radius:4px;font-size:13px;color:var(--text);}
+  .search-wrap input:focus{outline:none;border-color:var(--orange);}
+  .dropdown{position:absolute;top:100%;left:0;right:0;background:white;
+    border:1px solid var(--border);border-top:none;border-radius:0 0 5px 5px;
+    max-height:200px;overflow-y:auto;z-index:50;box-shadow:0 4px 10px rgba(0,0,0,.1);}
+  .dopt{padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;}
+  .dopt:hover{background:var(--g1);}
+  .dopt-name{font-weight:600;}
+  .dopt-desc{font-size:11px;color:var(--g3);margin-top:1px;}
+  .dopt-price{font-size:11px;color:var(--orange);margin-top:1px;}
+
+  /* ── TABLA ÍTEMS ── */
+  .tbl-wrap{overflow-x:auto;margin-top:10px;}
+  table.items{width:100%;border-collapse:collapse;font-size:12px;min-width:820px;}
+  table.items th{background:var(--g5);color:white;padding:7px 7px;
+    font-size:11px;font-weight:600;text-align:left;white-space:nowrap;}
+  table.items td{padding:5px 6px;border-bottom:1px solid #f0f0f0;vertical-align:middle;}
+  table.items tr:nth-child(even) td{background:var(--g1);}
+  table.items input,table.items select{
+    width:100%;border:1px solid var(--border);border-radius:3px;
+    padding:4px 5px;font-size:12px;background:white;color:var(--text);}
+  table.items input:focus,table.items select:focus{outline:none;border-color:var(--orange);}
+
+  /* anchos de columnas */
+  .cn  {width:28px;text-align:center;}
+  .cdesc{min-width:140px;}
+  .cneq{width:70px;}   /* N° equipos */
+  .cunit{width:70px;}  /* unidad */
+  .ccant{width:70px;}  /* cantidad horas/meses */
+  .cmon {width:55px;}  /* moneda */
+  .cup  {width:105px;} /* precio unit */
+  .ctuf {width:90px;}  /* total en UF o $ */
+  .ctclp{width:105px;} /* total en $ (siempre) */
+  .cdel {width:28px;text-align:center;}
+
+  .tot-uf{font-weight:600;color:var(--g5);}
+  .tot-clp{font-weight:700;color:var(--orange);}
+  .eq-tag{font-size:10px;color:var(--g3);white-space:nowrap;}
+
+  .btn{padding:7px 14px;border:none;border-radius:4px;font-size:12px;font-weight:600;
+    cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-family:inherit;
+    transition:opacity .15s;}
+  .btn:hover{opacity:.85;}
+  .btn-primary{background:var(--orange);color:white;}
+  .btn-dark{background:var(--g5);color:white;}
+  .btn-outline{background:white;color:var(--g5);border:1px solid var(--border);}
+  .btn-success{background:#2d7a4f;color:white;}
+  .btn-sm{padding:4px 9px;font-size:11px;}
+  .btn-ghost{background:transparent;border:1px dashed var(--border);color:var(--g4);}
+  .btn-ghost:hover{border-color:var(--orange);color:var(--orange);opacity:1;}
+  .btn-del{background:none;border:none;cursor:pointer;color:var(--g3);
+    font-size:15px;padding:0 3px;line-height:1;}
+  .btn-del:hover{color:#c00;}
+
+  .sb-hdr{background:var(--dark);color:white;padding:12px 14px;flex-shrink:0;}
+  .sb-hdr .lbl{font-size:11px;color:#999;}
+  .sb-hdr .num{font-size:24px;font-weight:800;color:var(--orange);}
+  .sb-section{padding:12px 14px;border-bottom:1px solid var(--border);}
+  .sb-section h4{font-size:10px;font-weight:700;color:var(--g3);
+    text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+  .totals-box{background:var(--g1);border-radius:5px;padding:10px 12px;}
+  .tot-row{display:flex;justify-content:space-between;padding:3px 0;font-size:13px;color:var(--g5);}
+  .tot-row.grand{background:var(--orange);color:white;border-radius:4px;
+    padding:7px 10px;margin-top:5px;font-weight:700;font-size:14px;}
+  hr.thin{border:none;border-top:1px solid var(--border);margin:5px 0;}
+  .sb-actions{padding:12px 14px;display:flex;flex-direction:column;gap:7px;}
+  .toggle-row{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--g4);}
+  .toggle-row input{width:auto;}
+
+  .tab-bar{display:flex;border-bottom:2px solid var(--border);padding:0 14px;}
+  .tab{padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;
+    border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--g4);}
+  .tab.active{color:var(--orange);border-bottom-color:var(--orange);}
+  .tab-pane{display:none;padding:12px 14px;}
+  .tab-pane.active{display:block;}
+
+  .cat-item{display:flex;align-items:flex-start;gap:8px;
+    padding:8px 0;border-bottom:1px solid #f0f0f0;}
+  .cat-item:last-child{border-bottom:none;}
+  .cat-name{font-weight:600;font-size:12px;flex:1;}
+  .cat-price{font-size:11px;color:var(--orange);}
+  .cat-desc{font-size:11px;color:var(--g3);}
+
+  table.hist{width:100%;border-collapse:collapse;font-size:12px;}
+  table.hist th{background:var(--g5);color:white;padding:6px 8px;font-weight:600;text-align:left;}
+  table.hist td{padding:6px 8px;border-bottom:1px solid #f0f0f0;}
+  table.hist tr:hover td{background:var(--g1);}
+  .pill{border-radius:10px;padding:1px 8px;font-size:10px;font-weight:600;}
+  .pill-ok{background:#d4f0e4;color:#1b6b3a;}
+  .pill-pend{background:#f0f0f0;color:var(--g4);}
+
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
+    z-index:200;align-items:center;justify-content:center;}
+  .overlay.on{display:flex;}
+  .modal{background:white;border-radius:8px;padding:20px;width:480px;max-width:95vw;
+    box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .modal h3{font-size:15px;margin-bottom:14px;color:var(--dark);}
+  .modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;}
+
+  .toast-wrap{position:fixed;bottom:18px;right:18px;z-index:300;
+    display:flex;flex-direction:column;gap:7px;}
+  .toast{padding:10px 16px;border-radius:6px;color:white;font-size:13px;font-weight:500;
+    box-shadow:0 3px 10px rgba(0,0,0,.2);animation:si .25s ease;max-width:360px;}
+  .t-ok{background:#2d7a4f;} .t-err{background:#a93226;} .t-inf{background:var(--g5);}
+  @keyframes si{from{transform:translateX(110%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+  .loader{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
+    z-index:400;align-items:center;justify-content:center;}
+  .loader.on{display:flex;}
+  .loader-box{background:white;border-radius:10px;padding:28px 36px;text-align:center;}
+  .spin{width:44px;height:44px;border:4px solid #eee;border-top-color:var(--orange);
+    border-radius:50%;animation:sp .7s linear infinite;margin:0 auto 14px;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+  .loader-msg{font-size:13px;color:var(--g4);}
+  .empty{text-align:center;padding:28px;color:var(--g3);font-size:12px;}
+  .row-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+
+  /* nota UF */
+  .uf-note{font-size:10px;color:var(--g3);font-style:italic;margin-top:2px;}
+</style>
+</head>
+<body>
+
+<div class="loader" id="loader">
+  <div class="loader-box"><div class="spin"></div>
+    <div class="loader-msg" id="loaderMsg">Procesando...</div></div>
+</div>
+<div class="toast-wrap" id="toasts"></div>
+
+<!-- MODAL PRODUCTO -->
+<div class="overlay" id="modalProd">
+  <div class="modal">
+    <h3>Agregar al Catálogo</h3>
+    <div class="fg2" style="gap:10px;">
+      <div class="fg full"><label>Nombre *</label>
+        <input id="mpNombre" placeholder="Ej: Camión Tolva Volvo FMX 30m³"></div>
+      <div class="fg full"><label>Descripción</label>
+        <textarea id="mpDesc" placeholder="Condiciones, especificaciones..."></textarea></div>
+      <div class="fg"><label>Precio base / hora (neto)</label>
+        <input type="number" id="mpHora" placeholder="0 (en $ o UF)"></div>
+      <div class="fg"><label>Precio base / mes (neto)</label>
+        <input type="number" id="mpMes" placeholder="0 (en $ o UF)"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeProdModal()">Cancelar</button>
+      <button class="btn btn-dark" onclick="saveProd()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div><div class="brand">TRANSPORTES CYC</div>
+    <div class="brand-sub">Sistema de Cotizaciones</div></div>
+  <div class="spacer"></div>
+  <div id="gBadge" class="badge badge-warn">⚠ Google no configurado</div>
+</header>
+
+<div class="layout">
+<!-- ═══════ MAIN ═══════ -->
+<main class="main">
+
+  <!-- CLIENTE -->
+  <div class="card">
+    <div class="card-hdr" onclick="toggle(this)">
+      👤 Datos del Cliente <span class="arrow">▲</span>
+    </div>
+    <div class="card-body">
+      <div class="fg2">
+        <div class="fg"><label>Empresa / Razón Social *</label>
+          <input id="cEmpresa" placeholder="Minera Los Andes S.A."></div>
+        <div class="fg"><label>R.U.T.</label>
+          <input id="cRut" placeholder="76.123.456-7"></div>
+        <div class="fg full"><label>Dirección Comercial</label>
+          <input id="cDir" placeholder="Calle, número, ciudad"></div>
+        <div class="fg full"><label>Correo Electrónico *</label>
+          <input type="email" id="cEmail" placeholder="contacto@empresa.cl"></div>
+        <div class="fg"><label>Nombre Contacto</label>
+          <input id="cNombre" placeholder="Nombre y apellido"></div>
+        <div class="fg"><label>Cargo</label>
+          <input id="cCargo" placeholder="Gerente de Operaciones"></div>
+        <div class="fg"><label>Teléfono</label>
+          <input id="cFono" placeholder="+56 9 XXXX XXXX"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EQUIPOS -->
+  <div class="card">
+    <div class="card-hdr" onclick="toggle(this)">
+      🚜 Equipos y Servicios <span class="arrow">▲</span>
+    </div>
+    <div class="card-body">
+
+      <!-- UF global -->
+      <div class="fg2" style="margin-bottom:12px;max-width:460px;">
+        <div class="fg">
+          <label>Valor UF del día ($)</label>
+          <input type="number" id="ufValor" placeholder="Ej: 39800" step="1"
+                 oninput="recalc();renderItems();">
+        </div>
+        <div class="fg" style="justify-content:flex-end;padding-top:18px;">
+          <span class="uf-note">Necesario para ítems cotizados en UF</span>
+        </div>
+      </div>
+
+      <!-- Buscador -->
+      <div class="search-wrap">
+        <input id="searchInput"
+               placeholder="🔍 Buscar equipo del catálogo, o escribir nombre y presionar Enter..."
+               oninput="filterDrop()" onkeydown="onSearchKey(event)" autocomplete="off">
+        <div class="dropdown" id="dropdown" style="display:none;"></div>
+      </div>
+      <div class="row-btns">
+        <button class="btn btn-ghost btn-sm" onclick="addManual()">✏ Agregar ítem manual</button>
+        <button class="btn btn-outline btn-sm" onclick="openProdModal()">＋ Guardar en catálogo</button>
+      </div>
+
+      <!-- TABLA -->
+      <div class="tbl-wrap">
+        <table class="items">
+          <thead>
+            <tr>
+              <th class="cn">#</th>
+              <th class="cdesc">Descripción</th>
+              <th class="cneq" title="Cantidad de máquinas/equipos">N° Eq.</th>
+              <th class="cunit">Unidad</th>
+              <th class="ccant" title="Horas, meses, viajes, etc.">Cant.</th>
+              <th class="cmon">Moneda</th>
+              <th class="cup">Precio Unit. (neto)</th>
+              <th class="ctuf">Total (UF / $)</th>
+              <th class="ctclp">Total en $</th>
+              <th class="cdel"></th>
+            </tr>
+          </thead>
+          <tbody id="itemsBody">
+            <tr><td colspan="10">
+              <div class="empty">Busca un equipo o agrega un ítem manual para comenzar</div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- OPCIONES -->
+  <div class="card">
+    <div class="card-hdr" onclick="toggle(this)">⚙ Opciones <span class="arrow">▲</span></div>
+    <div class="card-body">
+      <div class="fg2">
+        <div class="fg"><label>Validez de la cotización (días)</label>
+          <input type="number" id="validez" value="30" min="1"></div>
+        <div class="fg full"><label>Notas adicionales</label>
+          <textarea id="notas" placeholder="Condiciones especiales, observaciones..."></textarea></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="card">
+    <div class="card-hdr" onclick="toggle(this)">📋 Historial <span class="arrow">▼</span></div>
+    <div class="card-body hidden" id="histBody">
+      <button class="btn btn-outline btn-sm" onclick="loadHistory()" style="margin-bottom:10px;">↺ Actualizar</button>
+      <div id="histContainer" class="empty">Cargando...</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ═══════ SIDEBAR ═══════ -->
+<aside class="sidebar">
+  <div class="sb-hdr">
+    <div class="lbl">Cotización N°</div>
+    <div class="num" id="quoteNum">—</div>
+  </div>
+
+  <div class="sb-section">
+    <h4>Resumen</h4>
+    <div class="totals-box">
+      <div class="tot-row"><span>Ítems</span><span id="sItems">0</span></div>
+      <hr class="thin">
+      <div class="tot-row"><span>Subtotal Neto</span><span id="sSubtotal">$ 0</span></div>
+      <div class="tot-row"><span>IVA (19%)</span><span id="sIva">$ 0</span></div>
+      <div class="tot-row grand"><span>TOTAL c/ IVA</span><span id="sTotal">$ 0</span></div>
+    </div>
+    <div id="ufResumen" style="display:none;margin-top:8px;font-size:11px;color:var(--g4);
+         background:var(--g1);border-radius:4px;padding:7px 10px;line-height:1.6;"></div>
+  </div>
+
+  <div class="sb-actions">
+    <label class="toggle-row">
+      <input type="checkbox" id="chkEmail" checked>
+      <span>Enviar correo al cliente automáticamente</span>
+    </label>
+    <button class="btn btn-outline" onclick="preview()" style="width:100%;">
+      👁 Vista Previa PDF
+    </button>
+    <button class="btn btn-success" onclick="generate()"
+            style="width:100%;font-size:13px;padding:10px;">
+      ✓ Generar y Enviar Cotización
+    </button>
+  </div>
+
+  <div class="tab-bar">
+    <div class="tab active" id="tabCatBtn" onclick="switchTab('Cat')">Catálogo</div>
+    <div class="tab" id="tabCfgBtn" onclick="switchTab('Cfg')">Configuración</div>
+  </div>
+  <div id="tabCat" class="tab-pane active">
+    <div id="catList" class="empty">Cargando...</div>
+  </div>
+  <div id="tabCfg" class="tab-pane">
+    <p style="font-size:12px;color:var(--g4);margin-bottom:8px;">
+      Coloca <strong>credentials.json</strong> en la carpeta raíz del cotizador.
+    </p>
+    <div id="cfgStatus" style="font-size:12px;"></div>
+  </div>
+</aside>
+</div><!-- layout -->
+
+<script>
+// ─── Estado global ─────────────────────────────────────────────────────────
+let items    = [];
+let catalog  = [];
+let nextNum  = 1000;
+let googleOk = false;
+
+// ─── Init ──────────────────────────────────────────────────────────────────
+async function init() {
+  const s  = await fetch("/api/status").then(r=>r.json());
+  nextNum  = s.next_number;
+  googleOk = s.google_ready;
+  document.getElementById("quoteNum").textContent = pad(nextNum);
+  const b = document.getElementById("gBadge");
+  if (googleOk) { b.className="badge badge-ok"; b.textContent="✅ Google conectado"; }
+  document.getElementById("cfgStatus").innerHTML = googleOk
+    ? '<span style="color:#2d7a4f">✅ Google configurado</span>'
+    : '<span style="color:#a93226">❌ credentials.json no encontrado</span>';
+  await loadCatalog();
+  loadHistory();
+}
+
+// ─── Valor UF ──────────────────────────────────────────────────────────────
+function getUF() {
+  const v = parseFloat(document.getElementById("ufValor").value);
+  return isNaN(v) || v <= 0 ? null : v;
+}
+
+// ─── Catálogo ──────────────────────────────────────────────────────────────
+async function loadCatalog() {
+  catalog = await fetch("/api/products").then(r=>r.json());
+  renderCatalog();
+}
+function renderCatalog() {
+  const el = document.getElementById("catList");
+  if (!catalog.length) { el.innerHTML='<div class="empty">Sin productos.</div>'; return; }
+  el.innerHTML = catalog.map(p=>`
+    <div class="cat-item">
+      <div style="flex:1">
+        <div class="cat-name">${esc(p.nombre)}</div>
+        ${p.descripcion?`<div class="cat-desc">${esc(p.descripcion.substring(0,70))}${p.descripcion.length>70?"…":""}</div>`:""}
+        <div class="cat-price">
+          ${p.precio_hora?fmtNum(p.precio_hora)+"/hr ":""}
+          ${p.precio_mes?fmtNum(p.precio_mes)+"/mes":""}
+          ${!p.precio_hora&&!p.precio_mes?"A convenir":""}
+        </div>
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button class="btn btn-primary btn-sm" onclick="addFromCat(${p.id})">+</button>
+        <button class="btn btn-outline btn-sm" onclick="delCat(${p.id})">🗑</button>
+      </div>
+    </div>`).join("");
+}
+async function delCat(id) {
+  if (!confirm("¿Eliminar del catálogo?")) return;
+  await fetch(`/api/products/${id}`,{method:"DELETE"});
+  await loadCatalog(); toast("Eliminado","inf");
+}
+
+// ─── Agregar items ─────────────────────────────────────────────────────────
+function addFromCat(id) {
+  const p = catalog.find(x=>x.id===id);
+  if (!p) return;
+  addItem({ nombre:p.nombre, detalle:p.descripcion||"",
+            n_equipos:1, tipo_precio:"Hora", cantidad:1,
+            moneda:"$", precio_unitario: p.precio_hora||p.precio_mes||0 });
+  document.getElementById("searchInput").value="";
+  document.getElementById("dropdown").style.display="none";
+}
+function addManual() {
+  addItem({nombre:"",detalle:"",n_equipos:1,tipo_precio:"Hora",cantidad:1,moneda:"$",precio_unitario:0});
+}
+function addItem(item) {
+  items.push({_id:Date.now(), ...item});
+  recalc(); renderItems();
+}
+function removeItem(id) {
+  items=items.filter(i=>i._id!==id); recalc(); renderItems();
+}
+
+// ─── CÁLCULO CENTRAL ───────────────────────────────────────────────────────
+// total_moneda = n_equipos × cantidad × precio_unit  (en la moneda del ítem)
+// total_clp    = total_moneda × uf_valor  (si UF)  |  total_moneda  (si $)
+function calcItem(item) {
+  const uf  = getUF();
+  const neq = parseFloat(item.n_equipos) || 1;
+  const qty = parseFloat(item.cantidad)  || 0;
+  const up  = parseFloat(item.precio_unitario) || 0;
+  const totalMon = neq * qty * up;          // en la moneda del ítem (UF o $)
+  const totalClp = item.moneda === "UF"
+    ? (uf ? totalMon * uf : 0)             // convertir UF→$ si hay valor UF
+    : totalMon;
+  return { totalMon, totalClp };
+}
+
+function recalc() {
+  const uf = getUF();
+  let subtotal = 0;
+  let hasUF    = false;
+  let ufDetail = [];
+
+  items.forEach(item => {
+    const { totalMon, totalClp } = calcItem(item);
+    item._totalMon = totalMon;
+    item._totalClp = totalClp;
+    subtotal += totalClp;
+    if (item.moneda === "UF") {
+      hasUF = true;
+      ufDetail.push({ nombre: item.nombre, uf: totalMon, clp: totalClp });
+    }
+  });
+
+  const iva   = subtotal * 0.19;
+  const total = subtotal + iva;
+
+  document.getElementById("sItems").textContent    = `${items.length} equipo${items.length!==1?"s":""}`;
+  document.getElementById("sSubtotal").textContent = fmtClp(subtotal);
+  document.getElementById("sIva").textContent      = fmtClp(iva);
+  document.getElementById("sTotal").textContent    = fmtClp(total);
+
+  // Detalle UF en sidebar
+  const ufBox = document.getElementById("ufResumen");
+  if (hasUF && uf) {
+    ufBox.style.display = "";
+    ufBox.innerHTML = `<strong>Conversión UF → $ (1 UF = ${fmtClp(uf)})</strong><br>` +
+      ufDetail.map(d=>
+        `${esc(d.nombre.substring(0,30))}: ${fmtUF(d.uf)} = ${fmtClp(d.clp)}`
+      ).join("<br>");
+  } else if (hasUF && !uf) {
+    ufBox.style.display = "";
+    ufBox.innerHTML = `⚠ Ingresa el valor UF del día para calcular el total en $.`;
+  } else {
+    ufBox.style.display = "none";
+  }
+}
+
+// ─── RENDER TABLA ──────────────────────────────────────────────────────────
+function renderItems() {
+  const tb = document.getElementById("itemsBody");
+  if (!items.length) {
+    tb.innerHTML=`<tr><td colspan="10"><div class="empty">Busca un equipo o agrega un ítem manual</div></td></tr>`;
+    return;
+  }
+  tb.innerHTML = items.map((item,idx)=>{
+    const {totalMon, totalClp} = calcItem(item);
+    const uf = getUF();
+    const totUFhtml = item.moneda==="UF"
+      ? `<div class="tot-uf">${fmtUF(totalMon)}</div>${uf?`<div class="uf-note">${fmtClp(totalMon*uf)}</div>`:`<div class="uf-note" style="color:#c00">Ingresa UF</div>`}`
+      : `<div class="tot-uf">${fmtClp(totalMon)}</div>`;
+    const totClpHtml = item.moneda==="UF"
+      ? (uf ? `<div class="tot-clp">${fmtClp(totalClp)}</div>` : `<div style="color:#c00;font-size:11px">—</div>`)
+      : `<div class="tot-clp">${fmtClp(totalClp)}</div>`;
+
+    return `<tr>
+      <td class="cn" style="text-align:center;color:var(--g3)">${idx+1}</td>
+      <td class="cdesc">
+        <input type="text" value="${esc(item.nombre)}" placeholder="Nombre del equipo"
+               onchange="upd(${item._id},'nombre',this.value)">
+        <input type="text" value="${esc(item.detalle)}" placeholder="Detalle (opcional)"
+               style="margin-top:3px;font-style:italic;color:var(--g4);"
+               onchange="upd(${item._id},'detalle',this.value)">
+      </td>
+      <td class="cneq">
+        <select onchange="upd(${item._id},'n_equipos',this.value)">
+          ${[1,2,3,4,5,6,7,8,9,10,12,15,20].map(n=>
+            `<option value="${n}" ${item.n_equipos==n?"selected":""}>${n}</option>`).join("")}
+        </select>
+        <div class="eq-tag">equipos</div>
+      </td>
+      <td class="cunit">
+        <select onchange="upd(${item._id},'tipo_precio',this.value)">
+          ${["Hora","Mes","Día","Turno","Viaje","m³","Ton","Unidad"].map(u=>
+            `<option ${item.tipo_precio===u?"selected":""}>${u}</option>`).join("")}
+        </select>
+      </td>
+      <td class="ccant">
+        <input type="number" value="${item.cantidad}" min="0" step="1"
+               onchange="upd(${item._id},'cantidad',this.value)"
+               placeholder="0">
+        <div class="eq-tag">${item.tipo_precio.toLowerCase()}s</div>
+      </td>
+      <td class="cmon">
+        <select onchange="upd(${item._id},'moneda',this.value)">
+          <option value="$"  ${item.moneda==="$" ?"selected":""}>$</option>
+          <option value="UF" ${item.moneda==="UF"?"selected":""}>UF</option>
+        </select>
+      </td>
+      <td class="cup">
+        <input type="number" value="${item.precio_unitario}" min="0"
+               step="${item.moneda==="UF"?"0.001":"1000"}"
+               onchange="upd(${item._id},'precio_unitario',this.value)"
+               placeholder="0">
+        <div class="eq-tag">por ${item.tipo_precio.toLowerCase()}</div>
+      </td>
+      <td class="ctuf">${totUFhtml}</td>
+      <td class="ctclp">${totClpHtml}</td>
+      <td class="cdel"><button class="btn-del" onclick="removeItem(${item._id})">✕</button></td>
+    </tr>`;
+  }).join("");
+}
+
+function upd(id, field, value) {
+  const item = items.find(i=>i._id===id);
+  if (!item) return;
+  item[field] = ["n_equipos","cantidad","precio_unitario"].includes(field)
+    ? (parseFloat(value)||0) : value;
+  recalc(); renderItems();
+}
+
+// ─── Buscador ──────────────────────────────────────────────────────────────
+function filterDrop() {
+  const q    = document.getElementById("searchInput").value.toLowerCase().trim();
+  const drop = document.getElementById("dropdown");
+  if (!q) { drop.style.display="none"; return; }
+  const hits = catalog.filter(p=>
+    p.nombre.toLowerCase().includes(q)||(p.descripcion||"").toLowerCase().includes(q));
+  if (!hits.length) { drop.style.display="none"; return; }
+  drop.innerHTML = hits.map(p=>`
+    <div class="dopt" onclick="addFromCat(${p.id})">
+      <div class="dopt-name">${esc(p.nombre)}</div>
+      ${p.descripcion?`<div class="dopt-desc">${esc(p.descripcion.substring(0,80))}</div>`:""}
+      <div class="dopt-price">
+        ${p.precio_hora?fmtNum(p.precio_hora)+"/hr ":""}
+        ${p.precio_mes?fmtNum(p.precio_mes)+"/mes":""}
+        ${!p.precio_hora&&!p.precio_mes?"A convenir":""}
+      </div>
+    </div>`).join("");
+  drop.style.display="block";
+}
+function onSearchKey(e) {
+  if (e.key==="Escape") document.getElementById("dropdown").style.display="none";
+  if (e.key==="Enter") {
+    const q = document.getElementById("searchInput").value.trim();
+    if (q) {
+      addItem({nombre:q,detalle:"",n_equipos:1,tipo_precio:"Hora",cantidad:1,moneda:"$",precio_unitario:0});
+      document.getElementById("searchInput").value="";
+      document.getElementById("dropdown").style.display="none";
+    }
+  }
+}
+document.addEventListener("click",e=>{
+  if (!e.target.closest(".search-wrap"))
+    document.getElementById("dropdown").style.display="none";
+});
+
+// ─── Generar cotización ────────────────────────────────────────────────────
+async function generate() {
+  const empresa = document.getElementById("cEmpresa").value.trim();
+  const nombre  = document.getElementById("cNombre").value.trim();
+  const email   = document.getElementById("cEmail").value.trim();
+  if (!empresa && !nombre) { toast("Ingresa empresa o nombre del cliente","err"); return; }
+  if (!items.length) { toast("Agrega al menos un equipo","err"); return; }
+
+  const uf = getUF();
+  const hasUF = items.some(i=>i.moneda==="UF");
+  if (hasUF && !uf) { toast("Ingresa el valor UF del día para cotizaciones en UF","err"); return; }
+
+  showLoader("Generando cotización...");
+  const subtotal = items.reduce((s,i)=>s+i._totalClp, 0);
+  const iva      = subtotal * 0.19;
+  const total    = subtotal + iva;
+
+  const payload = {
+    cliente:{ empresa, nombre, email,
+      rut:      document.getElementById("cRut").value.trim(),
+      fono:     document.getElementById("cFono").value.trim(),
+      direccion:document.getElementById("cDir").value.trim(),
+      cargo:    document.getElementById("cCargo").value.trim(),
+    },
+    items: items.map(i=>({
+      nombre: i.nombre, detalle: i.detalle,
+      n_equipos: i.n_equipos,
+      tipo_precio: i.tipo_precio,
+      cantidad: i.cantidad,
+      moneda: i.moneda,
+      precio_unitario: i.precio_unitario,
+      total_moneda: i._totalMon,
+      total_clp: i._totalClp,
+    })),
+    uf_valor: uf,
+    subtotal: Math.round(subtotal),
+    iva:      Math.round(iva),
+    total:    Math.round(total),
+    validez_dias: parseInt(document.getElementById("validez").value)||30,
+    notas:    document.getElementById("notas").value.trim(),
+    send_email: document.getElementById("chkEmail").checked,
+  };
+
+  try {
+    const res = await fetch("/api/generate",{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(payload),
+    }).then(r=>r.json());
+    hideLoader();
+    if (!res.ok) { toast("Error al generar","err"); return; }
+
+    const a = document.createElement("a");
+    a.href = "data:application/pdf;base64,"+res.pdf_b64;
+    a.download = res.filename; a.click();
+
+    const msgs = [`✓ Cotización N°${pad(res.numero)} generada`];
+    if (res.drive_url) msgs.push("📁 Drive");
+    if (res.email_sent) msgs.push("📧 Correo enviado");
+    res.errors.forEach(e=>toast("⚠ "+e,"inf"));
+    toast(msgs.join(" · "),"ok");
+
+    nextNum = res.numero+1;
+    document.getElementById("quoteNum").textContent = pad(nextNum);
+    items=[]; renderItems(); recalc(); loadHistory();
+
+    if (res.drive_url)
+      setTimeout(()=>{ if(confirm("¿Abrir en Google Drive?")) window.open(res.drive_url,"_blank"); },600);
+  } catch { hideLoader(); toast("Error de conexión","err"); }
+}
+
+async function preview() {
+  if (!items.length) { toast("Agrega ítems primero","err"); return; }
+  const uf = getUF();
+  const hasUF = items.some(i=>i.moneda==="UF");
+  if (hasUF && !uf) { toast("Ingresa el valor UF para ver la vista previa","err"); return; }
+
+  showLoader("Generando vista previa...");
+  const subtotal = items.reduce((s,i)=>s+i._totalClp,0);
+  const payload = {
+    cliente:{
+      empresa:document.getElementById("cEmpresa").value||"Vista Previa",
+      nombre:document.getElementById("cNombre").value,
+      rut:document.getElementById("cRut").value,
+      email:document.getElementById("cEmail").value,
+      fono:document.getElementById("cFono").value,
+      direccion:document.getElementById("cDir").value,
+      cargo:document.getElementById("cCargo").value,
+    },
+    items: items.map(i=>({
+      nombre:i.nombre, detalle:i.detalle, n_equipos:i.n_equipos,
+      tipo_precio:i.tipo_precio, cantidad:i.cantidad, moneda:i.moneda,
+      precio_unitario:i.precio_unitario,
+      total_moneda:i._totalMon, total_clp:i._totalClp,
+    })),
+    uf_valor: uf,
+    subtotal: Math.round(subtotal),
+    iva: Math.round(subtotal*0.19),
+    total: Math.round(subtotal*1.19),
+    validez_dias: parseInt(document.getElementById("validez").value)||30,
+    notas: document.getElementById("notas").value,
+  };
+  try {
+    const res  = await fetch("/api/preview",{method:"POST",
+      headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    const blob = await res.blob();
+    hideLoader();
+    window.open(URL.createObjectURL(blob),"_blank");
+  } catch { hideLoader(); toast("Error vista previa","err"); }
+}
+
+// ─── Historial ─────────────────────────────────────────────────────────────
+async function loadHistory() {
+  const c = document.getElementById("histContainer");
+  try {
+    const qs = await fetch("/api/quotes").then(r=>r.json());
+    if (!qs.length) { c.innerHTML='<div class="empty">Sin cotizaciones aún</div>'; return; }
+    c.innerHTML=`<div style="overflow-x:auto">
+      <table class="hist"><thead><tr>
+        <th>N°</th><th>Fecha</th><th>Cliente</th><th>Total</th><th>Email</th><th>Drive</th>
+      </tr></thead><tbody>
+        ${qs.map(q=>`<tr>
+          <td><strong>${pad(q.numero)}</strong></td>
+          <td>${q.fecha}</td>
+          <td><div style="font-weight:600">${esc(q.cliente_nombre)}</div>
+            ${q.cliente_empresa?`<div style="font-size:11px;color:var(--g3)">${esc(q.cliente_empresa)}</div>`:""}</td>
+          <td style="font-weight:600;color:var(--orange)">${fmtClp(q.total)}</td>
+          <td><span class="pill ${q.email_enviado?"pill-ok":"pill-pend"}">
+            ${q.email_enviado?"✓ Enviado":"Pendiente"}</span></td>
+          <td>${q.drive_url
+            ?`<a href="${q.drive_url}" target="_blank"
+                  style="color:var(--orange);text-decoration:none;font-size:11px">📁 Ver</a>`
+            :'<span style="color:var(--g2)">—</span>'}</td>
+        </tr>`).join("")}
+      </tbody></table></div>`;
+  } catch { c.innerHTML='<div class="empty">Error cargando historial</div>'; }
+}
+
+// ─── Modal catálogo ────────────────────────────────────────────────────────
+function openProdModal() {
+  const q=document.getElementById("searchInput").value.trim();
+  if(q) document.getElementById("mpNombre").value=q;
+  document.getElementById("modalProd").classList.add("on");
+}
+function closeProdModal() {
+  document.getElementById("modalProd").classList.remove("on");
+  ["mpNombre","mpDesc","mpHora","mpMes"].forEach(id=>document.getElementById(id).value="");
+}
+async function saveProd() {
+  const nombre=document.getElementById("mpNombre").value.trim();
+  if(!nombre){toast("Nombre obligatorio","err");return;}
+  await fetch("/api/products",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({nombre,
+      descripcion:document.getElementById("mpDesc").value.trim(),
+      precio_hora:parseFloat(document.getElementById("mpHora").value)||null,
+      precio_mes: parseFloat(document.getElementById("mpMes").value)||null,
+    })});
+  await loadCatalog(); closeProdModal(); toast("Guardado en catálogo","ok");
+}
+
+// ─── UI helpers ────────────────────────────────────────────────────────────
+function toggle(hdr) {
+  const body  = hdr.nextElementSibling;
+  const arrow = hdr.querySelector(".arrow");
+  const hidden = body.classList.toggle("hidden");
+  arrow.textContent = hidden?"▼":"▲";
+  if (!hidden && body.id==="histBody") loadHistory();
+}
+function switchTab(n) {
+  ["Cat","Cfg"].forEach(t=>{
+    document.getElementById("tab"+t).classList.toggle("active",t===n);
+    document.getElementById("tab"+t+"Btn").classList.toggle("active",t===n);
+  });
+}
+function showLoader(msg){document.getElementById("loaderMsg").textContent=msg;document.getElementById("loader").classList.add("on");}
+function hideLoader(){document.getElementById("loader").classList.remove("on");}
+function toast(msg,type="inf"){
+  const c=document.getElementById("toasts"),d=document.createElement("div");
+  d.className=`toast t-${type}`;d.textContent=msg;c.appendChild(d);
+  setTimeout(()=>d.remove(),4500);
+}
+function fmtClp(v){const n=parseFloat(v)||0;return"$ "+n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,".");}
+function fmtUF(v){const n=parseFloat(v)||0;return"UF "+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,".");}
+function fmtNum(v){const n=parseFloat(v)||0;return n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,".");}
+function pad(n){return String(n).padStart(4,"0");}
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+init();
+</script>
+</body>
+</html>

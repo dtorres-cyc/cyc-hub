@@ -1,0 +1,22 @@
+{
+  "name": "cyc-hub",
+  "version": "1.0.0",
+  "description": "CYC Hub — Plataforma unificada de herramientas para Transportes CYC",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.14",
+    "better-sqlite3": "^9.4.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "googleapis": "^144.0.0",
+    "nodemailer": "^6.9.9",
+    "pdfkit": "^0.15.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

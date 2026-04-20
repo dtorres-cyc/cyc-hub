@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CYC Hub — Plataforma de Herramientas</title>
+<meta name="description" content="Plataforma unificada de herramientas de gestión para Transportes CYC Limitada">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --orange:    #E8651A;
+    --orange-l:  #FF7A2F;
+    --orange-d:  #C9540D;
+    --dark:      #0D0D0D;
+    --dark-2:    #141414;
+    --dark-3:    #1C1C1C;
+    --dark-4:    #242424;
+    --border:    rgba(255,255,255,0.08);
+    --text:      #F0F0F0;
+    --text-muted: #888;
+    --radius:    16px;
+    --radius-sm: 10px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+    background: var(--dark);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* ── Background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 10% 20%, rgba(232,101,26,0.15) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 80%, rgba(232,101,26,0.08) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Grid de fondo sutil ── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 24px;
+    gap: 64px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .logo-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo-badge {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--orange) 0%, var(--orange-d) 100%);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 900;
+    color: white;
+    letter-spacing: -1px;
+    box-shadow: 0 0 40px rgba(232,101,26,0.4);
+  }
+
+  .logo-text {
+    text-align: left;
+  }
+
+  .logo-text .name {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text .sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 400;
+    letter-spacing: 0.5px;
+  }
+
+  .header-title {
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 900;
+    letter-spacing: -2px;
+    line-height: 1.05;
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.6) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header-title span {
+    background: linear-gradient(135deg, var(--orange-l), var(--orange-d));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header-sub {
+    font-size: 16px;
+    color: var(--text-muted);
+    font-weight: 400;
+    max-width: 480px;
+    line-height: 1.6;
+  }
+
+  /* ── GRID DE MÓDULOS ── */
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .module-card {
+    position: relative;
+    background: var(--dark-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    transition: transform 0.25s cubic-bezier(.22,.68,0,1.2),
+                border-color 0.2s,
+                box-shadow 0.25s;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .module-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(232,101,26,0.06) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .module-card:hover {
+    transform: translateY(-4px) scale(1.01);
+    border-color: rgba(232,101,26,0.4);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 40px rgba(232,101,26,0.1);
+  }
+
+  .module-card:hover::before {
+    opacity: 1;
+  }
+
+  /* Acento de color superior */
+  .module-card .accent-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--orange), var(--orange-l));
+    opacity: 0;
+    transition: opacity 0.3s;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  .module-card:hover .accent-bar {
+    opacity: 1;
+  }
+
+  .card-icon {
+    width: 52px;
+    height: 52px;
+    background: rgba(232,101,26,0.12);
+    border: 1px solid rgba(232,101,26,0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    transition: background 0.3s, transform 0.3s;
+    flex-shrink: 0;
+  }
+
+  .module-card:hover .card-icon {
+    background: rgba(232,101,26,0.2);
+    transform: scale(1.1);
+  }
+
+  .card-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .card-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+
+  .card-desc {
+    font-size: 13.5px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .tag {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.06);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    letter-spacing: 0.2px;
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .card-cta {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--orange);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: gap 0.2s;
+  }
+
+  .module-card:hover .card-cta {
+    gap: 10px;
+  }
+
+  .card-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: #4ade80;
+    font-weight: 500;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.6; transform: scale(0.8); }
+  }
+
+  /* ── COMING SOON card ── */
+  .module-card.coming-soon {
+    opacity: 0.5;
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .coming-soon .card-status {
+    color: var(--text-muted);
+  }
+
+  .coming-soon .status-dot {
+    background: var(--text-muted);
+    animation: none;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    text-align: center;
+    font-size: 12px;
+    color: rgba(255,255,255,0.2);
+    line-height: 1.8;
+  }
+
+  /* ── Animación de entrada ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .header        { animation: fadeUp 0.5s ease both 0.1s; }
+  .modules-grid  { animation: fadeUp 0.5s ease both 0.25s; }
+  .footer        { animation: fadeUp 0.5s ease both 0.4s; }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .container { padding: 40px 16px; gap: 40px; }
+    .modules-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="logo-wrap">
+      <div class="logo-badge">CYC</div>
+      <div class="logo-text">
+        <div class="name">TRANSPORTES CYC</div>
+        <div class="sub">Limitada — Plataforma de Herramientas</div>
+      </div>
+    </div>
+    <h1 class="header-title">
+      Tu <span>centro de control</span><br>operacional
+    </h1>
+    <p class="header-sub">
+      Todas las herramientas de gestión de CYC en un solo lugar. Accede, opera y escala desde cualquier dispositivo.
+    </p>
+  </header>
+
+  <!-- MÓDULOS -->
+  <div class="modules-grid">
+
+    <!-- Cotizador -->
+    <a href="/cotizador" class="module-card" id="card-cotizador">
+      <div class="accent-bar"></div>
+      <div class="card-icon">📄</div>
+      <div class="card-content">
+        <div class="card-title">Cotizador</div>
+        <div class="card-desc">
+          Genera cotizaciones profesionales en PDF, las sube automáticamente a Google Drive y las envía por correo al cliente.
+        </div>
+        <div class="card-tags">
+          <span class="tag">PDF automático</span>
+          <span class="tag">Google Drive</span>
+          <span class="tag">Email</span>
+          <span class="tag">Historial</span>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="card-status">
+          <div class="status-dot"></div>
+          Activo
+        </div>
+        <div class="card-cta">Abrir módulo →</div>
+      </div>
+    </a>
+
+    <!-- Envío de Flota -->
+    <a href="/flota" class="module-card" id="card-flota">
+      <div class="accent-bar"></div>
+      <div class="card-icon">🚜</div>
+      <div class="card-content">
+        <div class="card-title">Envío de Flota</div>
+        <div class="card-desc">
+          Selecciona los equipos disponibles desde Notion y envía campañas de correo personalizadas a tu base de clientes.
+        </div>
+        <div class="card-tags">
+          <span class="tag">Notion</span>
+          <span class="tag">Campañas email</span>
+          <span class="tag">Multi-cuenta</span>
+          <span class="tag">WhatsApp CSV</span>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="card-status">
+          <div class="status-dot"></div>
+          Activo
+        </div>
+        <div class="card-cta">Abrir módulo →</div>
+      </div>
+    </a>
+
+    <!-- Próximamente -->
+    <div class="module-card coming-soon" id="card-coming">
+      <div class="accent-bar"></div>
+      <div class="card-icon">⚙️</div>
+      <div class="card-content">
+        <div class="card-title">Próximamente</div>
+        <div class="card-desc">
+          Nuevos módulos de gestión flotando en el horizonte: Taller, Contratos, Inventario y más.
+        </div>
+        <div class="card-tags">
+          <span class="tag">Taller</span>
+          <span class="tag">Contratos</span>
+          <span class="tag">Inventario</span>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="card-status">
+          <div class="status-dot"></div>
+          En desarrollo
+        </div>
+        <div class="card-cta">Próximamente</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div>CYC Hub · Transportes CYC Limitada · RUT 76.350.127-2</div>
+    <div>Américo Vespucio Norte N°2880, Oficina 1003, Conchalí – Santiago</div>
+  </footer>
+
+</div>
+
+</body>
+</html>

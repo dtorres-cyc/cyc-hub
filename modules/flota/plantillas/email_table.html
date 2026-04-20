@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Equipos disponibles CYC</title>
+    <style type="text/css">
+        /* ── Resets ── */
+        body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { -ms-interpolation-mode: bicubic; border: 0; display: block; }
+
+        /* ── Mobile ── */
+        @media screen and (max-width: 600px) {
+            .email-wrap    { padding: 10px 4px !important; }
+            .email-cont    { width: 100% !important; border-radius: 6px !important; }
+
+            /* Header */
+            .hdr-td        { padding: 18px 16px 16px !important; }
+            .hdr-title     { font-size: 18px !important; }
+            .hdr-badge     { display: none !important; }
+
+            /* Body pads */
+            .body-msg-td   { padding: 18px 14px 0 !important; }
+            .body-tbl-td   { padding: 12px 8px 16px !important; }
+            .footer-td     { padding: 14px 16px !important; }
+
+            /* Ocultar encabezado de tabla en móvil */
+            .eq-thead      { display: none !important; }
+
+            /* Filas de grupo */
+            .eq-group-td   { padding: 10px 12px 6px !important; }
+
+            /* FOTO: pasa a bloque y ocupa todo el ancho */
+            .eq-photo-td   {
+                display: block !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 10px 12px 4px !important;
+                box-sizing: border-box;
+            }
+            .eq-photo-td img {
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                border-radius: 6px !important;
+            }
+
+            /* CONTENIDO: pasa a bloque */
+            .eq-content-td {
+                display: block !important;
+                width: 100% !important;
+                padding: 6px 12px 4px !important;
+                box-sizing: border-box;
+            }
+            /* SPECS: pasa a bloque */
+            .eq-specs-td {
+                display: block !important;
+                width: 100% !important;
+                padding: 0 12px 12px !important;
+                border-top: none !important;
+                box-sizing: border-box;
+            }
+        }
+    </style>
+</head>
+<body style="margin:0; padding:0; background-color:#f2f2f2; font-family:'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+
+<table class="email-wrap" width="100%" border="0" cellspacing="0" cellpadding="0"
+       style="background-color:#f2f2f2; padding:36px 10px;">
+  <tr>
+    <td align="center">
+      <table class="email-cont" width="620" border="0" cellspacing="0" cellpadding="0"
+             style="max-width:620px; width:100%; background-color:#ffffff; border-radius:10px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,0.10);">
+
+        <!-- HEADER -->
+        <tr>
+          <td class="hdr-td" style="background-color:#F96B11; padding:24px 30px 22px;">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td>
+                  <p style="color:rgba(255,255,255,0.75); font-size:11px; text-transform:uppercase; letter-spacing:1.5px; margin:0 0 5px; font-weight:600;">CYC Maquinaria</p>
+                  <p class="hdr-title" style="color:#ffffff; font-size:22px; font-weight:800; margin:0; line-height:1.2;">Equipos disponibles esta semana</p>
+                </td>
+                <td class="hdr-badge" align="right" valign="middle">
+                  <div style="background:rgba(255,255,255,0.15); border-radius:8px; padding:8px 14px;">
+                    <span style="color:#fff; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Entrega Inmediata</span>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Barra decorativa -->
+        <tr><td style="height:4px; background:linear-gradient(90deg,#F96B11,#ffaa55,#F96B11); font-size:0; line-height:0;">&nbsp;</td></tr>
+
+        <!-- SALUDO -->
+        <tr>
+          <td class="body-msg-td" style="padding:28px 30px 0; color:#1a1a1a; font-size:15px; line-height:1.7;">
+            {{MENSAJE_PERSONALIZADO}}
+          </td>
+        </tr>
+
+        <!-- TABLA EQUIPOS -->
+        <tr>
+          <td class="body-tbl-td" style="padding:20px 30px 24px;">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0"
+                   style="border-collapse:collapse; border-radius:8px; overflow:hidden; border:1px solid #e0e0e0;">
+              <thead class="eq-thead">
+                <tr style="background-color:#f7f7f7;">
+                  {{TH_FOTO}}
+                  <th align="left" style="padding:11px 14px; border-bottom:2px solid #e0e0e0; color:#555; font-size:11px; text-transform:uppercase; letter-spacing:0.8px; font-weight:700;">Equipo</th>
+                  <th align="left" style="padding:11px 14px; border-bottom:2px solid #e0e0e0; color:#555; font-size:11px; text-transform:uppercase; letter-spacing:0.8px; font-weight:700;">Especificaciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- START_EQUIPOS_LOOP -->
+                <!-- END_EQUIPOS_LOOP -->
+              </tbody>
+            </table>
+          </td>
+        </tr>
+
+        <!-- BOTÓN WHATSAPP -->
+        <tr>
+          <td align="center" style="padding:0 30px 32px;">
+            <table border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td align="center" bgcolor="#25D366" style="border-radius:6px;">
+                  <a href="https://wa.me/56998298131?text=Hola%20Diego%2C%20me%20interesa%20consultar%20disponibilidad%20de%20equipos."
+                     target="_blank"
+                     style="font-size:14px; font-weight:700; font-family:Helvetica,Arial,sans-serif; color:#ffffff; text-decoration:none; border-radius:6px; padding:13px 28px; display:inline-block;">
+                    📲 Consultar por WhatsApp
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- FOOTER -->
+        <tr>
+          <td class="footer-td" style="background-color:#f7f7f7; padding:20px 30px; border-top:1px solid #e0e0e0;">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td>
+                  <p style="color:#555; font-size:13px; margin:0 0 3px;"><strong>Diego Torres</strong></p>
+                  <p style="color:#888; font-size:12px; margin:0;">dtorres@tcyc.cl</p>
+                </td>
+                <td align="right" valign="middle">
+                  <div style="width:8px; height:32px; background:#F96B11; border-radius:4px; display:inline-block;"></div>
+                </td>
+              </tr>
+            </table>
+            <p style="color:#bbb; font-size:11px; margin:12px 0 0; text-align:center;">
+              Recibes este correo porque eres un cliente registrado de CYC.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

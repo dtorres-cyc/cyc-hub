@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYC Fleet Sender</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-brand">
+            <div class="logo">CYC</div>
+            <div class="brand-info">
+                <span class="brand-name">Fleet Sender</span>
+                <span class="brand-badge">PRO</span>
+            </div>
+        </div>
+        
+        <!-- STEP INDICATOR -->
+        <div class="steps-nav">
+            <div class="step-item active" id="step-nav-1">1. Inventario</div>
+            <div class="step-item" id="step-nav-2">2. Audiencia y Mensaje</div>
+        </div>
+
+        <div class="header-actions">
+            <button class="btn btn-ghost btn-sm" onclick="toggleHistorial()">Historial</button>
+        </div>
+    </header>
+
+    <main class="main" id="step1-container">
+        <div class="toolbar">
+            <div>
+                <h1 class="page-title">Selección de Equipos</h1>
+                <p class="page-subtitle">Elige las máquinas y ajusta los filtros.</p>
+            </div>
+            
+            <div class="toolbar-controls">
+                <!-- Filters -->
+                <select class="ctrl-select" id="filterTipo" onchange="applyFilters()">
+                    <option value="">Todos los Tipos</option>
+                </select>
+                <select class="ctrl-select" id="filterMarca" onchange="applyFilters()">
+                    <option value="">Todas las Marcas</option>
+                </select>
+                <select class="ctrl-select" id="sortEquipos" onchange="applyFilters()">
+                    <option value="tipo_az">Ordenar: Tipo (A-Z)</option>
+                    <option value="tipo_za">Ordenar: Tipo (Z-A)</option>
+                    <option value="marca_az">Ordenar: Marca (A-Z)</option>
+                </select>
+
+                <!-- View Toggle -->
+                <div class="view-toggle">
+                    <button class="btn-toggle active" id="btnViewGrid" onclick="setViewMode('grid')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    </button>
+                    <button class="btn-toggle" id="btnViewTable" onclick="setViewMode('table')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button class="btn btn-ghost btn-sm" onclick="selectAll()">Marcar todos los visibles</button>
+                <button class="btn btn-ghost btn-sm" onclick="deselectAll()">Limpiar</button>
+                <span style="font-size:13px; color:var(--text-secondary); margin-left:6px;">
+                    <span id="selectedCount">0</span> seleccionados
+                </span>
+            </div>
+            <label class="checkbox-label" style="background:var(--bg-card);border:1px solid var(--border);padding:7px 12px;border-radius:var(--radius-sm);">
+                <input type="checkbox" id="confShowTarifa" onchange="onTarifaToggle()">
+                <span>💰 Configurar tarifas por equipo</span>
+            </label>
+        </div>
+
+        <!-- Estados -->
+        <div class="state-box" id="loadingState">
+            <div class="spinner"></div><p class="state-text">Cargando flota desde Notion...</p>
+        </div>
+        
+        <!-- Contenedores Grid y Tabla -->
+        <div class="equipment-grid hidden" id="equipmentGrid"></div>
+        <div class="equipment-table-wrap hidden" id="equipmentTableWrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th width="40"></th>
+                        <th width="60">Foto</th>
+                        <th>Tipo</th>
+                        <th>N° Interno</th>
+                        <th>Marca y Modelo</th>
+                        <th>Año/Horómetro</th>
+                        <th>Tarifa 180H</th>
+                    </tr>
+                </thead>
+                <tbody id="equipmentTableBody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- STEP 2: AUDIENCE & CONFIG -->
+    <main class="main hidden" id="step2-container">
+        <div class="wizard-layout">
+            <!-- Left Side: Config -->
+            <div class="wizard-column settings-column">
+                <h2 class="section-title">Diseño del Correo</h2>
+                
+                <div class="form-group">
+                    <label>Asunto del Correo</label>
+                    <input type="text" class="form-input" id="confSubject" value="Equipos disponibles CYC">
+                    <small>Usa {{EMPRESA}} para que se reemplace por el nombre de cada compañía.</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Texto Principal Personalizado</label>
+                    <textarea class="form-input" id="confMessage" rows="5">Hola {{NOMBRE}}, ¿cómo estás?
+Quería saber si requieren cotizar algún tipo de maquinaria para estos días. Te envío lo que tengo disponible para entrega dentro de esta y la próxima semana.</textarea>
+                    <small>Usa {{NOMBRE}} para saludar automáticamente por su nombre.</small>
+                </div>
+
+                <div class="form-group mt-2">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="confPhotos" checked>
+                        <span>Incluir fotos en el correo</span>
+                    </label>
+                </div>
+
+                <div class="form-group mt-2">
+                    <label>Enviar desde</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="senderEmail" value="dtorres@tcyc.cl" checked>
+                            dtorres@tcyc.cl
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="senderEmail" value="contacto@tcyc.cl">
+                            contacto@tcyc.cl
+                        </label>
+                    </div>
+                </div>
+
+                <hr style="border:0; border-top:1px solid var(--border); margin: 30px 0;">
+
+                <h2 class="section-title">Destinatarios</h2>
+                <div class="contacts-box">
+                    <div class="contacts-header">
+                        <span><strong id="contactCount">0</strong> contactos seleccionados</span>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <button class="btn btn-ghost btn-sm" onclick="refreshContactos()" id="btnRefreshContactos" style="padding:3px 8px;font-size:11px;">↻</button>
+                            <a href="#" onclick="toggleAllContacts(true);return false;" style="color:var(--accent);font-size:12px;">Todos</a>
+                            <span style="color:var(--border);">|</span>
+                            <a href="#" onclick="toggleAllContacts(false);return false;" style="color:var(--text-muted);font-size:12px;">Ninguno</a>
+                        </div>
+                    </div>
+                    <div class="contacts-search-wrap">
+                        <input
+                            type="text"
+                            id="contactSearch"
+                            class="contacts-search"
+                            placeholder="🔍  Buscar por nombre o empresa..."
+                            oninput="filterContacts()"
+                        >
+                    </div>
+                    <div class="contacts-list" id="contactsList">
+                        <p class="state-text" style="font-size:12px;padding:16px;">Cargando clientes...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Live HTML Preview -->
+            <div class="wizard-column preview-column">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h2 class="section-title" style="margin:0;">Vista Previa en Vivo</h2>
+                    <button class="btn btn-ghost btn-sm" onclick="refreshPreview()">↻ Refrescar</button>
+                </div>
+                <div class="live-preview-box">
+                    <div id="previewLoading" class="preview-loading hidden"><div class="spinner"></div></div>
+                    <iframe id="livePreviewFrame" class="live-iframe"></iframe>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ACTION BAR -->
+    <footer class="action-bar">
+        <div class="action-bar-inner">
+            <div id="actionBarStep1">
+                <button class="btn btn-primary" id="btnNext" onclick="goToStep2()" disabled>
+                    Siguiente: Audiencia y Diseño →
+                </button>
+            </div>
+            <div id="actionBarStep2" class="hidden">
+                <button class="btn btn-ghost" onclick="goToStep1()">← Regresar</button>
+                <div style="display: flex; gap:10px;">
+                    <button class="btn btn-outline" onclick="sendCampaign('TEST')">🧪 Enviarme Prueba</button>
+                    <button class="btn btn-primary" onclick="openConfirm()">🚀 Iniciar Campaña</button>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+
+    <!-- MODAL: CONFIRMAR ENVÍO -->
+    <div class="overlay hidden" id="confirmOverlay" onclick="closeConfirm()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header"><h2 class="modal-title">⚠️ Confirmar Campaña</h2></div>
+            <div class="modal-body"><p id="confirmText" style="color: var(--text-secondary); line-height: 1.6;"></p></div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeConfirm()">Cancelar</button>
+                <button class="btn btn-primary" onclick="sendCampaign('PROD')">Confirmar Envío</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: PROGRESO -->
+    <div class="overlay hidden" id="progressOverlay">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header"><h2 class="modal-title" id="progressTitle">Enviando...</h2></div>
+            <div class="modal-body">
+                <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+                <p class="progress-label" id="progressLabel">Iniciando...</p>
+                <div class="progress-log" id="progressLog"></div>
+            </div>
+            <div class="modal-footer" id="progressFooter" style="display:none">
+                <button class="btn btn-primary" onclick="closeProgress()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL: HISTORIAL -->
+    <div class="side-panel hidden" id="historialPanel">
+        <div class="side-panel-inner">
+            <div class="side-panel-header"><h3>Historial</h3><button class="modal-close" onclick="toggleHistorial()">✕</button></div>
+            <div class="side-panel-body" id="historialBody"></div>
+        </div>
+    </div>
+
+    <div class="toast-area" id="toastArea"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

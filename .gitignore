@@ -1,0 +1,27 @@
+# ── Node ──────────────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Entorno ───────────────────────────────────────────────────────────────────
+.env
+
+# ── Base de datos local ───────────────────────────────────────────────────────
+cotizaciones.db
+cotizaciones.db-shm
+cotizaciones.db-wal
+
+# ── Credenciales Google (van como env vars en Railway) ────────────────────────
+credentials.json
+token.json
+
+# ── Python (archivos heredados, ya no se usan) ────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyc
+venv/
+.venv/
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
