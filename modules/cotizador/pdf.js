@@ -210,8 +210,16 @@ function generatePdf(data) {
     }
     y += headerH;
 
-    const rowH = 32;
+    // Precalcular alturas dinámicas de fila
+    const rowHeights = data.items.map(item => {
+      let th = 0;
+      if (item.nombre) th += doc.heightOfString(item.nombre, { width: cols[1].w - 6, font: 'Helvetica-Bold', fontSize: 7.5 });
+      if (item.detalle) th += doc.heightOfString(item.detalle, { width: cols[1].w - 6, font: 'Helvetica-Oblique', fontSize: 7 });
+      return Math.max(32, th + 12);
+    });
+
     data.items.forEach((item, idx) => {
+      const rowH = rowHeights[idx];
       const even = idx % 2 === 1;
       if (even) drawRect(doc, margin, y, contentW, rowH, C.g1);
       doc.save().rect(margin, y, contentW, rowH).lineWidth(0.3).strokeColor(C.g2).stroke().restore();
@@ -337,11 +345,15 @@ function generatePdf(data) {
         .text(title, x + 6, y + 4, { width: w - 12 }).restore();
       let iry = y + rh;
       items.forEach((item, i) => {
-        if (i % 2 === 0) drawRect(doc, x, iry, w, 14, C.g1);
-        doc.save().rect(x, iry, w, 14).lineWidth(0.3).strokeColor(C.g2).stroke().restore();
+        const txt = `• ${item}`;
+        const th = doc.heightOfString(txt, { width: w - 12, font: 'Helvetica', fontSize: 7 });
+        const boxH = Math.max(14, th + 6);
+        
+        if (i % 2 === 0) drawRect(doc, x, iry, w, boxH, C.g1);
+        doc.save().rect(x, iry, w, boxH).lineWidth(0.3).strokeColor(C.g2).stroke().restore();
         doc.save().font('Helvetica').fontSize(7).fillColor(C.dark)
-          .text(`• ${item}`, x + 6, iry + 3, { width: w - 12 }).restore();
-        iry += 14;
+          .text(txt, x + 6, iry + 3, { width: w - 12 }).restore();
+        iry += boxH;
       });
       return iry;
     }
@@ -357,11 +369,16 @@ function generatePdf(data) {
       doc.save().font('Helvetica-Bold').fontSize(9).fillColor(C.g4)
         .text('NOTAS ADICIONALES', margin, y).restore();
       y += 10;
-      drawRect(doc, margin, y, contentW, 40, C.g1);
-      doc.save().rect(margin, y, contentW, 40).lineWidth(0.5).strokeColor(C.g2).stroke().restore();
+      
+      const txt = data.notas;
+      const th = doc.heightOfString(txt, { width: contentW - 16, font: 'Helvetica-Oblique', fontSize: 7.5 });
+      const boxH = Math.max(40, th + 16);
+      
+      drawRect(doc, margin, y, contentW, boxH, C.g1);
+      doc.save().rect(margin, y, contentW, boxH).lineWidth(0.5).strokeColor(C.g2).stroke().restore();
       doc.save().font('Helvetica-Oblique').fontSize(7.5).fillColor(C.g3)
-        .text(data.notas, margin + 8, y + 8, { width: contentW - 16 }).restore();
-      y += 52;
+        .text(txt, margin + 8, y + 8, { width: contentW - 16 }).restore();
+      y += boxH + 12;
     }
 
     // ── TÉRMINOS Y CONDICIONES ────────────────────────────────────────────
@@ -370,9 +387,12 @@ function generatePdf(data) {
       .text('TÉRMINOS Y CONDICIONES', margin, y).restore();
     y += 10;
     TERMS.forEach((term, i) => {
+      const txt = `${i + 1}. ${term}`;
+      const th = doc.heightOfString(txt, { width: contentW, font: 'Helvetica', fontSize: 7 });
+      
       doc.save().font('Helvetica').fontSize(7).fillColor(C.g3)
-        .text(`${i + 1}. ${term}`, margin, y, { width: contentW, align: 'justify' }).restore();
-      y += 10;
+        .text(txt, margin, y, { width: contentW, align: 'justify' }).restore();
+      y += th + 4;
     });
     y += 10;
 
