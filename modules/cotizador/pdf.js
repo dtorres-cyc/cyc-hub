@@ -45,9 +45,12 @@ function hLine(doc, x, y, w, color = C.g2, thickness = 0.5) {
 // ─────────────────────────────────────────────────────────────────────────────
 function generatePdf(data) {
   return new Promise((resolve, reject) => {
+    // IMPORTANTE: autoFirstPage=true es the default, doc.y keeps track of cursor automatically
+    // PERO utilizaremos nuestra propia variable 'y' para posicionar de manera absoluta.
     const doc = new PDFDocument({
       size: 'A4',
       margin: 50,
+      autoFirstPage: true,
       info: {
         Title:   `Cotización ${String(data.numero).padStart(4,'0')} – ${COMPANY.name}`,
         Author:  COMPANY.name,
@@ -66,26 +69,42 @@ function generatePdf(data) {
     const contentW = pageW - margin * 2;
     const ufVal   = data.uf_valor ? parseFloat(data.uf_valor) : null;
 
+    let y = margin;
+
+    // Helper de paginación para forzar salto de página cuando no cabe la siguiente sección
+    function checkPageBreak(requiredHeight) {
+      if (y + requiredHeight > pageH - margin - 20) {
+        doc.addPage();
+        y = margin;
+        return true; // True if a new page was added
+      }
+      return false;
+    }
+
     // ── FOOTER (se dibuja en cada página) ─────────────────────────────────
     function drawFooter() {
-      const fy = pageH - 40;
-      drawRect(doc, margin, fy, contentW, 16, C.g4);
-      doc.save()
-        .fontSize(6.5).fillColor(C.white).font('Helvetica')
-        .text(
-          `${COMPANY.name}  |  RUT ${COMPANY.rut}  |  ${COMPANY.address}  |  ${COMPANY.email}`,
-          margin, fy + 4, { width: contentW, align: 'center' }
-        ).restore();
+      // Loop over all pages in the document to stamp the footer at the very end
+      const range = doc.bufferedPageRange();
+      for (let i = range.start; i < range.start + range.count; i++) {
+        doc.switchToPage(i);
+        const fy = pageH - 40;
+        drawRect(doc, margin, fy, contentW, 16, C.g4);
+        doc.save()
+          .fontSize(6.5).fillColor(C.white).font('Helvetica')
+          .text(
+            `${COMPANY.name}  |  RUT ${COMPANY.rut}  |  ${COMPANY.address}  |  ${COMPANY.email}`,
+            margin, fy + 4, { width: contentW, align: 'center', lineBreak: false }
+          ).restore();
 
-      doc.save()
-        .fontSize(7).fillColor(C.g3).font('Helvetica')
-        .text(`Página ${doc.bufferedPageRange().start + doc.bufferedPageRange().count}`,
-              margin, fy + 22, { width: contentW, align: 'right' })
-        .restore();
+        doc.save()
+          .fontSize(7).fillColor(C.g3).font('Helvetica')
+          .text(`Página ${i + 1}`,
+                margin, fy + 22, { width: contentW, align: 'right', lineBreak: false })
+          .restore();
+      }
     }
 
     // ── HEADER ─────────────────────────────────────────────────────────────
-    let y = margin;
 
     // Logo
     if (fs.existsSync(LOGO_PATH)) {
@@ -192,48 +211,62 @@ function generatePdf(data) {
       { w: 38,  align: 'center', label: 'Cant.' },
       { w: 75,  align: 'right',  label: 'Precio Unit.' },
       { w: 80,  align: 'right',  label: 'Total UF/$' },
-      { w: 80,  align: 'right',  label: 'Total $' },
+      { w: 90,  align: 'right',  label: 'Total $' },
     ];
     const fixedW = cols.reduce((s, c) => s + c.w, 0);
     cols[1].w = contentW - fixedW;
 
     const headerH = 20;
-    drawRect(doc, margin, y, contentW, headerH, C.g5);
 
-    let cx = margin;
-    for (const col of cols) {
-      doc.save()
-        .font('Helvetica-Bold').fontSize(7).fillColor(C.white)
-        .text(col.label, cx + 3, y + 6, { width: col.w - 6, align: col.align })
-        .restore();
-      cx += col.w;
+    function drawTableHeader() {
+      drawRect(doc, margin, y, contentW, headerH, C.g5);
+      let cx = margin;
+      for (const col of cols) {
+        doc.save()
+          .font('Helvetica-Bold').fontSize(7).fillColor(C.white)
+          .text(col.label, cx + 3, y + 6, { width: col.w - 6, align: col.align })
+          .restore();
+        cx += col.w;
+      }
+      y += headerH;
     }
-    y += headerH;
 
-    // Precalcular alturas dinámicas de fila
+    drawTableHeader();
+
+    // Precalcular alturas dinámicas de fila CORRECTAMENTE asignando la fuente antes de medir
     const rowHeights = data.items.map(item => {
       let th = 0;
-      if (item.nombre) th += doc.heightOfString(item.nombre, { width: cols[1].w - 6, font: 'Helvetica-Bold', fontSize: 7.5 });
-      if (item.detalle) th += doc.heightOfString(item.detalle, { width: cols[1].w - 6, font: 'Helvetica-Oblique', fontSize: 7 });
-      return Math.max(32, th + 12);
+      doc.font('Helvetica-Bold').fontSize(7.5);
+      if (item.nombre) th += doc.heightOfString(item.nombre, { width: cols[1].w - 6 });
+      
+      doc.font('Helvetica-Oblique').fontSize(7);
+      if (item.detalle) th += doc.heightOfString(item.detalle, { width: cols[1].w - 6 });
+      
+      return Math.max(30, th + 12);
     });
 
     data.items.forEach((item, idx) => {
       const rowH = rowHeights[idx];
+      
+      // Control de paginación para cada fila
+      if (checkPageBreak(rowH)) {
+        drawTableHeader();
+      }
+
       const even = idx % 2 === 1;
       if (even) drawRect(doc, margin, y, contentW, rowH, C.g1);
       doc.save().rect(margin, y, contentW, rowH).lineWidth(0.3).strokeColor(C.g2).stroke().restore();
 
-      cx = margin;
+      let cx = margin;
       const vals = [
         String(idx + 1),
-        null,   // descripción especial
+        null,   // descripción
         String(item.n_equipos ?? 1),
         item.tipo_precio ?? 'Hora',
         String(item.cantidad ?? 1),
-        null,   // precio unit especial
-        null,   // total moneda especial
-        null,   // total clp especial
+        null,   // precio unit
+        null,   // total moneda
+        null,   // total clp
       ];
 
       for (let i = 0; i < cols.length; i++) {
@@ -241,40 +274,35 @@ function generatePdf(data) {
         const val  = vals[i];
         const ty   = y + 4;
 
-        if (i === 1) {
-          // Descripción
+        if (i === 1) { // Descripción
           doc.save().font('Helvetica-Bold').fontSize(7.5).fillColor(C.dark)
             .text(item.nombre || '', cx + 3, ty, { width: col.w - 6 }).restore();
+          
           if (item.detalle) {
+            doc.font('Helvetica-Bold').fontSize(7.5);
+            const offsetH = item.nombre ? doc.heightOfString(item.nombre, { width: col.w - 6 }) : 0;
             doc.save().font('Helvetica-Oblique').fontSize(7).fillColor(C.g3)
-              .text(item.detalle, cx + 3, ty + 11, { width: col.w - 6 }).restore();
+              .text(item.detalle, cx + 3, ty + offsetH + 2, { width: col.w - 6 }).restore();
           }
-        } else if (i === 5) {
-          // Precio unitario
+
+        } else if (i === 5 || i === 6) { // Precio Unit. / Total UF/$
+          const valObj = i === 5 ? item.precio_unitario : item.total_moneda;
           const moneda = item.moneda ?? '$';
-          const upStr  = moneda === 'UF' ? uf(item.precio_unitario) : clp(item.precio_unitario);
+          const upStr  = moneda === 'UF' ? uf(valObj) : clp(valObj);
+          
           doc.save().font('Helvetica').fontSize(7.5).fillColor(C.dark)
             .text(upStr, cx + 3, ty, { width: col.w - 6, align: 'right' }).restore();
+          
           if (moneda === 'UF' && ufVal) {
+            doc.font('Helvetica').fontSize(7.5);
+            const offsetH = doc.heightOfString(upStr, { width: col.w - 6 });
             doc.save().font('Helvetica').fontSize(7).fillColor(C.g3)
-              .text(`(${clp(parseFloat(item.precio_unitario) * ufVal)})`,
-                cx + 3, ty + 11, { width: col.w - 6, align: 'right' }).restore();
+              .text(`(${clp(parseFloat(valObj) * ufVal)})`, cx + 3, ty + offsetH + 2, { width: col.w - 6, align: 'right' }).restore();
           }
-        } else if (i === 6) {
-          // Total en moneda del ítem
-          const moneda = item.moneda ?? '$';
-          const totStr = moneda === 'UF' ? uf(item.total_moneda) : clp(item.total_moneda);
-          doc.save().font('Helvetica').fontSize(7.5).fillColor(C.dark)
-            .text(totStr, cx + 3, ty, { width: col.w - 6, align: 'right' }).restore();
-          if (moneda === 'UF' && ufVal) {
-            doc.save().font('Helvetica').fontSize(7).fillColor(C.g3)
-              .text(`(${clp(parseFloat(item.total_moneda) * ufVal)})`,
-                cx + 3, ty + 11, { width: col.w - 6, align: 'right' }).restore();
-          }
-        } else if (i === 7) {
-          // Total en $
+
+        } else if (i === 7) { // Total en CLP
           const totalClp = parseFloat(item.total_clp) || 0;
-          doc.save().font('Helvetica-Bold').fontSize(7.5).fillColor(C.orange)
+          doc.save().font('Helvetica-Bold').fontSize(8.5).fillColor(C.orange)
             .text(totalClp > 0 ? clp(totalClp) : '—',
               cx + 3, ty, { width: col.w - 6, align: 'right' }).restore();
         } else {
@@ -289,6 +317,7 @@ function generatePdf(data) {
     // Nota UF
     const hasUF = data.items.some(i => i.moneda === 'UF');
     if (hasUF && ufVal) {
+      checkPageBreak(30);
       drawRect(doc, margin, y + 6, contentW, 16, C.g1);
       doc.save().rect(margin, y + 6, contentW, 16).lineWidth(0.3).strokeColor(C.g2).stroke().restore();
       doc.save().font('Helvetica-Oblique').fontSize(7).fillColor(C.g3)
@@ -301,38 +330,35 @@ function generatePdf(data) {
     y += 10;
 
     // ── TOTALES ───────────────────────────────────────────────────────────
-    const totW  = 160;
+    checkPageBreak(80); // Asegurar que todo el bloque de totales quepa
+
+    const totW  = 180;
     const totX  = pageW - margin - totW;
 
-    // Subtotal y IVA
     const subH = 20;
     doc.save().font('Helvetica-Bold').fontSize(8.5).fillColor(C.dark)
-      .text('Subtotal Neto:', totX, y + 3, { width: totW - 6, align: 'right' }).restore();
+      .text('Subtotal Neto:', totX, y + 3, { width: totW - 75, align: 'right' }).restore();
     doc.save().font('Helvetica-Bold').fontSize(8.5).fillColor(C.dark)
-      .text(clp(data.subtotal), totX, y + 3, { width: totW, align: 'right' }).restore();
+      .text(clp(data.subtotal), totX + totW - 75, y + 3, { width: 70, align: 'right' }).restore();
     y += subH;
 
     doc.save().font('Helvetica-Bold').fontSize(8.5).fillColor(C.dark)
-      .text('IVA (19%):', totX, y + 3, { width: totW - 6, align: 'right' }).restore();
+      .text('IVA (19%):', totX, y + 3, { width: totW - 75, align: 'right' }).restore();
     doc.save().font('Helvetica-Bold').fontSize(8.5).fillColor(C.dark)
-      .text(clp(data.iva), totX, y + 3, { width: totW, align: 'right' }).restore();
+      .text(clp(data.iva), totX + totW - 75, y + 3, { width: 70, align: 'right' }).restore();
     y += subH;
 
     // Total con fondo naranja
     drawRect(doc, totX - 10, y, totW + 10, 28, C.orange);
     doc.save().font('Helvetica-Bold').fontSize(10).fillColor(C.white)
-      .text('TOTAL CON IVA:', totX - 4, y + 8, { width: totW - 6, align: 'right' }).restore();
-    doc.save().font('Helvetica-Bold').fontSize(10).fillColor(C.white)
-      .text(clp(data.total), totX, y + 8, { width: totW, align: 'right' }).restore();
+      .text('TOTAL CON IVA:', totX - 4, y + 8, { width: totW - 75, align: 'right' }).restore();
+    doc.save().font('Helvetica-Bold').fontSize(11).fillColor(C.white)
+      .text(clp(data.total), totX + totW - 75, y + 7, { width: 70, align: 'right' }).restore();
 
     y += 44;
 
     // ── RESPONSABILIDADES ─────────────────────────────────────────────────
-    // Verificar si hay espacio suficiente, si no saltar página
-    if (y > pageH - 200) {
-      doc.addPage();
-      y = margin;
-    }
+    checkPageBreak(120);
 
     doc.save().font('Helvetica-Bold').fontSize(9).fillColor(C.g4)
       .text('RESPONSABILIDADES', margin, y).restore();
@@ -346,7 +372,8 @@ function generatePdf(data) {
       let iry = y + rh;
       items.forEach((item, i) => {
         const txt = `• ${item}`;
-        const th = doc.heightOfString(txt, { width: w - 12, font: 'Helvetica', fontSize: 7 });
+        doc.font('Helvetica').fontSize(7);
+        const th = doc.heightOfString(txt, { width: w - 12 });
         const boxH = Math.max(14, th + 6);
         
         if (i % 2 === 0) drawRect(doc, x, iry, w, boxH, C.g1);
@@ -360,36 +387,42 @@ function generatePdf(data) {
 
     const halfW = contentW / 2 - 3;
     const endLeft  = drawRespCol('CARGO ARRENDATARIO (Cliente)', CARGO_ARRENDATARIO, margin, halfW, C.g4);
-    const endRight = drawRespCol('CARGO ARRENDADOR (CYC)',       CARGO_ARRENDADOR,  margin + halfW + 6, halfW, C.g5);
+    const endRight = drawRespCol('CARGO ARRENDADOR (CYC)',       CARGO_ARRENDADOR,   margin + halfW + 6, halfW, C.g5);
     y = Math.max(endLeft, endRight) + 14;
 
     // ── NOTAS ADICIONALES ─────────────────────────────────────────────────
     if (data.notas) {
-      if (y > pageH - 120) { doc.addPage(); y = margin; }
+      doc.font('Helvetica-Oblique').fontSize(7.5);
+      const th = doc.heightOfString(data.notas, { width: contentW - 16 });
+      const boxH = Math.max(40, th + 16);
+
+      checkPageBreak(boxH + 20);
+
       doc.save().font('Helvetica-Bold').fontSize(9).fillColor(C.g4)
         .text('NOTAS ADICIONALES', margin, y).restore();
       y += 10;
       
-      const txt = data.notas;
-      const th = doc.heightOfString(txt, { width: contentW - 16, font: 'Helvetica-Oblique', fontSize: 7.5 });
-      const boxH = Math.max(40, th + 16);
-      
       drawRect(doc, margin, y, contentW, boxH, C.g1);
       doc.save().rect(margin, y, contentW, boxH).lineWidth(0.5).strokeColor(C.g2).stroke().restore();
       doc.save().font('Helvetica-Oblique').fontSize(7.5).fillColor(C.g3)
-        .text(txt, margin + 8, y + 8, { width: contentW - 16 }).restore();
+        .text(data.notas, margin + 8, y + 8, { width: contentW - 16 }).restore();
       y += boxH + 12;
     }
 
     // ── TÉRMINOS Y CONDICIONES ────────────────────────────────────────────
-    if (y > pageH - 150) { doc.addPage(); y = margin; }
+    checkPageBreak(150);
+
     doc.save().font('Helvetica-Bold').fontSize(9).fillColor(C.g4)
       .text('TÉRMINOS Y CONDICIONES', margin, y).restore();
     y += 10;
     TERMS.forEach((term, i) => {
       const txt = `${i + 1}. ${term}`;
-      const th = doc.heightOfString(txt, { width: contentW, font: 'Helvetica', fontSize: 7 });
+      doc.font('Helvetica').fontSize(7);
+      const th = doc.heightOfString(txt, { width: contentW });
       
+      // Auto page break inside terms array individually to be bulletproof
+      checkPageBreak(th + 10);
+
       doc.save().font('Helvetica').fontSize(7).fillColor(C.g3)
         .text(txt, margin, y, { width: contentW, align: 'justify' }).restore();
       y += th + 4;
@@ -397,9 +430,9 @@ function generatePdf(data) {
     y += 10;
 
     // ── FIRMAS ────────────────────────────────────────────────────────────
-    if (y > pageH - 80) { doc.addPage(); y = margin; }
-    const sigW = contentW / 2 - 20;
+    checkPageBreak(80);
 
+    const sigW = contentW / 2 - 20;
     function drawSignature(label, name, x) {
       doc.save().font('Helvetica').fontSize(8).fillColor(C.g3)
         .text('_______________________________', x, y + 10, { width: sigW, align: 'center' })
@@ -407,10 +440,11 @@ function generatePdf(data) {
         .text(label, x, y + 32, { width: sigW, align: 'center' })
         .restore();
     }
+    
     drawSignature('Firma y Timbre', COMPANY.name, margin);
     drawSignature('Firma y Timbre Cliente', cli.empresa || cli.nombre || '', margin + sigW + 40);
 
-    // ── FOOTER ────────────────────────────────────────────────────────────
+    // ── FOOTER POST-PROCESO ───────────────────────────────────────────────
     drawFooter();
 
     doc.end();
