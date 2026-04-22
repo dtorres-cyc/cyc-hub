@@ -85,7 +85,8 @@ router.post('/api/generate', async (req, res) => {
     const pdfBuffer = await generatePdf(pdfData);
 
     const clienteNombre = d.cliente?.nombre || d.cliente?.empresa || 'Cliente';
-    const pdfFilename   = `Cotización ${String(numero).padStart(4,'0')} - ${clienteNombre}.pdf`;
+    const nombreParaArchivo = d.cliente?.empresa || d.cliente?.nombre || 'Cliente';
+    const pdfFilename   = `Cotización N°${String(numero).padStart(4,'0')} - ${nombreParaArchivo}.pdf`;
 
     // Guardar en DB
     const dbData = {

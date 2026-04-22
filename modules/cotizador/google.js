@@ -97,15 +97,6 @@ async function sendEmailGmail({ toEmail, clienteNombre, numero, pdfBuffer, pdfFi
     ${notas ? `<p><em>Notas adicionales:</em> ${notas}</p>` : ''}
     <br>
     <p>Atentamente,</p>
-    <table>
-      <tr><td>
-        <strong style="color:#E8651A;font-size:15px;">${COMPANY.name}</strong><br>
-        <span style="font-size:12px;color:#555;">${COMPANY.giro}</span><br>
-        <span style="font-size:12px;">📧 ${COMPANY.email}</span><br>
-        <span style="font-size:12px;">🌐 ${COMPANY.web}</span><br>
-        <span style="font-size:12px;">📍 ${COMPANY.address}</span>
-      </td></tr>
-    </table>
     <br>
     <p style="font-size:11px;color:#888;">
       Este correo y sus adjuntos son de carácter confidencial y están
