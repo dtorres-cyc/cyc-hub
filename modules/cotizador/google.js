@@ -84,7 +84,7 @@ async function uploadToDrive(pdfBuffer, filename) {
 }
 
 // ── Envío de email via Gmail API ──────────────────────────────────────────────
-async function sendEmailGmail({ toEmail, clienteNombre, numero, pdfBuffer, pdfFilename, notas }) {
+async function sendEmailGmail({ toEmail, ccEmail, clienteNombre, numero, pdfBuffer, pdfFilename, notas }) {
   const auth    = buildOAuth2Client();
   const gmail   = google.gmail({ version: 'v1', auth });
 
@@ -108,12 +108,18 @@ async function sendEmailGmail({ toEmail, clienteNombre, numero, pdfBuffer, pdfFi
   const boundary = 'boundary_cyc_' + Date.now();
   const pdfB64   = pdfBuffer.toString('base64');
 
-  const rawMsg = [
+  const headers = [
     `To: ${toEmail}`,
     `From: ${COMPANY.name} <${COMPANY.email}>`,
     `Subject: =?UTF-8?B?${Buffer.from(`Cotización N°${String(numero).padStart(4,'0')} – ${COMPANY.name}`).toString('base64')}?=`,
     'MIME-Version: 1.0',
-    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    `Content-Type: multipart/mixed; boundary="${boundary}"`
+  ];
+  
+  if (ccEmail) headers.splice(1, 0, `Cc: ${ccEmail}`);
+
+  const rawMsg = [
+    ...headers,
     '',
     `--${boundary}`,
     'Content-Type: text/html; charset=UTF-8',

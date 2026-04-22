@@ -117,12 +117,14 @@ router.post('/api/generate', async (req, res) => {
         errors.push(`Drive: ${e.message}`);
       }
 
-      const clienteEmail = d.cliente?.email;
+      const emailTo      = d.emailTo || d.cliente?.email;
+      const emailCc      = d.emailCc || '';
       const sendMail     = d.send_email !== false;
-      if (sendMail && clienteEmail) {
+      if (sendMail && emailTo) {
         try {
           await google.sendEmailGmail({
-            toEmail:       clienteEmail,
+            toEmail:       emailTo,
+            ccEmail:       emailCc,
             clienteNombre,
             numero,
             pdfBuffer,

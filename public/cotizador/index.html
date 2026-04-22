@@ -178,6 +178,27 @@
 </div>
 <div class="toast-wrap" id="toasts"></div>
 
+<!-- MODAL EMAIL -->
+<div class="overlay" id="modalEmail">
+  <div class="modal" style="width:400px; max-width:90vw;">
+    <h3>Enviar Cotización</h3>
+    <div class="fg" style="margin-bottom:12px;">
+      <label>Para (Destinatarios) *</label>
+      <input type="text" id="mEmailTo" placeholder="cliente@empresa.com">
+      <small style="font-size:10px;color:var(--g3)">Usa comas para separar varios correos.</small>
+    </div>
+    <div class="fg">
+      <label>C.C. (Con copia)</label>
+      <input type="text" id="mEmailCc" placeholder="copia@empresa.com">
+      <small style="font-size:10px;color:var(--g3)">Usa comas para separar varios correos.</small>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeEmailModal()">Cancelar</button>
+      <button class="btn btn-success" onclick="confirmGenerateEmail()">Generar y Enviar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL PRODUCTO -->
 <div class="overlay" id="modalProd">
   <div class="modal">
@@ -342,14 +363,14 @@
   <div class="sb-actions">
     <label class="toggle-row">
       <input type="checkbox" id="chkEmail" checked>
-      <span>Enviar correo al cliente automáticamente</span>
+      <span>Preguntar por correos al enviar</span>
     </label>
     <button class="btn btn-outline" onclick="preview()" style="width:100%;">
       👁 Vista Previa PDF
     </button>
-    <button class="btn btn-success" onclick="generate()"
+    <button class="btn btn-success" onclick="tryGenerate()"
             style="width:100%;font-size:13px;padding:10px;">
-      ✓ Generar y Enviar Cotización
+      ✓ Generar Cotización
     </button>
   </div>
 
@@ -615,11 +636,38 @@ document.addEventListener("click",e=>{
 });
 
 // ─── Generar cotización ────────────────────────────────────────────────────
-async function generate() {
+function tryGenerate() {
+  const empresa = document.getElementById("cEmpresa").value.trim();
+  const nombre  = document.getElementById("cNombre").value.trim();
+  if (!empresa && !nombre) { toast("Ingresa empresa o nombre del cliente","err"); return; }
+  if (!items.length) { toast("Agrega al menos un equipo","err"); return; }
+  const uf = getUF();
+  const hasUF = items.some(i=>i.moneda==="UF");
+  if (hasUF && !uf) { toast("Ingresa el valor UF del día para cotizaciones en UF","err"); return; }
+
+  if (document.getElementById("chkEmail").checked) {
+    document.getElementById("mEmailTo").value = document.getElementById("cEmail").value.trim();
+    document.getElementById("mEmailCc").value = "";
+    document.getElementById("modalEmail").classList.add("on");
+  } else {
+    generate(false, "", "");
+  }
+}
+
+function closeEmailModal() { document.getElementById("modalEmail").classList.remove("on"); }
+
+function confirmGenerateEmail() {
+  const to = document.getElementById("mEmailTo").value.trim();
+  const cc = document.getElementById("mEmailCc").value.trim();
+  if (!to) { toast("Ingresa al menos un destinatario","err"); return; }
+  closeEmailModal();
+  generate(true, to, cc);
+}
+
+async function generate(sendEmail, emailTo, emailCc) {
   const empresa = document.getElementById("cEmpresa").value.trim();
   const nombre  = document.getElementById("cNombre").value.trim();
   const email   = document.getElementById("cEmail").value.trim();
-  if (!empresa && !nombre) { toast("Ingresa empresa o nombre del cliente","err"); return; }
   if (!items.length) { toast("Agrega al menos un equipo","err"); return; }
 
   const uf = getUF();
@@ -654,7 +702,9 @@ async function generate() {
     total:    Math.round(total),
     validez_dias: parseInt(document.getElementById("validez").value)||30,
     notas:    document.getElementById("notas").value.trim(),
-    send_email: document.getElementById("chkEmail").checked,
+    send_email: sendEmail,
+    emailTo,
+    emailCc
   };
 
   try {
