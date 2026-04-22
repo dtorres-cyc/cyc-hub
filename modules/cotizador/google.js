@@ -84,7 +84,7 @@ async function uploadToDrive(pdfBuffer, filename) {
 }
 
 // ── Envío de email via Gmail API ──────────────────────────────────────────────
-async function sendEmailGmail({ toEmail, ccEmail, clienteNombre, numero, pdfBuffer, pdfFilename, notas }) {
+async function sendEmailGmail({ toEmail, ccEmail, clienteNombre, nombreEmpresa, numero, pdfBuffer, pdfFilename, notas }) {
   const auth    = buildOAuth2Client();
   const gmail   = google.gmail({ version: 'v1', auth });
 
@@ -98,6 +98,12 @@ async function sendEmailGmail({ toEmail, ccEmail, clienteNombre, numero, pdfBuff
     <br>
     <p>Atentamente,</p>
     <br>
+    <p style="font-size: 13px; color: #444; line-height: 1.4;">
+      <strong>Diego Torres</strong><br>
+      Gerente Comercial<br>
+      +56 9 9829 8131<br>
+      <a href="https://www.tcyc.cl/" style="color: #E8651A; text-decoration: none;">https://www.tcyc.cl/</a>
+    </p>
     <p style="font-size:11px;color:#888;">
       Este correo y sus adjuntos son de carácter confidencial y están
       dirigidos exclusivamente al destinatario indicado.
@@ -111,7 +117,7 @@ async function sendEmailGmail({ toEmail, ccEmail, clienteNombre, numero, pdfBuff
   const headers = [
     `To: ${toEmail}`,
     `From: ${COMPANY.name} <${COMPANY.email}>`,
-    `Subject: =?UTF-8?B?${Buffer.from(`Cotización N°${String(numero).padStart(4,'0')} – ${COMPANY.name}`).toString('base64')}?=`,
+    `Subject: =?UTF-8?B?${Buffer.from(`Cotización N°${String(numero).padStart(4,'0')} – ${nombreEmpresa}`).toString('base64')}?=`,
     'MIME-Version: 1.0',
     `Content-Type: multipart/mixed; boundary="${boundary}"`
   ];

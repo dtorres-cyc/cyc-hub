@@ -126,6 +126,7 @@ router.post('/api/generate', async (req, res) => {
             toEmail:       emailTo,
             ccEmail:       emailCc,
             clienteNombre,
+            nombreEmpresa: nombreParaArchivo,
             numero,
             pdfBuffer,
             pdfFilename,
