@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYC - Informe Comercial Gerencia</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">Transportes <span>CYC</span></div>
+    <nav class="nav-links">
+      <a href="/" class="nav-item">🏠 Portal Hub</a>
+      <a href="#flota" class="nav-item active">🚛 Estado Arriendo</a>
+      <a href="#crm" class="nav-item">📊 Pipeline CRM</a>
+      <a href="#comercial" class="nav-item">🎯 Área Comercial</a>
+      <a href="#facturacion" class="nav-item">💳 Facturación</a>
+    </nav>
+    <div class="user-info">
+      <p class="role">Gerencia Comercial</p>
+      <p class="updated">Actualizado: <span id="timestamp">--</span></p>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dashboard">
+    <header class="header">
+      <div>
+        <h1>Informe Comercial Gerencia CyC</h1>
+        <p class="subtitle">Semana Activa · Resumen Ejecutivo</p>
+      </div>
+      <button class="action-btn" onclick="window.print()">
+        Exportar PDF
+      </button>
+    </header>
+
+    <div class="content-wrapper">
+      
+      <!-- Seccion Flota -->
+      <section id="flota" class="section-block">
+        <h2 class="section-title">🚛 Estado Arriendo - Flota General</h2>
+        
+        <div class="kpi-grid">
+          <div class="kpi-card card-dark">
+            <span class="kpi-label">Total Flota</span>
+            <span class="kpi-value" id="kpi-total-flota">--</span>
+          </div>
+          <div class="kpi-card card-green">
+            <span class="kpi-label">En Contrato</span>
+            <span class="kpi-value" id="kpi-en-contrato">--</span>
+          </div>
+          <div class="kpi-card card-orange">
+            <span class="kpi-label">Disponibles</span>
+            <span class="kpi-value" id="kpi-disponibles">--</span>
+          </div>
+          <div class="kpi-card card-green">
+            <span class="kpi-label">Operativos</span>
+            <span class="kpi-value" id="kpi-operativos">--</span>
+          </div>
+          <div class="kpi-card card-orange">
+            <span class="kpi-label">En Taller</span>
+            <span class="kpi-value" id="kpi-taller">--</span>
+          </div>
+          <div class="kpi-card card-red">
+            <span class="kpi-label">En Panne</span>
+            <span class="kpi-value" id="kpi-panne">--</span>
+          </div>
+        </div>
+
+        <div class="charts-row">
+          <div class="chart-container">
+            <h3>Composición Flota</h3>
+            <canvas id="chart-flota-tipo"></canvas>
+          </div>
+          <div class="chart-container">
+            <h3>Operatividad Total</h3>
+            <canvas id="chart-flota-op"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Seccion CRM -->
+      <section id="crm" class="section-block">
+        <h2 class="section-title">📊 Pipeline CRM</h2>
+        
+        <div class="crm-grid">
+          <div class="crm-column">
+            <h3>Negociaciones Activas</h3>
+            <div id="crm-negociaciones" class="list-container"></div>
+            
+            <h3 class="mt-4">Por Enviar Cotización</h3>
+            <div id="crm-cotizar" class="list-container"></div>
+          </div>
+          
+          <div class="crm-column">
+            <h3>Retomar (Top 3 Prioridad)</h3>
+            <div id="crm-retomar" class="list-container"></div>
+            
+            <div class="funnel-summary card-dark mt-4">
+              <h4>Pipeline Activo Estimado</h4>
+              <p class="pipeline-val" id="pipeline-total">--</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Seccion Facturacion -->
+      <section id="facturacion" class="section-block">
+        <h2 class="section-title">💳 Facturación & Cobranza</h2>
+        
+        <div class="kpi-grid">
+          <div class="kpi-card card-dark">
+            <span class="kpi-label">Facturado 2026</span>
+            <span class="kpi-value" id="fac-total">--</span>
+          </div>
+          <div class="kpi-card card-blue">
+            <span class="kpi-label">Mes Actual</span>
+            <span class="kpi-value" id="fac-mes">--</span>
+          </div>
+          <div class="kpi-card card-orange">
+            <span class="kpi-label">Por Cobrar Total</span>
+            <span class="kpi-value" id="fac-porcobrar">--</span>
+          </div>
+          <div class="kpi-card card-red">
+            <span class="kpi-label">Facturas Vencidas</span>
+            <span class="kpi-value" id="fac-vencidas">--</span>
+          </div>
+        </div>
+
+        <div class="charts-row mt-4">
+          <div class="chart-container full-width">
+            <h3>Facturación Mensual (M CLP)</h3>
+            <canvas id="chart-facturacion"></canvas>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
