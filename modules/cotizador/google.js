@@ -155,4 +155,4 @@ async function sendEmailGmail({ toEmail, ccEmail, clienteNombre, nombreEmpresa, 
   return true;
 }
 
-module.exports = { isReady, uploadToDrive, sendEmailGmail };
+module.exports = { isReady, uploadToDrive, sendEmailGmail, buildOAuth2Client };

@@ -84,13 +84,88 @@ const REPORT_DATA = {
     }
 };
 
-router.get('/api/data', (req, res) => {
-    res.json(REPORT_DATA);
+const { getSheetData } = require('../../shared/googleSheets');
+const SHEET_ID = '1Ry7QVd8jkzISDymg3CeLyL2iroYD4eO6eXIpjImdAXo';
+
+function safeLower(val) {
+  return val ? val.toString().trim().toLowerCase() : '';
+}
+
+async function getFlotaData() {
+    try {
+        const data = await getSheetData(SHEET_ID, "'Detalle Estatus'!A:Z");
+        if (!data || data.length < 2) return REPORT_DATA.flota; // Fallback a mock
+
+        const rows = data.slice(1).filter(r => r[0] && r[0].trim() !== '');
+        
+        let total = rows.length;
+        let contrato = 0;
+        let disponible = 0;
+        let usoInterno = 0;
+        let operativo = 0;
+        let taller = 0;
+        let panne = 0;
+        
+        let por_tipo = {};
+
+        for (const row of rows) {
+            const tipoMaquina = (row[3] || 'Otros').trim();
+            const arrendado = safeLower(row[14] || '');
+            const cliente = safeLower(row[15] || '');
+            const estadoOp = safeLower(row[17] || '');
+
+            // Agrupar por tipo
+            const tipoKey = tipoMaquina !== '' ? tipoMaquina : 'Otros';
+            por_tipo[tipoKey] = (por_tipo[tipoKey] || 0) + 1;
+
+            // Arrendado
+            if (arrendado === 'contrato') contrato++;
+            if (arrendado === 'disponible' && cliente !== 'venta') disponible++;
+            if (arrendado.includes('interno')) usoInterno++;
+
+            // Operatividad
+            if (cliente === 'sin cliente') {
+                if (estadoOp === 'operativo') operativo++;
+                if (estadoOp === 'taller') taller++;
+                if (estadoOp === 'panne') panne++;
+            }
+        }
+
+        return {
+            total,
+            por_tipo,
+            arrendado: { 'Contrato': contrato, 'Disponible': disponible, 'Uso interno': usoInterno },
+            operatividad: { 'Operativo': operativo, 'Taller': taller, 'Panne': panne },
+            // Mantenemos estas métricas falsas por si el frontend las usa en otra vista
+            ta_total: 40,
+            ta_contrato: 21,
+            ta_disponible: 19,
+            ta_sc_op: { 'Taller': 11, 'Panne': 6, 'Operativo': 2 },
+            contrato_clientes: REPORT_DATA.flota.contrato_clientes,
+            disponibles_ta: REPORT_DATA.flota.disponibles_ta
+        };
+    } catch (e) {
+        console.error('Error obteniendo data de sheets', e);
+        return REPORT_DATA.flota; // Fallback
+    }
+}
+
+router.get('/api/data', async (req, res) => {
+    const realFlota = await getFlotaData();
+    const dataToSend = {
+        ...REPORT_DATA,
+        flota: realFlota
+    };
+    res.json(dataToSend);
 });
 
-// Función interna para el cron de emails (para no hacer fetch HTTP local)
-router.getReportDataInternal = () => {
-    return REPORT_DATA;
+// Función interna para el cron de emails
+router.getReportDataInternal = async () => {
+    const realFlota = await getFlotaData();
+    return {
+        ...REPORT_DATA,
+        flota: realFlota
+    };
 };
 
 module.exports = router;
