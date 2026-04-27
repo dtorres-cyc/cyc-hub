@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('timestamp').textContent = now.toLocaleString('es-CL');
 
     try {
-        const response = await fetch('/api/data');
+        const response = await fetch('/informe/api/data');
         const data = await response.json();
         
         renderFlota(data.flota);
