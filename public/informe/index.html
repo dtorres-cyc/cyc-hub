@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 </head>
 <body>
   
@@ -18,10 +19,10 @@
     <div class="logo">Transportes <span>CYC</span></div>
     <nav class="nav-links">
       <a href="/" class="nav-item">🏠 Portal Hub</a>
-      <a href="#flota" class="nav-item active">🚛 Estado Arriendo</a>
-      <a href="#crm" class="nav-item">📊 Pipeline CRM</a>
+      <a href="#" class="nav-item active" onclick="switchTab('tab-flota', this)">🚛 Estado Arriendo</a>
+      <a href="#" class="nav-item" onclick="switchTab('tab-crm', this)">📊 Pipeline CRM</a>
       <a href="#comercial" class="nav-item">🎯 Área Comercial</a>
-      <a href="#facturacion" class="nav-item">💳 Facturación</a>
+      <a href="#" class="nav-item" onclick="switchTab('tab-facturacion', this)">💳 Facturación</a>
     </nav>
     <div class="user-info">
       <p class="role">Gerencia Comercial</p>
@@ -44,41 +45,132 @@
     <div class="content-wrapper">
       
       <!-- Seccion Flota -->
-      <section id="flota" class="section-block">
-        <h2 class="section-title">🚛 Estado Arriendo - Flota General</h2>
-        
-        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-          <div class="kpi-card card-dark">
-            <span class="kpi-label">Total Arrendados</span>
-            <span class="kpi-value" id="kpi-arrendados-total">--</span>
+      <section id="tab-flota" class="tab-content" style="display: block;">
+        <div class="section-block">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+            <h2 class="section-title" style="margin-bottom:0;">🚛 Estado Arriendo - Flota General</h2>
+            <div class="filter-bar" style="display:flex; gap:10px;">
+              <input type="text" id="filter-id" placeholder="Buscar ID o Patente..." style="padding:8px; border-radius:5px; border:1px solid #ccc; font-family:Inter;">
+              <select id="filter-tipo" style="padding:8px; border-radius:5px; border:1px solid #ccc; font-family:Inter;">
+                <option value="">Todos los Tipos</option>
+              </select>
+              <select id="filter-propietario" style="padding:8px; border-radius:5px; border:1px solid #ccc; font-family:Inter;">
+                <option value="">Cualquier Dueño</option>
+                <option value="cyc">Solo Flota Propia (CYC)</option>
+              </select>
+              <button onclick="applyFilters()" style="padding:8px 15px; background:var(--c-primary); color:white; border:none; border-radius:5px; cursor:pointer;">Filtrar</button>
+            </div>
           </div>
-          <div class="kpi-card card-blue">
-            <span class="kpi-label">Sin Arriendo (No Venta)</span>
-            <span class="kpi-value" id="kpi-sin-arriendo">--</span>
+          
+          <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+            <div class="kpi-card card-dark" style="background:#111;">
+              <span class="kpi-label">Total Flota CYC</span>
+              <span class="kpi-value" id="kpi-flota-cyc">--</span>
+            </div>
+            <div class="kpi-card card-dark">
+              <span class="kpi-label">Total Arrendados</span>
+              <span class="kpi-value" id="kpi-arrendados-total">--</span>
+            </div>
+            <div class="kpi-card card-blue">
+              <span class="kpi-label">Sin Arriendo (No Venta)</span>
+              <span class="kpi-value" id="kpi-sin-arriendo">--</span>
+            </div>
+            <div class="kpi-card card-dark" style="opacity:0.8;">
+              <span class="kpi-label">Arrendados Externos</span>
+              <span class="kpi-value" id="kpi-arrendados-externos">--</span>
+            </div>
+            <div class="kpi-card card-orange">
+              <span class="kpi-label">A la Venta</span>
+              <span class="kpi-value" id="kpi-venta">--</span>
+            </div>
+            <div class="kpi-card card-dark" style="opacity:0.6;">
+              <span class="kpi-label">Uso Interno</span>
+              <span class="kpi-value" id="kpi-interno">--</span>
+            </div>
+            
+            <!-- Grupo Taller -->
+            <div style="grid-column: 1 / -1; margin-top: 15px; padding-bottom: 5px; border-bottom: 2px solid #eaeaea;">
+              <h3 style="font-size:16px; color:#555; margin:0;">🛠️ Estado de Taller (Equipos sin cliente)</h3>
+            </div>
+            <div class="kpi-card card-green">
+              <span class="kpi-label">Operativos</span>
+              <span class="kpi-value" id="kpi-operativos">--</span>
+            </div>
+            <div class="kpi-card card-orange">
+              <span class="kpi-label">En Taller</span>
+              <span class="kpi-value" id="kpi-taller">--</span>
+            </div>
+            <div class="kpi-card card-red">
+              <span class="kpi-label">En Panne</span>
+              <span class="kpi-value" id="kpi-panne">--</span>
+            </div>
           </div>
-          <div class="kpi-card card-dark" style="opacity:0.8;">
-            <span class="kpi-label">Arrendados Externos</span>
-            <span class="kpi-value" id="kpi-arrendados-externos">--</span>
+        </div>
+
+        <!-- Seccion Análisis de Arriendo -->
+        <div class="section-block">
+          <h2 class="section-title">📈 Análisis de Arriendo</h2>
+          
+          <div class="charts-row">
+            <div class="chart-container">
+              <h3>Arriendo por Tipo de Equipo</h3>
+              <canvas id="chart-arriendo-tipo"></canvas>
+            </div>
+            <div class="chart-container">
+              <h3>Peso por Cliente</h3>
+              <canvas id="chart-arriendo-cliente"></canvas>
+            </div>
           </div>
-          <div class="kpi-card card-orange">
-            <span class="kpi-label">A la Venta</span>
-            <span class="kpi-value" id="kpi-venta">--</span>
+
+          <div class="kpi-grid mt-4" style="grid-template-columns: repeat(2, 1fr);">
+            <div class="kpi-card card-dark">
+              <span class="kpi-label">% Flota Arrendada Propia (Meta: 85%)</span>
+              <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:5px;">
+                <span class="kpi-value" id="kpi-meta-flota">--%</span>
+                <span id="kpi-meta-flota-text" style="font-size:14px; color:#aaa;"></span>
+              </div>
+              <div style="background:#222; border-radius:10px; height:8px; width:100%; overflow:hidden;">
+                <div id="bar-meta-flota" style="background:var(--c-primary); width:0%; height:100%; border-radius:10px; transition:width 1s;"></div>
+              </div>
+            </div>
+            
+            <div class="kpi-card card-blue">
+              <span class="kpi-label">Facturación Esperada (Meta: $180M)</span>
+              <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:5px;">
+                <span class="kpi-value" id="kpi-facturacion-esperada">--</span>
+                <span id="kpi-facturacion-porcentaje" style="font-size:14px; font-weight:bold; color:white;">--%</span>
+              </div>
+              <div style="background:rgba(0,0,0,0.2); border-radius:10px; height:8px; width:100%; overflow:hidden;">
+                <div id="bar-facturacion" style="background:white; width:0%; height:100%; border-radius:10px; transition:width 1s;"></div>
+              </div>
+            </div>
           </div>
-          <div class="kpi-card card-dark" style="opacity:0.6;">
-            <span class="kpi-label">Uso Interno</span>
-            <span class="kpi-value" id="kpi-interno">--</span>
-          </div>
-          <div class="kpi-card card-green">
-            <span class="kpi-label">Operativos</span>
-            <span class="kpi-value" id="kpi-operativos">--</span>
-          </div>
-          <div class="kpi-card card-orange">
-            <span class="kpi-label">En Taller</span>
-            <span class="kpi-value" id="kpi-taller">--</span>
-          </div>
-          <div class="kpi-card card-red">
-            <span class="kpi-label">En Panne</span>
-            <span class="kpi-value" id="kpi-panne">--</span>
+        </div>
+
+        <!-- Tabla de Equipos -->
+        <div class="section-block">
+          <h2 class="section-title">📋 Listado de Equipos (Estatus Maquinaria)</h2>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+              <thead>
+                <tr style="background-color: #f1f3f5; border-bottom: 2px solid #dee2e6;">
+                  <th style="padding: 12px 8px;">ID / Patente</th>
+                  <th style="padding: 12px 8px;">Tipo</th>
+                  <th style="padding: 12px 8px;">Ubicación</th>
+                  <th style="padding: 12px 8px;">Arrendado</th>
+                  <th style="padding: 12px 8px;">Cliente</th>
+                  <th style="padding: 12px 8px;">Dueño</th>
+                  <th style="padding: 12px 8px;">Horómetro</th>
+                  <th style="padding: 12px 8px;">Permiso Cir.</th>
+                  <th style="padding: 12px 8px;">SOAP</th>
+                  <th style="padding: 12px 8px;">Rev. Téc.</th>
+                  <th style="padding: 12px 8px;">Gases</th>
+                </tr>
+              </thead>
+              <tbody id="table-equipos-body">
+                <!-- Llenado por JS -->
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -124,57 +216,61 @@
       </section>
 
       <!-- Seccion CRM -->
-      <section id="crm" class="section-block">
-        <h2 class="section-title">📊 Pipeline CRM</h2>
-        
-        <div class="crm-grid">
-          <div class="crm-column">
-            <h3>Negociaciones Activas</h3>
-            <div id="crm-negociaciones" class="list-container"></div>
-            
-            <h3 class="mt-4">Por Enviar Cotización</h3>
-            <div id="crm-cotizar" class="list-container"></div>
-          </div>
+      <section id="tab-crm" class="tab-content" style="display: none;">
+        <div class="section-block">
+          <h2 class="section-title">📊 Pipeline CRM</h2>
           
-          <div class="crm-column">
-            <h3>Retomar (Top 3 Prioridad)</h3>
-            <div id="crm-retomar" class="list-container"></div>
+          <div class="crm-grid">
+            <div class="crm-column">
+              <h3>Negociaciones Activas</h3>
+              <div id="crm-negociaciones" class="list-container"></div>
+              
+              <h3 class="mt-4">Por Enviar Cotización</h3>
+              <div id="crm-cotizar" class="list-container"></div>
+            </div>
             
-            <div class="funnel-summary card-dark mt-4">
-              <h4>Pipeline Activo Estimado</h4>
-              <p class="pipeline-val" id="pipeline-total">--</p>
+            <div class="crm-column">
+              <h3>Retomar (Top 3 Prioridad)</h3>
+              <div id="crm-retomar" class="list-container"></div>
+              
+              <div class="funnel-summary card-dark mt-4">
+                <h4>Pipeline Activo Estimado</h4>
+                <p class="pipeline-val" id="pipeline-total">--</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       <!-- Seccion Facturacion -->
-      <section id="facturacion" class="section-block">
-        <h2 class="section-title">💳 Facturación & Cobranza</h2>
-        
-        <div class="kpi-grid">
-          <div class="kpi-card card-dark">
-            <span class="kpi-label">Facturado 2026</span>
-            <span class="kpi-value" id="fac-total">--</span>
+      <section id="tab-facturacion" class="tab-content" style="display: none;">
+        <div class="section-block">
+          <h2 class="section-title">💳 Facturación & Cobranza</h2>
+          
+          <div class="kpi-grid">
+            <div class="kpi-card card-dark">
+              <span class="kpi-label">Facturado 2026</span>
+              <span class="kpi-value" id="fac-total">--</span>
+            </div>
+            <div class="kpi-card card-blue">
+              <span class="kpi-label">Mes Actual</span>
+              <span class="kpi-value" id="fac-mes">--</span>
+            </div>
+            <div class="kpi-card card-orange">
+              <span class="kpi-label">Por Cobrar Total</span>
+              <span class="kpi-value" id="fac-porcobrar">--</span>
+            </div>
+            <div class="kpi-card card-red">
+              <span class="kpi-label">Facturas Vencidas</span>
+              <span class="kpi-value" id="fac-vencidas">--</span>
+            </div>
           </div>
-          <div class="kpi-card card-blue">
-            <span class="kpi-label">Mes Actual</span>
-            <span class="kpi-value" id="fac-mes">--</span>
-          </div>
-          <div class="kpi-card card-orange">
-            <span class="kpi-label">Por Cobrar Total</span>
-            <span class="kpi-value" id="fac-porcobrar">--</span>
-          </div>
-          <div class="kpi-card card-red">
-            <span class="kpi-label">Facturas Vencidas</span>
-            <span class="kpi-value" id="fac-vencidas">--</span>
-          </div>
-        </div>
 
-        <div class="charts-row mt-4">
-          <div class="chart-container full-width">
-            <h3>Facturación Mensual (M CLP)</h3>
-            <canvas id="chart-facturacion"></canvas>
+          <div class="charts-row mt-4">
+            <div class="chart-container full-width">
+              <h3>Facturación Mensual (M CLP)</h3>
+              <canvas id="chart-facturacion"></canvas>
+            </div>
           </div>
         </div>
       </section>
