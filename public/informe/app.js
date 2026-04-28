@@ -7,6 +7,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof ChartDataLabels !== 'undefined') {
         Chart.register(ChartDataLabels);
     }
+    
+    // Configuración global de colores para ChartJS modo oscuro
+    Chart.defaults.color = '#a1a1aa';
+    Chart.defaults.borderColor = '#27272a';
 
     const now = new Date();
     document.getElementById('timestamp').textContent = now.toLocaleString('es-CL');
@@ -117,17 +121,17 @@ function updateDocumentAlerts(equipos) {
     document.getElementById('kpi-doc-porvencer').textContent = porVencerCount;
 
     document.getElementById('vencidos-content').innerHTML = `
-        <h5 style="margin-top:5px; color:#555;">Equipos con Contrato</h5>
-        <ul style="margin-bottom:15px; padding-left:20px; font-size:13px;">${vencidos_contrato.join('') || '<li style="color:#aaa;">Ninguno</li>'}</ul>
-        <h5 style="color:#555;">Equipos sin Contrato</h5>
-        <ul style="padding-left:20px; font-size:13px; margin-bottom:5px;">${vencidos_sin.join('') || '<li style="color:#aaa;">Ninguno</li>'}</ul>
+        <h5 style="margin-top:5px; color:var(--text-main);">Equipos con Contrato</h5>
+        <ul style="margin-bottom:15px; padding-left:20px; font-size:13px; color:var(--text-main);">${vencidos_contrato.join('') || '<li style="color:var(--text-muted);">Ninguno</li>'}</ul>
+        <h5 style="color:var(--text-main);">Equipos sin Contrato</h5>
+        <ul style="padding-left:20px; font-size:13px; margin-bottom:5px; color:var(--text-main);">${vencidos_sin.join('') || '<li style="color:var(--text-muted);">Ninguno</li>'}</ul>
     `;
     
     document.getElementById('porvencer-content').innerHTML = `
-        <h5 style="margin-top:5px; color:#555;">Equipos con Contrato</h5>
-        <ul style="margin-bottom:15px; padding-left:20px; font-size:13px;">${porVencer_contrato.join('') || '<li style="color:#aaa;">Ninguno</li>'}</ul>
-        <h5 style="color:#555;">Equipos sin Contrato</h5>
-        <ul style="padding-left:20px; font-size:13px; margin-bottom:5px;">${porVencer_sin.join('') || '<li style="color:#aaa;">Ninguno</li>'}</ul>
+        <h5 style="margin-top:5px; color:var(--text-main);">Equipos con Contrato</h5>
+        <ul style="margin-bottom:15px; padding-left:20px; font-size:13px; color:var(--text-main);">${porVencer_contrato.join('') || '<li style="color:var(--text-muted);">Ninguno</li>'}</ul>
+        <h5 style="color:var(--text-main);">Equipos sin Contrato</h5>
+        <ul style="padding-left:20px; font-size:13px; margin-bottom:5px; color:var(--text-main);">${porVencer_sin.join('') || '<li style="color:var(--text-muted);">Ninguno</li>'}</ul>
     `;
 }
 
@@ -205,7 +209,7 @@ function renderAnalisisGraficos(arriendo_por_tipo, peso_por_cliente) {
             labels: Object.keys(arriendo_por_tipo),
             datasets: [{
                 data: Object.values(arriendo_por_tipo),
-                backgroundColor: ['#1a3a5c', '#2563a8', '#3498db', '#1abc9c', '#27ae60', '#f39c12', '#e67e22', '#9b59b6', '#bdc3c7'],
+                backgroundColor: ['#3b82f6', '#f97316', '#22c55e', '#ef4444', '#a855f7', '#eab308', '#ec4899', '#06b6d4', '#64748b'],
                 borderWidth: 0
             }]
         },
@@ -246,7 +250,7 @@ function renderAnalisisGraficos(arriendo_por_tipo, peso_por_cliente) {
     });
 
     // Barras apiladas por Tipo
-    const chartColors = ['#1a3a5c', '#7f8c8d', '#9ca3af', '#4b5563', '#d1d5db', '#111827', '#374151'];
+    const chartColors = ['#3b82f6', '#f97316', '#22c55e', '#ef4444', '#a855f7', '#eab308', '#64748b'];
     allTipos.forEach((tipo, idx) => {
         datasets.push({
             type: 'bar',
@@ -324,8 +328,8 @@ function checkDateAlarm(dateStr) {
     const d = parseDate(dateStr);
     if (!d) return '';
     const diffDays = (d - new Date()) / (1000 * 60 * 60 * 24);
-    if (diffDays < 0) return 'background-color: #f8d7da; color: #721c24; font-weight:bold;'; // Vencido
-    if (diffDays <= 30) return 'background-color: #fff3cd; color: #856404; font-weight:bold;'; // Por vencer
+    if (diffDays < 0) return 'background-color: rgba(239, 68, 68, 0.15); color: #fca5a5; font-weight:bold;'; // Vencido
+    if (diffDays <= 30) return 'background-color: rgba(249, 115, 22, 0.15); color: #fdba74; font-weight:bold;'; // Por vencer
     return '';
 }
 
@@ -347,7 +351,7 @@ function renderTabla(equipos) {
             <td style="padding:10px 8px;">${e.tipo}</td>
             <td style="padding:10px 8px;">${e.ubicacion}</td>
             <td style="padding:10px 8px;">
-                <span style="padding:2px 6px; border-radius:4px; font-size:11px; background:${safeLower(e.arrendado)==='contrato'?'#d4edda':'#f8d7da'}">
+                <span style="padding:2px 6px; border-radius:4px; font-size:11px; background:${safeLower(e.arrendado)==='contrato'?'rgba(34, 197, 94, 0.2)':'rgba(239, 68, 68, 0.2)'}; color:${safeLower(e.arrendado)==='contrato'?'#86efac':'#fca5a5'}">
                     ${e.arrendado}
                 </span>
             </td>

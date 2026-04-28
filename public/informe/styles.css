@@ -1,26 +1,26 @@
 :root {
-  --bg-sidebar: #0f172a;
-  --bg-main: #f8fafc;
-  --bg-card: #ffffff;
+  --bg-sidebar: #0f0f11;
+  --bg-main: #121212;
+  --bg-card: #1e1e1e;
   
-  --text-sidebar: #94a3b8;
+  --text-sidebar: #a1a1aa;
   --text-sidewhite: #f8fafc;
-  --text-main: #1e293b;
-  --text-muted: #64748b;
+  --text-main: #f4f4f5;
+  --text-muted: #a1a1aa;
   
   /* Brand Palette from CyC */
-  --c-primary: #1a3a5c;
+  --c-primary: #3b82f6; /* Azul */
   --c-secondary: #2563a8;
-  --c-green: #27ae60;
-  --c-orange: #f39c12;
-  --c-red: #e74c3c;
-  --c-gray: #7f8c8d;
-  --c-black: #2c3e50;
+  --c-green: #22c55e;
+  --c-orange: #f97316; /* Naranjo */
+  --c-red: #ef4444;
+  --c-gray: #3f3f46;
+  --c-black: #27272a;
   
-  --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
-  --shadow-md: 0 8px 20px rgba(0,0,0,0.04);
+  --shadow-sm: 0 4px 6px rgba(0,0,0,0.3);
+  --shadow-md: 0 10px 15px rgba(0,0,0,0.5);
   --radius: 16px;
-  --border: #e2e8f0;
+  --border: #27272a;
 }
 
 * {
@@ -30,7 +30,7 @@
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   background-color: var(--bg-main);
   color: var(--text-main);
   display: flex;
@@ -143,7 +143,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text-muted);
-  font-weight: 700;
+  font-weight: 800;
   margin-bottom: 20px;
   border-bottom: 2px solid var(--border);
   padding-bottom: 8px;
@@ -195,12 +195,12 @@ body {
   font-weight: 800;
   color: var(--text-main);
 }
-.card-dark .kpi-value { color: var(--c-black); }
+.card-dark .kpi-value { color: var(--text-main); }
 .card-green .kpi-value { color: var(--c-green); }
 .card-orange .kpi-value { color: var(--c-orange); }
 .card-red .kpi-value { color: var(--c-red); }
-.card-blue .kpi-value { color: var(--c-secondary); }
-.card-gray .kpi-value { color: var(--c-gray); }
+.card-blue .kpi-value { color: var(--c-primary); }
+.card-gray .kpi-value { color: var(--text-main); }
 
 /* Charts */
 .charts-row {
