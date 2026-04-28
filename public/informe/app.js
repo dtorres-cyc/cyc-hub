@@ -106,7 +106,13 @@ function showEquiposDetails(cat) {
             '</ul>';
     }
     
+    document.getElementById('kpi-modal-backdrop').style.display = 'block';
     container.style.display = 'block';
+}
+
+function closeModal() {
+    document.getElementById('kpi-details-container').style.display = 'none';
+    document.getElementById('kpi-modal-backdrop').style.display = 'none';
 }
 
 function updateDocumentAlerts(equipos) {
