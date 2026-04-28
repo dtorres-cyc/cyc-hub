@@ -11,12 +11,22 @@ const REPORT_DATA = {
             'Tractocamion': 2, 'Camioneta': 2,
             'Semiremolque': 2, 'Otros': 2
         },
-        arrendado: { 'Contrato': 21, 'Disponible': 33, 'Uso interno': 3 },
-        operatividad: { 'Operativo': 31, 'Taller': 14, 'Panne': 12 },
-        ta_total: 40,
-        ta_contrato: 21,
-        ta_disponible: 19,
-        ta_sc_op: { 'Taller': 11, 'Panne': 6, 'Operativo': 2 },
+        estado_arriendo: {
+            total_arrendados: 21,
+            sin_arriendo_no_venta: 33,
+            arrendados_externos: 5,
+            a_la_venta: 2,
+            uso_interno: 3,
+            operativos: 31,
+            taller: 14,
+            panne: 12
+        },
+        analisis: {
+            arriendo_por_tipo: {'Tolva': 15, 'Aljibe': 6},
+            peso_por_cliente: {'JCC': 6, 'Terracop': 4},
+            total_propios: 50,
+            arrendada_propia: 16
+        },
         contrato_clientes: {
             'JCC': 6, 'Terracop': 4, 'Laguna Verde': 3,
             'Go Rental': 3, 'GoDiesel': 2, 'MAQSA': 2, 'Doers': 1
