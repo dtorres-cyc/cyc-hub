@@ -1,6 +1,8 @@
 let globalEquipos = [];
+let globalFacturas = [];
 let chartTipo = null;
 let chartCliente = null;
+let chartFacturacion = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Activar ChartDataLabels
@@ -26,7 +28,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         renderCRM(data.crm);
-        renderFacturacion(data.facturacion);
+        
+        if (data.facturacion && data.facturacion.facturas) {
+            globalFacturas = data.facturacion.facturas;
+            populateFacFilters(globalFacturas);
+            applyFacFilters();
+        }
     } catch (e) {
         console.error('Error fetching data', e);
     }
@@ -471,21 +478,118 @@ function renderCRM(crm) {
     document.getElementById('pipeline-total').textContent = formatterM(totalPipeline);
 }
 
-function renderFacturacion(fac) {
-    if(!fac) return;
-    document.getElementById('fac-total').textContent = formatterM(fac.total_2026);
-    document.getElementById('fac-mes').textContent = formatterM(fac.mes_act_2026);
-    document.getElementById('fac-porcobrar').textContent = formatterM(fac.nopag_total);
-    document.getElementById('fac-vencidas').textContent = fac.venc_count;
+function populateFacFilters(facturas) {
+    const meses = [...new Set(facturas.map(f => f.mes_txt).filter(m => m))];
+    const tipos = [...new Set(facturas.map(f => f.tipo).filter(t => t))].sort();
 
+    const selectMes = document.getElementById('fac-filter-mes');
+    meses.forEach(m => {
+        const option = document.createElement('option');
+        option.value = m;
+        option.textContent = m.charAt(0).toUpperCase() + m.slice(1);
+        selectMes.appendChild(option);
+    });
+
+    const selectTipo = document.getElementById('fac-filter-tipo');
+    tipos.forEach(t => {
+        const option = document.createElement('option');
+        option.value = t;
+        option.textContent = t;
+        selectTipo.appendChild(option);
+    });
+}
+
+function applyFacFilters() {
+    const mes = document.getElementById('fac-filter-mes').value.toLowerCase();
+    const tipo = document.getElementById('fac-filter-tipo').value.toLowerCase();
+    const cliente = document.getElementById('fac-filter-cliente').value.toLowerCase();
+
+    let filtered = globalFacturas;
+    if (mes) filtered = filtered.filter(f => safeLower(f.mes_txt) === mes);
+    if (tipo) filtered = filtered.filter(f => safeLower(f.tipo) === tipo);
+    if (cliente) filtered = filtered.filter(f => safeLower(f.cliente).includes(cliente));
+
+    calculateFacKPIs(filtered);
+}
+
+function calculateFacKPIs(facturas) {
+    let total_2026 = 0, total_2025 = 0, mes_act_2026 = 0, nopag_total = 0;
+    let venc_count = 0, pv_count = 0, incobrables_count = 0;
+    let mensual_2025 = new Array(12).fill(0);
+    let mensual_2026 = new Array(12).fill(0);
+
+    const currentMonth = new Date().getMonth() + 1;
+    
+    // Arrays para modales
+    window.facLists = {
+        vencidas: [],
+        porvencer: [],
+        incobrables: [],
+        vencidas_seg: {}
+    };
+
+    facturas.forEach(f => {
+        const netoM = f.neto / 1000000;
+        const saldoM = f.saldo / 1000000;
+
+        if (f.anio_emi === 2025) {
+            total_2025 += netoM;
+            if (f.mes_emi >= 1 && f.mes_emi <= 12) mensual_2025[f.mes_emi - 1] += netoM;
+        } else if (f.anio_emi === 2026) {
+            total_2026 += netoM;
+            if (f.mes_emi >= 1 && f.mes_emi <= 12) mensual_2026[f.mes_emi - 1] += netoM;
+            if (f.mes_emi === currentMonth) mes_act_2026 += netoM;
+        }
+
+        if (f.estado !== 'pagado') {
+            nopag_total += saldoM;
+        }
+
+        const facStr = `Factura N°${f.id} - ${f.cliente} - $${formatterM(saldoM)}`;
+        const facItem = { facStr, f };
+
+        if (f.alerta === 'vencida') {
+            venc_count++;
+            window.facLists.vencidas.push(facItem);
+            
+            if (!window.facLists.vencidas_seg[f.tipo]) {
+                window.facLists.vencidas_seg[f.tipo] = [];
+            }
+            window.facLists.vencidas_seg[f.tipo].push(facItem);
+        } else if (f.alerta === 'por vencer' || f.alerta === '0-30') {
+            pv_count++;
+            window.facLists.porvencer.push(facItem);
+        }
+        
+        if (f.dias_vencida > 120 && f.estado !== 'pagado') {
+            incobrables_count++;
+            window.facLists.incobrables.push(facItem);
+        }
+    });
+
+    document.getElementById('fac-total').textContent = formatterM(total_2026);
+    document.getElementById('fac-mes').textContent = formatterM(mes_act_2026);
+    document.getElementById('fac-porcobrar').textContent = formatterM(nopag_total);
+    document.getElementById('fac-vencidas').textContent = venc_count;
+    document.getElementById('fac-porvencer').textContent = pv_count;
+    document.getElementById('fac-incobrables').textContent = incobrables_count;
+    
+    // Generar string para segmento
+    let segHtml = Object.keys(window.facLists.vencidas_seg).map(t => {
+        return `<div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span>${t}</span> <strong>${window.facLists.vencidas_seg[t].length}</strong></div>`;
+    }).join('');
+    if(!segHtml) segHtml = "0";
+    document.getElementById('fac-vencidas-seg-list').innerHTML = segHtml;
+
+    if (chartFacturacion) chartFacturacion.destroy();
     const ctxFac = document.getElementById('chart-facturacion').getContext('2d');
-    new Chart(ctxFac, {
+    chartFacturacion = new Chart(ctxFac, {
         type: 'bar',
         data: {
-            labels: fac.meses_label,
+            labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
             datasets: [
-                { label: '2025', data: fac.mensual_2025, backgroundColor: '#bdc3c7', borderRadius: 4 },
-                { label: '2026', data: fac.mensual_2026, backgroundColor: '#2563a8', borderRadius: 4 }
+                { label: '2025', data: mensual_2025.map(n => Math.round(n*10)/10), backgroundColor: '#bdc3c7', borderRadius: 4 },
+                { label: '2026', data: mensual_2026.map(n => Math.round(n*10)/10), backgroundColor: '#2563a8', borderRadius: 4 }
             ]
         },
         options: {
@@ -494,6 +598,46 @@ function renderFacturacion(fac) {
             scales: { y: { beginAtZero: true } }
         }
     });
+}
+
+function showFacDetails(tipoLista) {
+    const list = window.facLists[tipoLista];
+    let items = [];
+    let titulo = "Detalle de Facturas";
+    
+    if (tipoLista === 'vencidas') {
+        titulo = "Facturas Vencidas";
+        items = list;
+    } else if (tipoLista === 'porvencer') {
+        titulo = "Facturas por Vencer";
+        items = list;
+    } else if (tipoLista === 'incobrables') {
+        titulo = "Facturas Incobrables (> 120 días)";
+        items = list;
+    } else if (tipoLista === 'vencidas_seg') {
+        titulo = "Facturas Vencidas por Segmento";
+        // Convert object values to flat array
+        Object.keys(list).forEach(tipo => {
+            list[tipo].forEach(item => {
+                items.push({
+                    facStr: `[${tipo}] ${item.facStr}`,
+                    f: item.f
+                });
+            });
+        });
+    }
+
+    if (!items || items.length === 0) return;
+
+    document.getElementById('kpi-details-title').textContent = titulo;
+    const content = document.getElementById('kpi-details-content');
+    
+    content.innerHTML = '<ul style="padding-left:20px; font-size:13px; color:var(--text-main); margin:0;">' + 
+        items.map(item => `<li style="margin-bottom:4px;">${item.facStr} <span style="color:#aaa; font-size:11px;">(Días v.: ${item.f.dias_vencida})</span></li>`).join('') + 
+        '</ul>';
+    
+    document.getElementById('kpi-modal-backdrop').style.display = 'block';
+    document.getElementById('kpi-details-container').style.display = 'block';
 }
 
 let sortDirections = [];

@@ -238,10 +238,21 @@
         </div>
       </section>
 
-      <!-- Seccion Facturacion -->
       <section id="tab-facturacion" class="tab-content" style="display: none;">
         <div class="section-block">
-          <h2 class="section-title">💳 Facturación & Cobranza</h2>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+            <h2 class="section-title" style="margin-bottom:0;">💳 Facturación & Cobranza</h2>
+            <div class="filter-bar" style="display:flex; gap:10px;">
+              <select id="fac-filter-mes" style="padding:8px; border-radius:5px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main);">
+                <option value="">Todos los Meses</option>
+              </select>
+              <select id="fac-filter-tipo" style="padding:8px; border-radius:5px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main);">
+                <option value="">Todos los Tipos</option>
+              </select>
+              <input type="text" id="fac-filter-cliente" placeholder="Buscar Cliente..." style="padding:8px; border-radius:5px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main);">
+              <button onclick="applyFacFilters()" style="padding:8px 15px; background:var(--c-primary); color:white; border:none; border-radius:5px; cursor:pointer;">Filtrar</button>
+            </div>
+          </div>
           
           <div class="kpi-grid">
             <div class="kpi-card card-dark">
@@ -256,9 +267,25 @@
               <span class="kpi-label">Por Cobrar Total</span>
               <span class="kpi-value" id="fac-porcobrar">--</span>
             </div>
-            <div class="kpi-card card-red">
-              <span class="kpi-label">Facturas Vencidas</span>
+            <div class="kpi-card card-red" style="cursor:pointer;" onclick="showFacDetails('vencidas')">
+              <span class="kpi-label">Total Vencidas</span>
               <span class="kpi-value" id="fac-vencidas">--</span>
+            </div>
+          </div>
+
+          <!-- Nuevos recuadros solicitados -->
+          <div class="kpi-grid" style="margin-top:20px; grid-template-columns: repeat(3, 1fr);">
+            <div class="kpi-card card-red" style="cursor:pointer;" onclick="showFacDetails('vencidas_seg')">
+              <span class="kpi-label" style="margin-bottom:10px; display:block;">Vencidas por Segmento (N°)</span>
+              <div id="fac-vencidas-seg-list" style="font-size:13px; color:var(--text-main);">--</div>
+            </div>
+            <div class="kpi-card card-orange" style="cursor:pointer;" onclick="showFacDetails('porvencer')">
+              <span class="kpi-label">Por Vencer (0-30 días)</span>
+              <span class="kpi-value" id="fac-porvencer">--</span>
+            </div>
+            <div class="kpi-card card-gray" style="cursor:pointer;" onclick="showFacDetails('incobrables')">
+              <span class="kpi-label">Incobrables (> 120 días)</span>
+              <span class="kpi-value" id="fac-incobrables">--</span>
             </div>
           </div>
 
