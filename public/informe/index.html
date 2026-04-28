@@ -47,18 +47,26 @@
       <section id="flota" class="section-block">
         <h2 class="section-title">🚛 Estado Arriendo - Flota General</h2>
         
-        <div class="kpi-grid">
+        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
           <div class="kpi-card card-dark">
-            <span class="kpi-label">Total Flota</span>
-            <span class="kpi-value" id="kpi-total-flota">--</span>
+            <span class="kpi-label">Total Arrendados</span>
+            <span class="kpi-value" id="kpi-arrendados-total">--</span>
           </div>
-          <div class="kpi-card card-green">
-            <span class="kpi-label">En Contrato</span>
-            <span class="kpi-value" id="kpi-en-contrato">--</span>
+          <div class="kpi-card card-blue">
+            <span class="kpi-label">Sin Arriendo (No Venta)</span>
+            <span class="kpi-value" id="kpi-sin-arriendo">--</span>
+          </div>
+          <div class="kpi-card card-dark" style="opacity:0.8;">
+            <span class="kpi-label">Arrendados Externos</span>
+            <span class="kpi-value" id="kpi-arrendados-externos">--</span>
           </div>
           <div class="kpi-card card-orange">
-            <span class="kpi-label">Disponibles</span>
-            <span class="kpi-value" id="kpi-disponibles">--</span>
+            <span class="kpi-label">A la Venta</span>
+            <span class="kpi-value" id="kpi-venta">--</span>
+          </div>
+          <div class="kpi-card card-dark" style="opacity:0.6;">
+            <span class="kpi-label">Uso Interno</span>
+            <span class="kpi-value" id="kpi-interno">--</span>
           </div>
           <div class="kpi-card card-green">
             <span class="kpi-label">Operativos</span>
@@ -73,15 +81,44 @@
             <span class="kpi-value" id="kpi-panne">--</span>
           </div>
         </div>
+      </section>
 
+      <!-- Seccion Análisis de Arriendo -->
+      <section id="analisis-arriendo" class="section-block">
+        <h2 class="section-title">📈 Análisis de Arriendo</h2>
+        
         <div class="charts-row">
           <div class="chart-container">
-            <h3>Composición Flota</h3>
-            <canvas id="chart-flota-tipo"></canvas>
+            <h3>Arriendo por Tipo de Equipo</h3>
+            <canvas id="chart-arriendo-tipo"></canvas>
           </div>
           <div class="chart-container">
-            <h3>Operatividad Total</h3>
-            <canvas id="chart-flota-op"></canvas>
+            <h3>Peso por Cliente</h3>
+            <canvas id="chart-arriendo-cliente"></canvas>
+          </div>
+        </div>
+
+        <div class="kpi-grid mt-4" style="grid-template-columns: repeat(2, 1fr);">
+          <div class="kpi-card card-dark">
+            <span class="kpi-label">% Flota Arrendada Propia (Meta: 85%)</span>
+            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:5px;">
+              <span class="kpi-value" id="kpi-meta-flota">--%</span>
+              <span id="kpi-meta-flota-text" style="font-size:14px; color:#aaa;"></span>
+            </div>
+            <div style="background:#222; border-radius:10px; height:8px; width:100%; overflow:hidden;">
+              <div id="bar-meta-flota" style="background:var(--c-primary); width:0%; height:100%; border-radius:10px; transition:width 1s;"></div>
+            </div>
+          </div>
+          
+          <div class="kpi-card card-blue">
+            <span class="kpi-label">Facturación Esperada (Meta: $180M)</span>
+            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:5px;">
+              <span class="kpi-value" id="kpi-facturacion-esperada">--</span>
+              <span id="kpi-facturacion-porcentaje" style="font-size:14px; font-weight:bold; color:white;">--%</span>
+            </div>
+            <div style="background:rgba(0,0,0,0.2); border-radius:10px; height:8px; width:100%; overflow:hidden;">
+              <div id="bar-facturacion" style="background:white; width:0%; height:100%; border-radius:10px; transition:width 1s;"></div>
+            </div>
           </div>
         </div>
       </section>

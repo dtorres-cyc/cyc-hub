@@ -99,33 +99,54 @@ async function getFlotaData() {
         const rows = data.slice(1).filter(r => r[0] && r[0].trim() !== '');
         
         let total = rows.length;
-        let contrato = 0;
-        let disponible = 0;
-        let usoInterno = 0;
-        let operativo = 0;
+        let total_arrendados = 0;
+        let sin_arriendo_no_venta = 0;
+        let arrendados_externos = 0;
+        let a_la_venta = 0;
+        let uso_interno = 0;
+        let operativos = 0;
         let taller = 0;
         let panne = 0;
         
         let por_tipo = {};
+        let arriendo_por_tipo = {};
+        let peso_por_cliente = {};
+        let total_propios = 0;
+        let arrendada_propia = 0;
 
         for (const row of rows) {
             const tipoMaquina = (row[3] || 'Otros').trim();
             const arrendado = safeLower(row[14] || '');
             const cliente = safeLower(row[15] || '');
+            const propietario = safeLower(row[16] || '');
             const estadoOp = safeLower(row[17] || '');
 
-            // Agrupar por tipo
             const tipoKey = tipoMaquina !== '' ? tipoMaquina : 'Otros';
             por_tipo[tipoKey] = (por_tipo[tipoKey] || 0) + 1;
 
-            // Arrendado
-            if (arrendado === 'contrato') contrato++;
-            if (arrendado === 'disponible' && cliente !== 'venta') disponible++;
-            if (arrendado.includes('interno')) usoInterno++;
+            const esCyc = propietario.includes('cyc');
+            if (esCyc) total_propios++;
+
+            // Arrendados
+            if (arrendado === 'contrato') {
+                total_arrendados++;
+                if (!esCyc) arrendados_externos++;
+                if (esCyc) arrendada_propia++;
+                
+                // Agrupaciones para análisis de arriendo
+                arriendo_por_tipo[tipoKey] = (arriendo_por_tipo[tipoKey] || 0) + 1;
+                const clientKey = cliente || 'Desconocido';
+                peso_por_cliente[clientKey] = (peso_por_cliente[clientKey] || 0) + 1;
+            }
+
+            // Disponibles y venta
+            if (arrendado === 'disponible' && cliente !== 'venta') sin_arriendo_no_venta++;
+            if (cliente === 'venta' || arrendado === 'venta') a_la_venta++;
+            if (arrendado.includes('interno')) uso_interno++;
 
             // Operatividad
             if (cliente === 'sin cliente') {
-                if (estadoOp === 'operativo') operativo++;
+                if (estadoOp === 'operativo') operativos++;
                 if (estadoOp === 'taller') taller++;
                 if (estadoOp === 'panne') panne++;
             }
@@ -134,9 +155,25 @@ async function getFlotaData() {
         return {
             total,
             por_tipo,
-            arrendado: { 'Contrato': contrato, 'Disponible': disponible, 'Uso interno': usoInterno },
-            operatividad: { 'Operativo': operativo, 'Taller': taller, 'Panne': panne },
-            // Mantenemos estas métricas falsas por si el frontend las usa en otra vista
+            estado_arriendo: {
+                total_arrendados,
+                sin_arriendo_no_venta,
+                arrendados_externos,
+                a_la_venta,
+                uso_interno,
+                operativos,
+                taller,
+                panne
+            },
+            analisis: {
+                arriendo_por_tipo,
+                peso_por_cliente,
+                total_propios,
+                arrendada_propia
+            },
+            // Mantenemos estas métricas falsas por si el frontend antiguo las necesita
+            arrendado: { 'Contrato': total_arrendados, 'Disponible': sin_arriendo_no_venta, 'Uso interno': uso_interno },
+            operatividad: { 'Operativo': operativos, 'Taller': taller, 'Panne': panne },
             ta_total: 40,
             ta_contrato: 21,
             ta_disponible: 19,

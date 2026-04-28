@@ -20,51 +20,93 @@ function formatterM(val) {
 }
 
 function renderFlota(flota) {
-    document.getElementById('kpi-total-flota').textContent = flota.total;
-    document.getElementById('kpi-en-contrato').textContent = flota.arrendado['Contrato'];
-    document.getElementById('kpi-disponibles').textContent = flota.arrendado['Disponible'];
+    const estado = flota.estado_arriendo || {};
     
-    document.getElementById('kpi-operativos').textContent = flota.operatividad['Operativo'];
-    document.getElementById('kpi-taller').textContent = flota.operatividad['Taller'];
-    document.getElementById('kpi-panne').textContent = flota.operatividad['Panne'];
+    document.getElementById('kpi-arrendados-total').textContent = estado.total_arrendados || 0;
+    document.getElementById('kpi-sin-arriendo').textContent = estado.sin_arriendo_no_venta || 0;
+    document.getElementById('kpi-arrendados-externos').textContent = estado.arrendados_externos || 0;
+    document.getElementById('kpi-venta').textContent = estado.a_la_venta || 0;
+    document.getElementById('kpi-interno').textContent = estado.uso_interno || 0;
+    
+    document.getElementById('kpi-operativos').textContent = estado.operativos || 0;
+    document.getElementById('kpi-taller').textContent = estado.taller || 0;
+    document.getElementById('kpi-panne').textContent = estado.panne || 0;
 
-    // Charts
-    const ctxTipo = document.getElementById('chart-flota-tipo').getContext('2d');
+    renderAnalisisArriendo(flota.analisis || {}, estado.total_arrendados || 0);
+}
+
+function renderAnalisisArriendo(analisis, totalArrendados) {
+    // Gráfico: Arriendo por Tipo
+    const ctxTipo = document.getElementById('chart-arriendo-tipo').getContext('2d');
     new Chart(ctxTipo, {
-        type: 'doughnut',
+        type: 'pie',
         data: {
-            labels: Object.keys(flota.por_tipo),
+            labels: Object.keys(analisis.arriendo_por_tipo || {}),
             datasets: [{
-                data: Object.values(flota.por_tipo),
+                data: Object.values(analisis.arriendo_por_tipo || {}),
                 backgroundColor: ['#1a3a5c', '#2563a8', '#3498db', '#1abc9c', '#27ae60', '#f39c12', '#e67e22', '#9b59b6', '#bdc3c7'],
                 borderWidth: 0
             }]
         },
         options: {
             responsive: true,
-            plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: {size: 11} } } },
-            cutout: '65%'
+            plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: {size: 11} } } }
         }
     });
 
-    const ctxOp = document.getElementById('chart-flota-op').getContext('2d');
-    new Chart(ctxOp, {
+    // Gráfico: Peso por Cliente
+    const ctxCliente = document.getElementById('chart-arriendo-cliente').getContext('2d');
+    const sortedClientes = Object.entries(analisis.peso_por_cliente || {})
+        .sort((a, b) => b[1] - a[1]); // Ordenar mayor a menor
+        
+    new Chart(ctxCliente, {
         type: 'bar',
         data: {
-            labels: Object.keys(flota.operatividad),
+            labels: sortedClientes.map(item => item[0]),
             datasets: [{
                 label: 'Equipos',
-                data: Object.values(flota.operatividad),
-                backgroundColor: ['#27ae60', '#f39c12', '#e74c3c'],
+                data: sortedClientes.map(item => item[1]),
+                backgroundColor: '#2563a8',
                 borderRadius: 4
             }]
         },
         options: {
+            indexAxis: 'y', // Barras horizontales
             responsive: true,
             plugins: { legend: {display: false} },
-            scales: { y: { beginAtZero: true } }
+            scales: { x: { beginAtZero: true } }
         }
     });
+
+    // Metas y Barras de Progreso
+    // 1. % Flota Arrendada Propia
+    const metaFlota = 85;
+    const propiosTotales = analisis.total_propios || 1; // Evitar division por cero
+    const arrendadaPropia = analisis.arrendada_propia || 0;
+    const porcentajePropia = Math.round((arrendadaPropia / propiosTotales) * 100);
+    
+    document.getElementById('kpi-meta-flota').textContent = `${porcentajePropia}%`;
+    document.getElementById('kpi-meta-flota-text').textContent = `(${arrendadaPropia} de ${propiosTotales} equipos)`;
+    
+    const barFlota = document.getElementById('bar-meta-flota');
+    barFlota.style.width = `${Math.min(porcentajePropia, 100)}%`;
+    if (porcentajePropia >= metaFlota) barFlota.style.background = '#27ae60'; // Verde si cumple
+    else if (porcentajePropia >= 60) barFlota.style.background = '#f39c12'; // Naranja
+    else barFlota.style.background = '#e74c3c'; // Rojo
+    
+    // 2. Facturación Esperada
+    const metaFacturacion = 180000000;
+    const tarifaEstimada = 6200000;
+    const facturacionActual = totalArrendados * tarifaEstimada;
+    const porcentajeFact = Math.round((facturacionActual / metaFacturacion) * 100);
+    
+    document.getElementById('kpi-facturacion-esperada').textContent = formatterM(facturacionActual / 1000000); // formatterM usa formato de millones
+    document.getElementById('kpi-facturacion-porcentaje').textContent = `${porcentajeFact}%`;
+    
+    const barFact = document.getElementById('bar-facturacion');
+    barFact.style.width = `${Math.min(porcentajeFact, 100)}%`;
+    if (porcentajeFact >= 100) barFact.style.background = '#27ae60';
+    else if (porcentajeFact >= 75) barFact.style.background = '#f39c12';
 }
 
 function renderCRM(crm) {
