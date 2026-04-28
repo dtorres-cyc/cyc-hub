@@ -152,11 +152,93 @@ async function getFlotaData() {
     }
 }
 
+async function getFacturacionData() {
+    try {
+        const SHEET_FACT_ID = '1C_bqGiH_oMtSB2dhw4AAzDMSrtcSPi7deUqnBwor5AE';
+        const data = await getSheetData(SHEET_FACT_ID, "'BBDD Facturas Venta'!A:Z");
+        if (!data || data.length < 2) return REPORT_DATA.facturacion;
+
+        const rows = data.slice(1).filter(r => r[0] && r[0].trim() !== '');
+        
+        let total_2026 = 0;
+        let total_2025 = 0;
+        let mes_act_2026 = 0;
+        let nopag_total = 0;
+        let venc_count = 0;
+        let pv_count = 0;
+        
+        let mensual_2025 = new Array(12).fill(0);
+        let mensual_2026 = new Array(12).fill(0);
+
+        const currentMonth = new Date().getMonth() + 1; // 1-12
+
+        rows.forEach(row => {
+            const netoStr = (row[7] || '0').replace(/\./g, '').replace(/,/g, '.');
+            const neto = parseFloat(netoStr) || 0;
+            const netoM = neto / 1000000;
+
+            const saldoStr = (row[11] || '0').replace(/\./g, '').replace(/,/g, '.');
+            const saldo = parseFloat(saldoStr) || 0;
+            
+            const estado = safeLower(row[13]);
+            const alerta = safeLower(row[14]);
+            
+            const mesEmi = parseInt(row[18]) || 0;
+            const anioEmi = parseInt(row[19]) || 0;
+
+            if (anioEmi === 2025) {
+                total_2025 += netoM;
+                if (mesEmi >= 1 && mesEmi <= 12) {
+                    mensual_2025[mesEmi - 1] += netoM;
+                }
+            } else if (anioEmi === 2026) {
+                total_2026 += netoM;
+                if (mesEmi >= 1 && mesEmi <= 12) {
+                    mensual_2026[mesEmi - 1] += netoM;
+                }
+                if (mesEmi === currentMonth) {
+                    mes_act_2026 += netoM;
+                }
+            }
+
+            if (estado !== 'pagado') {
+                nopag_total += (saldo / 1000000);
+            }
+
+            if (alerta === 'vencida') {
+                venc_count++;
+            } else if (alerta === 'por vencer' || alerta === '0-30') {
+                pv_count++;
+            }
+        });
+
+        const round1 = num => Math.round(num * 10) / 10;
+        
+        return {
+            total_2026: round1(total_2026),
+            total_2025: round1(total_2025),
+            mes_act_2026: round1(mes_act_2026),
+            nopag_total: round1(nopag_total),
+            venc_count: venc_count,
+            pv_count: pv_count,
+            mensual_2025: mensual_2025.map(round1),
+            mensual_2026: mensual_2026.map(round1),
+            meses_label: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+        };
+
+    } catch (e) {
+        console.error('Error obteniendo data de facturacion', e);
+        return REPORT_DATA.facturacion;
+    }
+}
+
 router.get('/api/data', async (req, res) => {
     const realFlota = await getFlotaData();
+    const realFacturacion = await getFacturacionData();
     const dataToSend = {
         ...REPORT_DATA,
-        flota: realFlota
+        flota: realFlota,
+        facturacion: realFacturacion
     };
     res.json(dataToSend);
 });
@@ -164,9 +246,11 @@ router.get('/api/data', async (req, res) => {
 // Función interna para el cron de emails
 router.getReportDataInternal = async () => {
     const realFlota = await getFlotaData();
+    const realFacturacion = await getFacturacionData();
     return {
         ...REPORT_DATA,
-        flota: realFlota
+        flota: realFlota,
+        facturacion: realFacturacion
     };
 };
 
