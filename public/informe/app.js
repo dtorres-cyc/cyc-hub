@@ -64,7 +64,48 @@ function applyFilters() {
     });
 
     calculateFlotaKPIs(filtered);
+    updateDocumentAlerts(filtered);
     renderTabla(filtered);
+    filterTable(); // Re-aplicar filtro de columnas por si quedó alguno escrito
+}
+
+function updateDocumentAlerts(equipos) {
+    let vencidos = [];
+    let porVencer = [];
+    
+    equipos.forEach(e => {
+        const id = e.id || e.patente || 'Sin ID';
+        const docs = [
+            { name: 'Permiso', date: e.venc_permiso },
+            { name: 'SOAP', date: e.venc_soap },
+            { name: 'Rev. Téc.', date: e.venc_rev },
+            { name: 'Gases', date: e.venc_gases }
+        ];
+        
+        docs.forEach(doc => {
+            const d = parseDate(doc.date);
+            if (!d) return;
+            const diffDays = (d - new Date()) / (1000 * 60 * 60 * 24);
+            if (diffDays < 0) vencidos.push(`<strong>${id}</strong> (${doc.name})`);
+            else if (diffDays <= 30) porVencer.push(`<strong>${id}</strong> (${doc.name})`);
+        });
+    });
+
+    const container = document.getElementById('alertas-documentos');
+    let html = '';
+    
+    if (vencidos.length > 0) {
+        html += `<div style="background-color:#f8d7da; color:#721c24; padding:12px; border-radius:8px; margin-bottom:10px; border:1px solid #f5c6cb;">
+            🚨 <strong>Documentos Vencidos:</strong> ${vencidos.join(', ')}
+        </div>`;
+    }
+    if (porVencer.length > 0) {
+        html += `<div style="background-color:#fff3cd; color:#856404; padding:12px; border-radius:8px; margin-bottom:10px; border:1px solid #ffeeba;">
+            ⚠️ <strong>Por Vencer (30 días):</strong> ${porVencer.join(', ')}
+        </div>`;
+    }
+    
+    container.innerHTML = html;
 }
 
 function calculateFlotaKPIs(equipos) {
@@ -296,6 +337,25 @@ function renderTabla(equipos) {
             <td style="padding:10px 8px; ${styleGases}">${e.venc_gases}</td>
         `;
         tbody.appendChild(tr);
+    });
+}
+
+function filterTable() {
+    const inputs = document.querySelectorAll('.col-filter');
+    const rows = document.querySelectorAll('#table-equipos-body tr');
+    
+    rows.forEach(row => {
+        let show = true;
+        inputs.forEach((input, index) => {
+            const text = input.value.toLowerCase().trim();
+            if (text) {
+                const cellText = row.cells[index] ? row.cells[index].textContent.toLowerCase() : '';
+                if (!cellText.includes(text)) {
+                    show = false;
+                }
+            }
+        });
+        row.style.display = show ? '' : 'none';
     });
 }
 

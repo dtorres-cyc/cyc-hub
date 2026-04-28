@@ -150,7 +150,10 @@
         <!-- Tabla de Equipos -->
         <div class="section-block">
           <h2 class="section-title">📋 Listado de Equipos (Estatus Maquinaria)</h2>
-          <div style="overflow-x: auto;">
+          
+          <div id="alertas-documentos"></div>
+
+          <div style="overflow-x: auto; margin-top: 15px;">
             <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
               <thead>
                 <tr style="background-color: #f1f3f5; border-bottom: 2px solid #dee2e6;">
@@ -165,6 +168,19 @@
                   <th style="padding: 12px 8px;">SOAP</th>
                   <th style="padding: 12px 8px;">Rev. Téc.</th>
                   <th style="padding: 12px 8px;">Gases</th>
+                </tr>
+                <tr style="background-color: #f8f9fa; border-bottom: 2px solid #ccc;">
+                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px;"></th>
+                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px;"></th>
+                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px;"></th>
+                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px;"></th>
+                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px;"></th>
+                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px;"></th>
+                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px;"></th>
+                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px;"></th>
+                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px;"></th>
+                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px;"></th>
+                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px;"></th>
                 </tr>
               </thead>
               <tbody id="table-equipos-body">
