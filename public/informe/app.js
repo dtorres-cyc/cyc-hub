@@ -99,9 +99,10 @@ function calculateFlotaKPIs(equipos) {
             arriendo_por_tipo[t] = (arriendo_por_tipo[t] || 0) + 1;
             
             const cName = e.cliente || 'Desconocido';
-            if (!peso_por_cliente[cName]) peso_por_cliente[cName] = { count: 0, items: [] };
+            if (!peso_por_cliente[cName]) peso_por_cliente[cName] = { count: 0, items: [], tipos: {} };
             peso_por_cliente[cName].count++;
             peso_por_cliente[cName].items.push(e.id || e.patente);
+            peso_por_cliente[cName].tipos[t] = (peso_por_cliente[cName].tipos[t] || 0) + 1;
         }
 
         if (arr === 'disponible' && cli !== 'venta') sin_arriendo_no_venta++;
@@ -159,33 +160,67 @@ function renderAnalisisGraficos(arriendo_por_tipo, peso_por_cliente) {
 
     const sortedClientes = Object.entries(peso_por_cliente).sort((a, b) => b[1].count - a[1].count);
     const ctxCliente = document.getElementById('chart-arriendo-cliente').getContext('2d');
+    
+    const allTipos = Object.keys(arriendo_por_tipo);
+    const datasets = [];
+
+    // Línea de Total
+    datasets.push({
+        type: 'line',
+        label: 'Total Equipos',
+        data: sortedClientes.map(item => item[1].count),
+        borderColor: '#f39c12',
+        backgroundColor: '#f39c12',
+        borderWidth: 2,
+        yAxisID: 'y',
+        order: 0,
+        datalabels: {
+            align: 'top',
+            color: '#f39c12',
+            font: { weight: 'bold' }
+        }
+    });
+
+    // Barras apiladas por Tipo
+    const chartColors = ['#1a3a5c', '#7f8c8d', '#9ca3af', '#4b5563', '#d1d5db', '#111827', '#374151'];
+    allTipos.forEach((tipo, idx) => {
+        datasets.push({
+            type: 'bar',
+            label: tipo,
+            data: sortedClientes.map(item => item[1].tipos[tipo] || 0),
+            backgroundColor: chartColors[idx % chartColors.length],
+            yAxisID: 'y',
+            order: 1,
+            stacked: true,
+            datalabels: { display: false }
+        });
+    });
+
     chartCliente = new Chart(ctxCliente, {
-        type: 'bar',
         data: {
             labels: sortedClientes.map(item => item[0]),
-            datasets: [{
-                label: 'Equipos',
-                data: sortedClientes.map(item => item[1].count),
-                backgroundColor: '#2563a8',
-                borderRadius: 4
-            }]
+            datasets: datasets
         },
         options: {
-            indexAxis: 'y',
             responsive: true,
             plugins: {
-                legend: { display: false },
+                legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } },
                 tooltip: {
                     callbacks: {
-                        afterLabel: function(context) {
-                            const clientData = sortedClientes[context.dataIndex][1];
-                            return 'Equipos: ' + clientData.items.join(', ');
+                        afterBody: function(context) {
+                            if (context[0].dataset.type === 'line') {
+                                const clientData = sortedClientes[context[0].dataIndex][1];
+                                return '\nEquipos: ' + clientData.items.join(', ');
+                            }
+                            return '';
                         }
                     }
-                },
-                datalabels: { display: false } // No mostrar labels grandes aquí
+                }
             },
-            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            scales: {
+                x: { stacked: true },
+                y: { stacked: true, beginAtZero: true }
+            }
         }
     });
 }
