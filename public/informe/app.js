@@ -495,3 +495,32 @@ function renderFacturacion(fac) {
         }
     });
 }
+
+let sortDirections = [];
+function sortTable(n) {
+    const tableBody = document.getElementById('table-equipos-body');
+    const rows = Array.from(tableBody.rows);
+    let dir = sortDirections[n] === 'asc' ? 'desc' : 'asc';
+    sortDirections[n] = dir;
+
+    rows.sort((a, b) => {
+        let valA = a.cells[n].innerText.trim().toLowerCase();
+        let valB = b.cells[n].innerText.trim().toLowerCase();
+
+        // Extraer numero para la columna horometro
+        if (n === 6) { 
+            const numA = parseFloat(valA.replace(/[^0-9.-]+/g,""));
+            const numB = parseFloat(valB.replace(/[^0-9.-]+/g,""));
+            if (!isNaN(numA) && !isNaN(numB)) {
+                return dir === 'asc' ? numA - numB : numB - numA;
+            }
+        }
+
+        if (valA < valB) return dir === 'asc' ? -1 : 1;
+        if (valA > valB) return dir === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    tableBody.innerHTML = '';
+    rows.forEach(row => tableBody.appendChild(row));
+}
