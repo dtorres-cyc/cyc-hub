@@ -151,7 +151,26 @@
         <div class="section-block">
           <h2 class="section-title">📋 Listado de Equipos (Estatus Maquinaria)</h2>
           
-          <div id="alertas-documentos"></div>
+          <div class="kpi-grid" style="margin-top: 15px; grid-template-columns: 1fr 1fr;">
+            <div class="kpi-card card-red" style="cursor: pointer;" onclick="toggleAlerts('vencidos-list')">
+              <span class="kpi-label">Documentos Vencidos (Click para ver)</span>
+              <span class="kpi-value" id="kpi-doc-vencidos">0</span>
+            </div>
+            <div class="kpi-card card-orange" style="cursor: pointer;" onclick="toggleAlerts('porvencer-list')">
+              <span class="kpi-label">Por Vencer en 30 días (Click para ver)</span>
+              <span class="kpi-value" id="kpi-doc-porvencer">0</span>
+            </div>
+          </div>
+
+          <div id="vencidos-list" style="display:none; margin-top: 15px; padding: 15px; background: #fff; border: 1px solid var(--c-red); border-radius: 8px;">
+            <h4 style="color: var(--c-red); margin-bottom: 10px;">🚨 Detalle Vencidos</h4>
+            <div id="vencidos-content"></div>
+          </div>
+
+          <div id="porvencer-list" style="display:none; margin-top: 15px; padding: 15px; background: #fff; border: 1px solid var(--c-orange); border-radius: 8px;">
+            <h4 style="color: var(--c-orange); margin-bottom: 10px;">⚠️ Detalle Por Vencer</h4>
+            <div id="porvencer-content"></div>
+          </div>
 
           <div style="overflow-x: auto; margin-top: 15px;">
             <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">

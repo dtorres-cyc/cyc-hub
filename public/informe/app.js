@@ -69,14 +69,27 @@ function applyFilters() {
     filterTable(); // Re-aplicar filtro de columnas por si quedó alguno escrito
 }
 
+function toggleAlerts(id) {
+    const el = document.getElementById(id);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
 function updateDocumentAlerts(equipos) {
-    let vencidos = [];
-    let porVencer = [];
+    let vencidos_contrato = [];
+    let vencidos_sin = [];
+    let porVencer_contrato = [];
+    let porVencer_sin = [];
+    
+    let vencidosCount = 0;
+    let porVencerCount = 0;
     
     equipos.forEach(e => {
         const id = e.id || e.patente || 'Sin ID';
+        const arr = safeLower(e.arrendado);
+        const hasContrato = arr === 'contrato';
+        
         const docs = [
-            { name: 'Permiso', date: e.venc_permiso },
+            { name: 'Permiso Cir.', date: e.venc_permiso },
             { name: 'SOAP', date: e.venc_soap },
             { name: 'Rev. Téc.', date: e.venc_rev },
             { name: 'Gases', date: e.venc_gases }
@@ -86,26 +99,36 @@ function updateDocumentAlerts(equipos) {
             const d = parseDate(doc.date);
             if (!d) return;
             const diffDays = (d - new Date()) / (1000 * 60 * 60 * 24);
-            if (diffDays < 0) vencidos.push(`<strong>${id}</strong> (${doc.name})`);
-            else if (diffDays <= 30) porVencer.push(`<strong>${id}</strong> (${doc.name})`);
+            const str = `<li><strong>${id}</strong>: ${doc.name} <span style="color:#666; font-size:12px;">(${doc.date})</span></li>`;
+            
+            if (diffDays < 0) {
+                vencidosCount++;
+                if (hasContrato) vencidos_contrato.push(str);
+                else vencidos_sin.push(str);
+            } else if (diffDays <= 30) {
+                porVencerCount++;
+                if (hasContrato) porVencer_contrato.push(str);
+                else porVencer_sin.push(str);
+            }
         });
     });
 
-    const container = document.getElementById('alertas-documentos');
-    let html = '';
+    document.getElementById('kpi-doc-vencidos').textContent = vencidosCount;
+    document.getElementById('kpi-doc-porvencer').textContent = porVencerCount;
+
+    document.getElementById('vencidos-content').innerHTML = `
+        <h5 style="margin-top:5px; color:#555;">Equipos con Contrato</h5>
+        <ul style="margin-bottom:15px; padding-left:20px; font-size:13px;">${vencidos_contrato.join('') || '<li style="color:#aaa;">Ninguno</li>'}</ul>
+        <h5 style="color:#555;">Equipos sin Contrato</h5>
+        <ul style="padding-left:20px; font-size:13px; margin-bottom:5px;">${vencidos_sin.join('') || '<li style="color:#aaa;">Ninguno</li>'}</ul>
+    `;
     
-    if (vencidos.length > 0) {
-        html += `<div style="background-color:#f8d7da; color:#721c24; padding:12px; border-radius:8px; margin-bottom:10px; border:1px solid #f5c6cb;">
-            🚨 <strong>Documentos Vencidos:</strong> ${vencidos.join(', ')}
-        </div>`;
-    }
-    if (porVencer.length > 0) {
-        html += `<div style="background-color:#fff3cd; color:#856404; padding:12px; border-radius:8px; margin-bottom:10px; border:1px solid #ffeeba;">
-            ⚠️ <strong>Por Vencer (30 días):</strong> ${porVencer.join(', ')}
-        </div>`;
-    }
-    
-    container.innerHTML = html;
+    document.getElementById('porvencer-content').innerHTML = `
+        <h5 style="margin-top:5px; color:#555;">Equipos con Contrato</h5>
+        <ul style="margin-bottom:15px; padding-left:20px; font-size:13px;">${porVencer_contrato.join('') || '<li style="color:#aaa;">Ninguno</li>'}</ul>
+        <h5 style="color:#555;">Equipos sin Contrato</h5>
+        <ul style="padding-left:20px; font-size:13px; margin-bottom:5px;">${porVencer_sin.join('') || '<li style="color:#aaa;">Ninguno</li>'}</ul>
+    `;
 }
 
 function calculateFlotaKPIs(equipos) {
