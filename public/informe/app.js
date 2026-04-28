@@ -78,6 +78,37 @@ function toggleAlerts(id) {
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
+function showEquiposDetails(cat) {
+    const container = document.getElementById('kpi-details-container');
+    const content = document.getElementById('kpi-details-content');
+    const title = document.getElementById('kpi-details-title');
+
+    const titles = {
+        flota_cyc: 'Total Flota CYC',
+        arrendados_total: 'Total Arrendados',
+        sin_arriendo: 'Sin Arriendo (No Venta)',
+        arrendados_externos: 'Arrendados Externos',
+        venta: 'A la Venta',
+        interno: 'Uso Interno',
+        operativos: 'Operativos (Sin Cliente)',
+        taller: 'En Taller (Sin Cliente)',
+        panne: 'En Panne (Sin Cliente)'
+    };
+
+    title.textContent = 'Detalle: ' + titles[cat];
+    const list = window.equipos_lists ? window.equipos_lists[cat] : [];
+    
+    if (!list || list.length === 0) {
+        content.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">No hay equipos en esta categoría.</p>';
+    } else {
+        content.innerHTML = '<ul style="padding-left:20px; font-size:13px; color:var(--text-main); margin:0;">' + 
+            list.map(item => `<li style="margin-bottom:4px;">${item}</li>`).join('') + 
+            '</ul>';
+    }
+    
+    container.style.display = 'block';
+}
+
 function updateDocumentAlerts(equipos) {
     let vencidos_contrato = [];
     let vencidos_sin = [];
@@ -150,18 +181,24 @@ function calculateFlotaKPIs(equipos) {
     let arriendo_por_tipo = {};
     let peso_por_cliente = {};
 
+    window.equipos_lists = {
+        flota_cyc: [], arrendados_total: [], sin_arriendo: [], arrendados_externos: [],
+        venta: [], interno: [], operativos: [], taller: [], panne: []
+    };
+
     equipos.forEach(e => {
         const esCyc = safeLower(e.propietario).includes('cyc');
         const arr = safeLower(e.arrendado);
         const cli = safeLower(e.cliente);
         const op = safeLower(e.operativo);
         const t = e.tipo || 'Otros';
+        const info = `<strong>${e.id || e.patente || 'Sin ID'}</strong> <span style="color:var(--text-muted)">- ${t}</span>`;
 
-        if (esCyc) total_cyc++;
+        if (esCyc) { total_cyc++; window.equipos_lists.flota_cyc.push(info); }
 
         if (arr === 'contrato') {
-            total_arrendados++;
-            if (!esCyc) arrendados_externos++;
+            total_arrendados++; window.equipos_lists.arrendados_total.push(info);
+            if (!esCyc) { arrendados_externos++; window.equipos_lists.arrendados_externos.push(info); }
             if (esCyc) arrendada_propia++;
             
             arriendo_por_tipo[t] = (arriendo_por_tipo[t] || 0) + 1;
@@ -173,14 +210,14 @@ function calculateFlotaKPIs(equipos) {
             peso_por_cliente[cName].tipos[t] = (peso_por_cliente[cName].tipos[t] || 0) + 1;
         }
 
-        if (arr === 'disponible' && cli !== 'venta') sin_arriendo_no_venta++;
-        if (cli === 'venta' || arr === 'venta') a_la_venta++;
-        if (arr.includes('interno')) uso_interno++;
+        if (arr === 'disponible' && cli !== 'venta') { sin_arriendo_no_venta++; window.equipos_lists.sin_arriendo.push(info); }
+        if (cli === 'venta' || arr === 'venta') { a_la_venta++; window.equipos_lists.venta.push(info); }
+        if (arr.includes('interno')) { uso_interno++; window.equipos_lists.interno.push(info); }
 
-        if (cli === 'sin cliente') {
-            if (op === 'operativo') operativos++;
-            if (op === 'taller') taller++;
-            if (op === 'panne') panne++;
+        if (cli === 'sin cliente' || cli === '') {
+            if (op === 'operativo') { operativos++; window.equipos_lists.operativos.push(info); }
+            if (op === 'taller') { taller++; window.equipos_lists.taller.push(info); }
+            if (op === 'panne') { panne++; window.equipos_lists.panne.push(info); }
         }
     });
 

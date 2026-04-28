@@ -63,47 +63,53 @@
           </div>
           
           <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-            <div class="kpi-card card-dark" style="background:#111;">
+            <div class="kpi-card card-dark" style="background:#111; cursor:pointer;" onclick="showEquiposDetails('flota_cyc')">
               <span class="kpi-label">Total Flota CYC</span>
               <span class="kpi-value" id="kpi-flota-cyc">--</span>
             </div>
-            <div class="kpi-card card-dark">
+            <div class="kpi-card card-dark" style="cursor:pointer;" onclick="showEquiposDetails('arrendados_total')">
               <span class="kpi-label">Total Arrendados</span>
               <span class="kpi-value" id="kpi-arrendados-total">--</span>
             </div>
-            <div class="kpi-card card-gray">
+            <div class="kpi-card card-gray" style="cursor:pointer;" onclick="showEquiposDetails('sin_arriendo')">
               <span class="kpi-label">Sin Arriendo (No Venta)</span>
               <span class="kpi-value" id="kpi-sin-arriendo">--</span>
             </div>
-            <div class="kpi-card card-gray">
+            <div class="kpi-card card-gray" style="cursor:pointer;" onclick="showEquiposDetails('arrendados_externos')">
               <span class="kpi-label">Arrendados Externos</span>
               <span class="kpi-value" id="kpi-arrendados-externos">--</span>
             </div>
-            <div class="kpi-card card-gray">
+            <div class="kpi-card card-gray" style="cursor:pointer;" onclick="showEquiposDetails('venta')">
               <span class="kpi-label">A la Venta</span>
               <span class="kpi-value" id="kpi-venta">--</span>
             </div>
-            <div class="kpi-card card-gray">
+            <div class="kpi-card card-gray" style="cursor:pointer;" onclick="showEquiposDetails('interno')">
               <span class="kpi-label">Uso Interno</span>
               <span class="kpi-value" id="kpi-interno">--</span>
             </div>
             
             <!-- Grupo Taller -->
-            <div style="grid-column: 1 / -1; margin-top: 15px; padding-bottom: 5px; border-bottom: 2px solid #eaeaea;">
-              <h3 style="font-size:16px; color:#555; margin:0;">🛠️ Estado de Taller (Equipos sin cliente)</h3>
+            <div style="grid-column: 1 / -1; margin-top: 15px; padding-bottom: 5px; border-bottom: 2px solid var(--border);">
+              <h3 style="font-size:16px; color:var(--text-main); margin:0;">🛠️ Estado de Taller (Equipos sin cliente)</h3>
             </div>
-            <div class="kpi-card card-green">
+            <div class="kpi-card card-green" style="cursor:pointer;" onclick="showEquiposDetails('operativos')">
               <span class="kpi-label">Operativos</span>
               <span class="kpi-value" id="kpi-operativos">--</span>
             </div>
-            <div class="kpi-card card-orange">
+            <div class="kpi-card card-orange" style="cursor:pointer;" onclick="showEquiposDetails('taller')">
               <span class="kpi-label">En Taller</span>
               <span class="kpi-value" id="kpi-taller">--</span>
             </div>
-            <div class="kpi-card card-red">
+            <div class="kpi-card card-red" style="cursor:pointer;" onclick="showEquiposDetails('panne')">
               <span class="kpi-label">En Panne</span>
               <span class="kpi-value" id="kpi-panne">--</span>
             </div>
+          </div>
+
+          <div id="kpi-details-container" style="display:none; margin-top: 20px; padding: 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; position:relative;">
+            <button onclick="document.getElementById('kpi-details-container').style.display='none'" style="position:absolute; right:15px; top:15px; background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">✖</button>
+            <h4 id="kpi-details-title" style="color: var(--c-primary); margin-bottom: 15px;">Detalle</h4>
+            <div id="kpi-details-content"></div>
           </div>
         </div>
 
