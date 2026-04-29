@@ -1,26 +1,26 @@
 :root {
-  --bg-sidebar: #0f0f11;
-  --bg-main: #121212;
-  --bg-card: #1e1e1e;
+  --bg-sidebar: #1e293b;
+  --bg-main: #f4f7f6;
+  --bg-card: #ffffff;
   
-  --text-sidebar: #a1a1aa;
+  --text-sidebar: #94a3b8;
   --text-sidewhite: #f8fafc;
-  --text-main: #f4f4f5;
-  --text-muted: #a1a1aa;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
   
   /* Brand Palette from CyC */
-  --c-primary: #3b82f6; /* Azul */
-  --c-secondary: #2563a8;
-  --c-green: #22c55e;
-  --c-orange: #f97316; /* Naranjo */
-  --c-red: #ef4444;
-  --c-gray: #3f3f46;
-  --c-black: #27272a;
+  --c-primary: #2563eb;
+  --c-secondary: #1e40af;
+  --c-green: #16a34a;
+  --c-orange: #f97316;
+  --c-red: #dc2626;
+  --c-gray: #f1f5f9;
+  --c-black: #0f172a;
   
-  --shadow-sm: 0 4px 6px rgba(0,0,0,0.3);
-  --shadow-md: 0 10px 15px rgba(0,0,0,0.5);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
   --radius: 16px;
-  --border: #27272a;
+  --border: #e2e8f0;
 }
 
 * {
@@ -30,7 +30,7 @@
 }
 
 body {
-  font-family: 'Realtime Text', 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   background-color: var(--bg-main);
   color: var(--text-main);
   display: flex;

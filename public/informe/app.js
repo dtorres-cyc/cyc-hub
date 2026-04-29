@@ -11,9 +11,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         Chart.register(ChartDataLabels);
     }
     
-    // Configuración global de colores para ChartJS modo oscuro
-    Chart.defaults.color = '#a1a1aa';
-    Chart.defaults.borderColor = '#27272a';
+    // Configuración global de colores para ChartJS modo claro
+    Chart.defaults.color = '#64748b';
+    Chart.defaults.borderColor = '#e2e8f0';
 
     const now = new Date();
     document.getElementById('timestamp').textContent = now.toLocaleString('es-CL');
