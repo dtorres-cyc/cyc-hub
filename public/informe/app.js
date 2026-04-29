@@ -395,8 +395,8 @@ function checkDateAlarm(dateStr) {
     const d = parseDate(dateStr);
     if (!d) return '';
     const diffDays = (d - new Date()) / (1000 * 60 * 60 * 24);
-    if (diffDays < 0) return 'background-color: rgba(239, 68, 68, 0.15); color: #fca5a5; font-weight:bold;'; // Vencido
-    if (diffDays <= 30) return 'background-color: rgba(249, 115, 22, 0.15); color: #fdba74; font-weight:bold;'; // Por vencer
+    if (diffDays < 0) return 'background-color: rgba(220, 38, 38, 0.1); color: #dc2626; font-weight:bold;'; // Vencido
+    if (diffDays <= 30) return 'background-color: rgba(249, 115, 22, 0.1); color: #ea580c; font-weight:bold;'; // Por vencer
     return '';
 }
 
