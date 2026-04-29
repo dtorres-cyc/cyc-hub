@@ -260,8 +260,17 @@ function renderAnalisisGraficos(arriendo_por_tipo, peso_por_cliente) {
             labels: Object.keys(arriendo_por_tipo),
             datasets: [{
                 data: Object.values(arriendo_por_tipo),
-                backgroundColor: ['#3b82f6', '#f97316', '#22c55e', '#ef4444', '#a855f7', '#eab308', '#ec4899', '#06b6d4', '#64748b'],
-                borderWidth: 0
+                backgroundColor: [
+                    'rgba(59,130,246,0.6)', 'rgba(249,115,22,0.6)', 'rgba(34,197,94,0.6)',
+                    'rgba(239,68,68,0.6)', 'rgba(168,85,247,0.6)', 'rgba(234,179,8,0.6)',
+                    'rgba(236,72,153,0.6)', 'rgba(6,182,212,0.6)', 'rgba(100,116,139,0.6)'
+                ],
+                borderColor: [
+                    '#3b82f6', '#f97316', '#22c55e', '#ef4444', '#a855f7', '#eab308', '#ec4899', '#06b6d4', '#64748b'
+                ],
+                borderWidth: 2,
+                hoverOffset: 12,
+                offset: 4
             }]
         },
         options: {
@@ -301,13 +310,20 @@ function renderAnalisisGraficos(arriendo_por_tipo, peso_por_cliente) {
     });
 
     // Barras apiladas por Tipo
-    const chartColors = ['#3b82f6', '#f97316', '#22c55e', '#ef4444', '#a855f7', '#eab308', '#64748b'];
+    const chartColors = [
+        'rgba(59,130,246,0.55)', 'rgba(249,115,22,0.55)', 'rgba(34,197,94,0.55)',
+        'rgba(239,68,68,0.55)', 'rgba(168,85,247,0.55)', 'rgba(234,179,8,0.55)', 'rgba(100,116,139,0.55)'
+    ];
+    const chartBorders = ['#3b82f6', '#f97316', '#22c55e', '#ef4444', '#a855f7', '#eab308', '#64748b'];
     allTipos.forEach((tipo, idx) => {
         datasets.push({
             type: 'bar',
             label: tipo,
             data: sortedClientes.map(item => item[1].tipos[tipo] || 0),
             backgroundColor: chartColors[idx % chartColors.length],
+            borderColor: chartBorders[idx % chartBorders.length],
+            borderWidth: 1,
+            borderRadius: 6,
             yAxisID: 'y',
             order: 1,
             stacked: true,
@@ -594,8 +610,8 @@ function calculateFacKPIs(facturas) {
         data: {
             labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
             datasets: [
-                { label: '2025', data: mensual_2025.map(n => Math.round(n*10)/10), backgroundColor: '#bdc3c7', borderRadius: 4 },
-                { label: '2026', data: mensual_2026.map(n => Math.round(n*10)/10), backgroundColor: '#2563a8', borderRadius: 4 }
+                { label: '2025', data: mensual_2025.map(n => Math.round(n*10)/10), backgroundColor: 'rgba(189,195,199,0.5)', borderColor: '#95a5a6', borderWidth: 1, borderRadius: 8, borderSkipped: false },
+                { label: '2026', data: mensual_2026.map(n => Math.round(n*10)/10), backgroundColor: 'rgba(37,99,168,0.55)', borderColor: '#2563a8', borderWidth: 1, borderRadius: 8, borderSkipped: false }
             ]
         },
         options: {
@@ -620,7 +636,15 @@ function calculateFacKPIs(facturas) {
             labels: topDeuda.map(d => d.cliente.substring(0, 15) + (d.cliente.length > 15 ? '...' : '')),
             datasets: [{
                 data: topDeuda.map(d => Math.round(d.monto * 10) / 10),
-                backgroundColor: ['#e74c3c', '#e67e22', '#f1c40f', '#3498db', '#9b59b6', '#2ecc71', '#1abc9c', '#34495e', '#95a5a6', '#7f8c8d']
+                backgroundColor: [
+                    'rgba(231,76,60,0.6)', 'rgba(230,126,34,0.6)', 'rgba(241,196,15,0.6)',
+                    'rgba(52,152,219,0.6)', 'rgba(155,89,182,0.6)', 'rgba(46,204,113,0.6)',
+                    'rgba(26,188,156,0.6)', 'rgba(52,73,94,0.6)', 'rgba(149,165,166,0.6)', 'rgba(127,140,141,0.6)'
+                ],
+                borderColor: ['#e74c3c', '#e67e22', '#f1c40f', '#3498db', '#9b59b6', '#2ecc71', '#1abc9c', '#34495e', '#95a5a6', '#7f8c8d'],
+                borderWidth: 2,
+                hoverOffset: 12,
+                offset: 4
             }]
         },
         options: {
