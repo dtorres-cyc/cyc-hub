@@ -3,6 +3,7 @@ let globalFacturas = [];
 let chartTipo = null;
 let chartCliente = null;
 let chartFacturacion = null;
+let chartFacCliente = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Activar ChartDataLabels
@@ -528,6 +529,8 @@ function calculateFacKPIs(facturas) {
         vencidas_seg: {}
     };
 
+    let deudaPorCliente = {};
+
     facturas.forEach(f => {
         const netoM = f.neto / 1000000;
         const saldoM = f.saldo / 1000000;
@@ -544,9 +547,12 @@ function calculateFacKPIs(facturas) {
         if (f.estado !== 'pagado') {
             nopag_total += saldoM;
         }
+        
+        if (f.estado === 'pendiente' && f.saldo > 0) {
+            deudaPorCliente[f.cliente] = (deudaPorCliente[f.cliente] || 0) + saldoM;
+        }
 
-        const facStr = `Factura N°${f.id} - ${f.cliente} - $${formatterM(saldoM)}`;
-        const facItem = { facStr, f };
+        const facItem = { f };
 
         if (f.alerta === 'vencida') {
             venc_count++;
@@ -561,8 +567,8 @@ function calculateFacKPIs(facturas) {
             window.facLists.porvencer.push(facItem);
         }
         
-        if (f.dias_vencida > 120 && f.estado !== 'pagado') {
-            incobrables_count++;
+        if (f.dias_vencida > 120 && f.estado === 'pendiente') {
+            incobrables_count += saldoM;
             window.facLists.incobrables.push(facItem);
         }
     });
@@ -572,7 +578,7 @@ function calculateFacKPIs(facturas) {
     document.getElementById('fac-porcobrar').textContent = formatterM(nopag_total);
     document.getElementById('fac-vencidas').textContent = venc_count;
     document.getElementById('fac-porvencer').textContent = pv_count;
-    document.getElementById('fac-incobrables').textContent = incobrables_count;
+    document.getElementById('fac-incobrables').textContent = formatterM(incobrables_count);
     
     // Generar string para segmento
     let segHtml = Object.keys(window.facLists.vencidas_seg).map(t => {
@@ -598,6 +604,37 @@ function calculateFacKPIs(facturas) {
             scales: { y: { beginAtZero: true } }
         }
     });
+
+    if (chartFacCliente) chartFacCliente.destroy();
+    const ctxFacCli = document.getElementById('chart-fac-cliente').getContext('2d');
+    
+    let topDeuda = Object.keys(deudaPorCliente)
+        .filter(c => c && c.trim() !== '')
+        .map(c => ({ cliente: c, monto: deudaPorCliente[c] }))
+        .sort((a, b) => b.monto - a.monto)
+        .slice(0, 10);
+        
+    chartFacCliente = new Chart(ctxFacCli, {
+        type: 'pie',
+        data: {
+            labels: topDeuda.map(d => d.cliente.substring(0, 15) + (d.cliente.length > 15 ? '...' : '')),
+            datasets: [{
+                data: topDeuda.map(d => Math.round(d.monto * 10) / 10),
+                backgroundColor: ['#e74c3c', '#e67e22', '#f1c40f', '#3498db', '#9b59b6', '#2ecc71', '#1abc9c', '#34495e', '#95a5a6', '#7f8c8d']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'right', labels: { font: { size: 10 } } },
+                datalabels: {
+                    color: '#fff',
+                    font: { weight: 'bold', size: 10 },
+                    formatter: (value) => value > 0 ? value : ''
+                }
+            }
+        }
+    });
 }
 
 function showFacDetails(tipoLista) {
@@ -620,8 +657,8 @@ function showFacDetails(tipoLista) {
         Object.keys(list).forEach(tipo => {
             list[tipo].forEach(item => {
                 items.push({
-                    facStr: `[${tipo}] ${item.facStr}`,
-                    f: item.f
+                    f: item.f,
+                    tipoOverride: tipo
                 });
             });
         });
@@ -632,9 +669,35 @@ function showFacDetails(tipoLista) {
     document.getElementById('kpi-details-title').textContent = titulo;
     const content = document.getElementById('kpi-details-content');
     
-    content.innerHTML = '<ul style="padding-left:20px; font-size:13px; color:var(--text-main); margin:0;">' + 
-        items.map(item => `<li style="margin-bottom:4px;">${item.facStr} <span style="color:#aaa; font-size:11px;">(Días v.: ${item.f.dias_vencida})</span></li>`).join('') + 
-        '</ul>';
+    let tableHtml = `
+      <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; color:var(--text-main);">
+        <thead>
+          <tr style="border-bottom: 2px solid var(--border); color:var(--text-muted);">
+            <th style="padding: 8px;">Factura</th>
+            <th style="padding: 8px;">Cliente</th>
+            <th style="padding: 8px;">Segmento</th>
+            <th style="padding: 8px;">Saldo</th>
+            <th style="padding: 8px;">Días V.</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    items.forEach(item => {
+        const seg = item.tipoOverride || item.f.tipo || '-';
+        tableHtml += `
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 8px;">N°${item.f.id}</td>
+            <td style="padding: 8px;" title="${item.f.cliente}">${item.f.cliente.substring(0, 20)}${item.f.cliente.length > 20 ? '...' : ''}</td>
+            <td style="padding: 8px;">${seg}</td>
+            <td style="padding: 8px; font-weight:bold; color:var(--c-primary);">$${formatterM(item.f.saldo / 1000000)}M</td>
+            <td style="padding: 8px; color:var(--c-red);">${item.f.dias_vencida}</td>
+          </tr>
+        `;
+    });
+    tableHtml += `</tbody></table>`;
+    
+    content.innerHTML = tableHtml;
     
     document.getElementById('kpi-modal-backdrop').style.display = 'block';
     document.getElementById('kpi-details-container').style.display = 'block';
