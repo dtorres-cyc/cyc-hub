@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>CYC Hub - Pipeline CRM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">CYC Hub</div>
+    <nav class="nav-menu">
+      <a href="/cotizador" class="nav-item">📄 Cotizador</a>
+      <a href="/flota" class="nav-item">🚜 Flota / Disponibilidad</a>
+      <a href="/informe/index.html" class="nav-item">📊 Dashboard Comercial</a>
+      <a href="/crm" class="nav-item active">🤝 Pipeline CRM</a>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dashboard">
+    <header class="header">
+      <h1>Pipeline CRM</h1>
+      <button class="btn" id="btn-nuevo">+ Crear Nuevo</button>
+    </header>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('opportunities')">Oportunidades</div>
+      <div class="tab" onclick="switchTab('contacts')">Contactos</div>
+      <div class="tab" onclick="switchTab('companies')">Empresas</div>
+    </div>
+
+    <!-- VISTA: OPORTUNIDADES -->
+    <section id="view-opportunities">
+      <div class="kanban-board" id="kanban-board">
+        <!-- Generado por JS -->
+      </div>
+    </section>
+
+    <!-- VISTA: CONTACTOS -->
+    <section id="view-contacts" style="display: none;">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Teléfono</th>
+              <th>Empresa</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="table-contacts">
+            <!-- Generado por JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- VISTA: EMPRESAS -->
+    <section id="view-companies" style="display: none;">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>RUT</th>
+              <th>Industria</th>
+              <th>Propietario</th>
+            </tr>
+          </thead>
+          <tbody id="table-companies">
+            <!-- Generado por JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL DINÁMICO -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal-content">
+      <h2 id="modal-title" style="margin-bottom: 20px;">Crear Nuevo</h2>
+      <form id="form-nuevo">
+        <div id="modal-fields"></div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+          <button type="button" class="btn" style="background:var(--c-gray); color:var(--text-main);" onclick="closeModal()">Cancelar</button>
+          <button type="submit" class="btn">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
