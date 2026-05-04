@@ -4,11 +4,7 @@ const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Servir la interfaz del CRM (asumiendo que estará en public/crm/index.html o similar)
-// Puedes ajustar esto según donde pongamos la vista.
-router.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../../public/crm/index.html'));
-});
+// CRM API Router
 
 // ==========================================
 // COMPANIES (Empresas)

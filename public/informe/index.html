@@ -214,25 +214,68 @@
       <!-- Seccion CRM -->
       <section id="tab-crm" class="tab-content" style="display: none;">
         <div class="section-block">
-          <h2 class="section-title">📊 Pipeline CRM</h2>
+          <div class="crm-header-actions">
+            <h2 class="section-title" style="margin:0;">🤝 Pipeline CRM Interactivo</h2>
+            <button class="action-btn" id="btn-nuevo" onclick="openCrmModal()">+ Crear Nuevo</button>
+          </div>
           
-          <div class="crm-grid">
-            <div class="crm-column">
-              <h3>Negociaciones Activas</h3>
-              <div id="crm-negociaciones" class="list-container"></div>
-              
-              <h3 class="mt-4">Por Enviar Cotización</h3>
-              <div id="crm-cotizar" class="list-container"></div>
+          <div class="crm-tabs">
+            <div class="crm-tab active" onclick="switchCrmTab('opportunities')">Oportunidades</div>
+            <div class="crm-tab" onclick="switchCrmTab('contacts')">Contactos</div>
+            <div class="crm-tab" onclick="switchCrmTab('companies')">Empresas</div>
+          </div>
+
+          <!-- VISTA: OPORTUNIDADES -->
+          <div id="view-opportunities">
+            <div class="kanban-board" id="kanban-board">
+              <!-- Generado por JS -->
             </div>
-            
-            <div class="crm-column">
-              <h3>Retomar (Top 3 Prioridad)</h3>
-              <div id="crm-retomar" class="list-container"></div>
-              
-              <div class="funnel-summary card-dark mt-4">
-                <h4>Pipeline Activo Estimado</h4>
-                <p class="pipeline-val" id="pipeline-total">--</p>
-              </div>
+          </div>
+
+          <!-- VISTA: CONTACTOS -->
+          <div id="view-contacts" style="display: none;">
+            <div class="table-container">
+              <table class="data-table" style="width:100%; text-align:left;">
+                <thead>
+                  <tr style="background:var(--c-gray);">
+                    <th style="padding:10px;">Nombre</th>
+                    <th style="padding:10px;">Email</th>
+                    <th style="padding:10px;">Teléfono</th>
+                    <th style="padding:10px;">Empresa</th>
+                  </tr>
+                </thead>
+                <tbody id="table-contacts"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- VISTA: EMPRESAS -->
+          <div id="view-companies" style="display: none;">
+            <div class="table-container">
+              <table class="data-table" style="width:100%; text-align:left;">
+                <thead>
+                  <tr style="background:var(--c-gray);">
+                    <th style="padding:10px;">Nombre</th>
+                    <th style="padding:10px;">RUT</th>
+                    <th style="padding:10px;">Industria</th>
+                  </tr>
+                </thead>
+                <tbody id="table-companies"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- MODAL DINÁMICO -->
+          <div class="modal-backdrop" id="crm-modal-backdrop">
+            <div class="modal-content">
+              <h2 id="crm-modal-title" style="margin-bottom: 20px;">Crear Nuevo</h2>
+              <form id="form-nuevo">
+                <div id="crm-modal-fields"></div>
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                  <button type="button" class="action-btn" style="background:var(--c-gray); color:var(--text-main);" onclick="closeCrmModal()">Cancelar</button>
+                  <button type="submit" class="action-btn" style="background:var(--c-primary); color:white;">Guardar</button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
