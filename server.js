@@ -11,6 +11,7 @@ app.use(express.json({ limit: '10mb' }));
 const cotizadorRouter = require('./modules/cotizador/router');
 const flotaRouter     = require('./modules/flota/router');
 const informeRouter   = require('./modules/informe/router');
+const crmRouter       = require('./modules/crm/router');
 
 // ── Cron Jobs ─────────────────────────────────────────────────────────────────
 require('./modules/cron/weeklyReport');
@@ -30,6 +31,7 @@ app.get('/', (req, res) => {
 app.use('/cotizador', cotizadorRouter);
 app.use('/flota',     flotaRouter);
 app.use('/informe',   informeRouter);
+app.use('/crm',       crmRouter);
 
 // ── Arranque ──────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
@@ -42,6 +44,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`  📄  Cotizador:  http://localhost:${PORT}/cotizador`);
   console.log(`  🚜  Flota:      http://localhost:${PORT}/flota`);
   console.log(`  📊  Informe:    http://localhost:${PORT}/informe/index.html`);
+  console.log(`  🤝  CRM:        http://localhost:${PORT}/crm`);
   console.log('═══════════════════════════════════════════════════');
   console.log('');
 });
