@@ -92,15 +92,15 @@ function showEquiposDetails(cat) {
     const title = document.getElementById('kpi-details-title');
 
     const titles = {
-        flota_cyc: 'Total Flota CYC',
+        flota_cyc: 'Total Parque',
         arrendados_total: 'Total Arrendados',
-        sin_arriendo: 'Sin Arriendo (No Venta)',
+        sin_arriendo: 'Sin Arriendo',
         arrendados_externos: 'Arrendados Externos',
         venta: 'A la Venta',
         interno: 'Uso Interno',
-        operativos: 'Operativos (Sin Cliente)',
-        taller: 'En Taller (Sin Cliente)',
-        panne: 'En Panne (Sin Cliente)'
+        operativos: 'Operativos',
+        taller: 'En Taller',
+        panne: 'En Panne'
     };
 
     title.textContent = 'Detalle: ' + titles[cat];
@@ -109,9 +109,39 @@ function showEquiposDetails(cat) {
     if (!list || list.length === 0) {
         content.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">No hay equipos en esta categoría.</p>';
     } else {
-        content.innerHTML = '<ul style="padding-left:20px; font-size:13px; color:var(--text-main); margin:0;">' + 
-            list.map(item => `<li style="margin-bottom:4px;">${item}</li>`).join('') + 
-            '</ul>';
+        let tableHtml = `
+          <div style="overflow-x:auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; color:var(--text-main);">
+            <thead>
+              <tr style="background-color: var(--c-gray); border-bottom: 2px solid var(--border);">
+                <th style="padding: 8px;">ID / Patente</th>
+                <th style="padding: 8px;">Tipo</th>
+                <th style="padding: 8px;">Ubicación</th>
+                <th style="padding: 8px;">Arrendado</th>
+                <th style="padding: 8px;">Cliente</th>
+                <th style="padding: 8px;">Dueño</th>
+                <th style="padding: 8px;">Horómetro</th>
+                <th style="padding: 8px;">Operativo</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        list.forEach(e => {
+            tableHtml += `
+              <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 8px; font-weight:600;">${e.id || e.patente || '-'}</td>
+                <td style="padding: 8px;">${e.tipo || '-'}</td>
+                <td style="padding: 8px;">${e.ubicacion || '-'}</td>
+                <td style="padding: 8px;">${e.arrendado || '-'}</td>
+                <td style="padding: 8px;">${e.cliente || '-'}</td>
+                <td style="padding: 8px;">${e.propietario || '-'}</td>
+                <td style="padding: 8px;">${e.horometro || '-'}</td>
+                <td style="padding: 8px;">${e.operativo || '-'}</td>
+              </tr>
+            `;
+        });
+        tableHtml += '</tbody></table></div>';
+        content.innerHTML = tableHtml;
     }
     
     document.getElementById('kpi-modal-backdrop').style.display = 'block';
@@ -181,11 +211,11 @@ function updateDocumentAlerts(equipos) {
 }
 
 function calculateFlotaKPIs(equipos) {
-    let total_cyc = 0;
+    let total_parque = 0;
     let total_arrendados = 0;
     let arrendados_externos = 0;
     let arrendada_propia = 0;
-    let sin_arriendo_no_venta = 0;
+    let sin_arriendo = 0;
     let a_la_venta = 0;
     let uso_interno = 0;
     let operativos = 0;
@@ -195,6 +225,7 @@ function calculateFlotaKPIs(equipos) {
     let arriendo_por_tipo = {};
     let peso_por_cliente = {};
 
+    // Ahora guardamos el objeto completo del equipo
     window.equipos_lists = {
         flota_cyc: [], arrendados_total: [], sin_arriendo: [], arrendados_externos: [],
         venta: [], interno: [], operativos: [], taller: [], panne: []
@@ -206,13 +237,14 @@ function calculateFlotaKPIs(equipos) {
         const cli = safeLower(e.cliente);
         const op = safeLower(e.operativo);
         const t = e.tipo || 'Otros';
-        const info = `<strong>${e.id || e.patente || 'Sin ID'}</strong> <span style="color:var(--text-muted)">- ${t}</span>`;
 
-        if (esCyc) { total_cyc++; window.equipos_lists.flota_cyc.push(info); }
+        // Total Parque = todos los equipos
+        total_parque++;
+        window.equipos_lists.flota_cyc.push(e);
 
         if (arr === 'contrato') {
-            total_arrendados++; window.equipos_lists.arrendados_total.push(info);
-            if (!esCyc) { arrendados_externos++; window.equipos_lists.arrendados_externos.push(info); }
+            total_arrendados++; window.equipos_lists.arrendados_total.push(e);
+            if (!esCyc) { arrendados_externos++; window.equipos_lists.arrendados_externos.push(e); }
             if (esCyc) arrendada_propia++;
             
             arriendo_por_tipo[t] = (arriendo_por_tipo[t] || 0) + 1;
@@ -224,20 +256,24 @@ function calculateFlotaKPIs(equipos) {
             peso_por_cliente[cName].tipos[t] = (peso_por_cliente[cName].tipos[t] || 0) + 1;
         }
 
-        if (arr === 'disponible' && cli !== 'venta') { sin_arriendo_no_venta++; window.equipos_lists.sin_arriendo.push(info); }
-        if (cli === 'venta' || arr === 'venta') { a_la_venta++; window.equipos_lists.venta.push(info); }
-        if (arr.includes('interno')) { uso_interno++; window.equipos_lists.interno.push(info); }
+        // Sin Arriendo = todo lo que tenga Arrendado = "Disponible"
+        if (arr === 'disponible') {
+            sin_arriendo++;
+            window.equipos_lists.sin_arriendo.push(e);
 
-        if (cli === 'sin cliente' || cli === '') {
-            if (op === 'operativo') { operativos++; window.equipos_lists.operativos.push(info); }
-            if (op === 'taller') { taller++; window.equipos_lists.taller.push(info); }
-            if (op === 'panne') { panne++; window.equipos_lists.panne.push(info); }
+            // Estado de Taller = sub-filtro de los Sin Arriendo
+            if (op === 'operativo') { operativos++; window.equipos_lists.operativos.push(e); }
+            if (op === 'taller') { taller++; window.equipos_lists.taller.push(e); }
+            if (op === 'panne') { panne++; window.equipos_lists.panne.push(e); }
         }
+
+        if (cli === 'venta' || arr === 'venta') { a_la_venta++; window.equipos_lists.venta.push(e); }
+        if (arr.includes('interno')) { uso_interno++; window.equipos_lists.interno.push(e); }
     });
 
-    document.getElementById('kpi-flota-cyc').textContent = total_cyc;
+    document.getElementById('kpi-flota-cyc').textContent = total_parque;
     document.getElementById('kpi-arrendados-total').textContent = total_arrendados;
-    document.getElementById('kpi-sin-arriendo').textContent = sin_arriendo_no_venta;
+    document.getElementById('kpi-sin-arriendo').textContent = sin_arriendo;
     document.getElementById('kpi-arrendados-externos').textContent = arrendados_externos;
     document.getElementById('kpi-venta').textContent = a_la_venta;
     document.getElementById('kpi-interno').textContent = uso_interno;
@@ -246,7 +282,7 @@ function calculateFlotaKPIs(equipos) {
     document.getElementById('kpi-panne').textContent = panne;
 
     renderAnalisisGraficos(arriendo_por_tipo, peso_por_cliente);
-    renderAnalisisMetas(total_cyc, arrendada_propia, total_arrendados);
+    renderAnalisisMetas(total_parque, arrendada_propia, total_arrendados);
 }
 
 function renderAnalisisGraficos(arriendo_por_tipo, peso_por_cliente) {
