@@ -114,16 +114,48 @@ router.get('/api/opportunities', async (req, res) => {
 // Crear una oportunidad
 router.post('/api/opportunities', async (req, res) => {
     try {
-        const { name, amount, stage, probability, businessType, companyId, contactId } = req.body;
+        const { 
+            name, amount, stage, probability, businessType, 
+            priority, expectedClose, 
+            companyId, newCompanyName, 
+            contactId, newContactFirstName, newContactLastName 
+        } = req.body;
+
+        let finalCompanyId = companyId ? parseInt(companyId) : null;
+        
+        // Creación rápida de empresa si se solicita
+        if (newCompanyName && (!finalCompanyId || isNaN(finalCompanyId))) {
+            const newComp = await prisma.company.create({
+                data: { name: newCompanyName }
+            });
+            finalCompanyId = newComp.id;
+        }
+
+        let finalContactId = contactId ? parseInt(contactId) : null;
+
+        // Creación rápida de contacto si se solicita
+        if (newContactFirstName && (!finalContactId || isNaN(finalContactId))) {
+            const newCont = await prisma.contact.create({
+                data: { 
+                    firstName: newContactFirstName, 
+                    lastName: newContactLastName || '',
+                    companyId: finalCompanyId 
+                }
+            });
+            finalContactId = newCont.id;
+        }
+
         const newOpp = await prisma.opportunity.create({
             data: {
                 name, 
                 amount: amount ? parseFloat(amount) : 0, 
                 stage, 
                 probability: probability ? parseInt(probability) : 10, 
+                priority: priority || 'Media',
+                expectedClose: expectedClose ? new Date(expectedClose) : null,
                 businessType,
-                companyId: companyId ? parseInt(companyId) : null,
-                contactId: contactId ? parseInt(contactId) : null
+                companyId: finalCompanyId,
+                contactId: finalContactId
             }
         });
         res.json(newOpp);

@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model Company {
@@ -45,6 +46,7 @@ model Opportunity {
   amount         Float     @default(0)
   stage          String    @default("Prospecto") // Prospecto, Calificado, Cotización Enviada, Negociación, Ganado, Perdido
   probability    Int       @default(10)
+  priority       String    @default("Media") // Baja, Media, Alta
   expectedClose  DateTime?
   businessType   String?
   createdAt      DateTime  @default(now())

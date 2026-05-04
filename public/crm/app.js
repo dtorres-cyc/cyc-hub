@@ -94,9 +94,15 @@ function renderKanban() {
             });
 
             card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span style="font-size:10px; background:var(--c-gray); padding:2px 6px; border-radius:4px;">${new Date(opp.createdAt).toLocaleDateString()}</span>
+                    <span style="font-size:10px; font-weight:bold; color: ${opp.priority === 'Alta' ? 'var(--c-orange)' : (opp.priority === 'Media' ? 'var(--c-primary)' : 'var(--text-muted)')}">${opp.priority}</span>
+                </div>
                 <div class="title">${opp.name}</div>
-                <div class="company">${opp.company ? opp.company.name : 'Sin empresa'}</div>
+                <div class="company" style="margin-bottom:4px;">🏢 ${opp.company ? opp.company.name : 'Sin empresa'}</div>
+                <div class="company">👤 ${opp.contact ? (opp.contact.firstName + ' ' + (opp.contact.lastName || '')) : 'Sin contacto'}</div>
                 <div class="amount">$${opp.amount.toLocaleString('es-CL')}</div>
+                ${opp.expectedClose ? `<div style="font-size:11px; margin-top:8px; color:var(--text-muted);">Cierre est: ${new Date(opp.expectedClose).toLocaleDateString()}</div>` : ''}
             `;
             cardsContainer.appendChild(card);
         });
@@ -194,19 +200,82 @@ function openModal() {
     } else if (currentTab === 'opportunities') {
         title.textContent = 'Nueva Oportunidad';
         const compOptions = globalCompanies.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        const contOptions = globalContacts.map(c => `<option value="${c.id}">${c.firstName} ${c.lastName || ''}</option>`).join('');
+        
         fields.innerHTML = `
             <div class="form-group"><label>Nombre del Negocio</label><input type="text" name="name" required></div>
             <div class="form-group"><label>Monto Estimado ($)</label><input type="number" name="amount" required></div>
-            <div class="form-group"><label>Empresa</label>
-                <select name="companyId" required><option value="">Selecciona...</option>${compOptions}</select>
+            
+            <div style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1;"><label>Prioridad</label>
+                    <select name="priority"><option value="Baja">Baja</option><option value="Media" selected>Media</option><option value="Alta">Alta</option></select>
+                </div>
+                <div class="form-group" style="flex:1;"><label>Cierre Esperado</label>
+                    <input type="date" name="expectedClose">
+                </div>
             </div>
+
             <div class="form-group"><label>Etapa</label>
                 <select name="stage">${STAGES.map(s => `<option value="${s}">${s}</option>`).join('')}</select>
+            </div>
+
+            <div style="border-top:1px solid var(--border); padding-top:15px; margin-top:15px;">
+                <h4 style="font-size:13px; margin-bottom:10px; color:var(--text-main);">Asignar Empresa</h4>
+                <div class="form-group">
+                    <select name="companyId" id="opp-comp-select" onchange="toggleNewCompany()">
+                        <option value="">-- Crear Nueva Empresa --</option>
+                        ${compOptions}
+                    </select>
+                </div>
+                <div class="form-group" id="opp-comp-new">
+                    <input type="text" name="newCompanyName" placeholder="Nombre de la nueva empresa">
+                </div>
+            </div>
+
+            <div style="border-top:1px solid var(--border); padding-top:15px; margin-top:15px;">
+                <h4 style="font-size:13px; margin-bottom:10px; color:var(--text-main);">Asignar Contacto</h4>
+                <div class="form-group">
+                    <select name="contactId" id="opp-cont-select" onchange="toggleNewContact()">
+                        <option value="">-- Crear Nuevo Contacto --</option>
+                        ${contOptions}
+                    </select>
+                </div>
+                <div id="opp-cont-new" style="display:flex; gap:10px;">
+                    <input type="text" name="newContactFirstName" placeholder="Nombre" style="flex:1; padding:8px; border:1px solid var(--border); border-radius:4px;">
+                    <input type="text" name="newContactLastName" placeholder="Apellido" style="flex:1; padding:8px; border:1px solid var(--border); border-radius:4px;">
+                </div>
             </div>
         `;
     }
 
     document.getElementById('modal-backdrop').style.display = 'block';
+    if(currentTab === 'opportunities') {
+        toggleNewCompany();
+        toggleNewContact();
+    }
+}
+
+function toggleNewCompany() {
+    const select = document.getElementById('opp-comp-select');
+    const newDiv = document.getElementById('opp-comp-new');
+    if(select.value === '') {
+        newDiv.style.display = 'block';
+    } else {
+        newDiv.style.display = 'none';
+        document.querySelector('input[name="newCompanyName"]').value = '';
+    }
+}
+
+function toggleNewContact() {
+    const select = document.getElementById('opp-cont-select');
+    const newDiv = document.getElementById('opp-cont-new');
+    if(select.value === '') {
+        newDiv.style.display = 'flex';
+    } else {
+        newDiv.style.display = 'none';
+        document.querySelector('input[name="newContactFirstName"]').value = '';
+        document.querySelector('input[name="newContactLastName"]').value = '';
+    }
 }
 
 function closeModal() {
