@@ -1104,3 +1104,64 @@ async function handleFormSubmit(e) {
         alert("Ocurrió un error al guardar.");
     }
 }
+
+function handleCSVUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const text = e.target.result;
+        // Basic CSV parsing
+        const rows = text.split('\n').map(row => row.trim()).filter(row => row);
+        if (rows.length < 2) return alert("El archivo está vacío o no tiene datos.");
+        
+        // Asumiendo delimitador por comas (,) o punto y coma (;)
+        const delimiter = rows[0].includes(';') ? ';' : ',';
+        const headers = rows[0].split(delimiter).map(h => h.trim());
+        const data = rows.slice(1).map(row => {
+            // Manejar comillas simples en un parseo rápido
+            const values = row.split(delimiter).map(v => v.replace(/^"|"$/g, '').trim());
+            let obj = {};
+            headers.forEach((h, i) => { obj[h] = values[i]; });
+            return obj;
+        });
+
+        // Determinar endpoint
+        let endpoint = '';
+        if (crmCurrentTab === 'companies') endpoint = '/crm/api/companies/bulk';
+        else if (crmCurrentTab === 'contacts') endpoint = '/crm/api/contacts/bulk';
+        else {
+            alert("La carga masiva solo está disponible para Empresas o Contactos.");
+            // Reset input
+            event.target.value = '';
+            return;
+        }
+
+        if(!confirm(`¿Estás seguro que deseas cargar ${data.length} registros en ${crmCurrentTab}?`)) {
+            event.target.value = '';
+            return;
+        }
+
+        try {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if(res.ok) {
+                alert("Carga masiva completada con éxito");
+                fetchCrmData();
+            } else {
+                alert("Hubo un error del servidor en la carga masiva.");
+            }
+        } catch(err) {
+            console.error(err);
+            alert("Error de red en la carga masiva.");
+        }
+        
+        // Reset input
+        event.target.value = '';
+    };
+    reader.readAsText(file);
+}

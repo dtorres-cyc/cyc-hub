@@ -216,7 +216,11 @@
         <div class="section-block">
           <div class="crm-header-actions">
             <h2 class="section-title" style="margin:0;">🤝 Pipeline CRM Interactivo</h2>
-            <button class="action-btn" id="btn-nuevo" onclick="openCrmModal()">+ Crear Nuevo</button>
+            <div style="display:flex; gap:10px;">
+              <button class="action-btn" style="background:var(--c-gray); color:var(--text-main);" onclick="document.getElementById('csv-file').click()">⬆ Carga Masiva CSV</button>
+              <input type="file" id="csv-file" accept=".csv" style="display:none;" onchange="handleCSVUpload(event)">
+              <button class="action-btn" id="btn-nuevo" onclick="openCrmModal()">+ Crear Nuevo</button>
+            </div>
           </div>
           
           <div class="crm-tabs">

@@ -37,6 +37,23 @@ router.post('/api/companies', async (req, res) => {
     }
 });
 
+// Carga masiva de empresas
+router.post('/api/companies/bulk', async (req, res) => {
+    try {
+        const companies = req.body.map(c => ({
+            name: c.name || c.Nombre || 'Sin Nombre',
+            rut: c.rut || c.RUT || null,
+            industry: c.industry || c.Industria || null,
+            owner: c.owner || c.Propietario || null
+        }));
+        const result = await prisma.company.createMany({ data: companies });
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error en carga masiva de empresas' });
+    }
+});
+
 // ==========================================
 // CONTACTS (Contactos)
 // ==========================================
@@ -68,6 +85,23 @@ router.post('/api/contacts', async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error al crear contacto' });
+    }
+});
+
+// Carga masiva de contactos
+router.post('/api/contacts/bulk', async (req, res) => {
+    try {
+        const contacts = req.body.map(c => ({
+            firstName: c.firstName || c.Nombre || 'Sin Nombre',
+            lastName: c.lastName || c.Apellido || null,
+            email: c.email || c.Email || null,
+            phone: c.phone || c.Telefono || c.Teléfono || null
+        }));
+        const result = await prisma.contact.createMany({ data: contacts });
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error en carga masiva de contactos' });
     }
 });
 

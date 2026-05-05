@@ -3,7 +3,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const { QUOTE_START_NUMBER } = require('../../shared/config');
 
-const DB_PATH = path.join(__dirname, '..', '..', 'cotizaciones.db');
+const DB_PATH = process.env.COTIZADOR_DB_PATH || path.join(__dirname, '..', '..', 'cotizaciones.db');
 
 let _db = null;
 function getDb() {
