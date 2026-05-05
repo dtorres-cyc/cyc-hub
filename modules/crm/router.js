@@ -55,6 +55,22 @@ router.post('/api/companies/bulk', async (req, res) => {
     }
 });
 
+// Actualizar una empresa
+router.put('/api/companies/:id', async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const { name, rut, industry, segment, size, owner } = req.body;
+        const updatedCompany = await prisma.company.update({
+            where: { id },
+            data: { name, rut, industry, segment, size, owner }
+        });
+        res.json(updatedCompany);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al actualizar empresa' });
+    }
+});
+
 // ==========================================
 // CONTACTS (Contactos)
 // ==========================================

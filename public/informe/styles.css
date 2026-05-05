@@ -389,3 +389,26 @@ body {
 .form-group { margin-bottom: 15px; }
 .form-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 5px; }
 .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; }
+
+/* Data Tables */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.data-table th {
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--border);
+  background: var(--bg-card);
+}
+.data-table td {
+  border-bottom: 1px solid var(--border);
+}
+.data-table tbody tr {
+  transition: background 0.2s;
+  cursor: pointer;
+}
+.data-table tbody tr:hover {
+  background: rgba(0,0,0,0.04);
+}

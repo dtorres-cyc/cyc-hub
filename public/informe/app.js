@@ -802,6 +802,7 @@ let crmCurrentTab = 'opportunities';
 let globalCompanies = [];
 let globalContacts = [];
 let globalOpportunities = [];
+let crmEditingId = null;
 
 const STAGES = ['Prospecto', 'Calificado', 'Cotización Enviada', 'Negociación', 'Ganado', 'Perdido'];
 
@@ -938,17 +939,19 @@ function renderContacts() {
     if(!tbody) return;
     tbody.innerHTML = '';
     globalContacts.forEach(c => {
-        tbody.innerHTML += `
-            <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:10px;"><strong>${c.firstName} ${c.lastName || ''}</strong></td>
-                <td style="padding:10px;">${c.firstName || '-'}</td>
-                <td style="padding:10px;">${c.lastName || '-'}</td>
-                <td style="padding:10px;">${c.role || '-'}</td>
-                <td style="padding:10px;">${c.phone || '-'}</td>
-                <td style="padding:10px;">${c.email || '-'}</td>
-                <td style="padding:10px;">${c.company ? c.company.name : '-'}</td>
-            </tr>
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--border)';
+        tr.onclick = () => openCrmModal(c);
+        tr.innerHTML = `
+            <td style="padding:10px;"><strong>${c.firstName} ${c.lastName || ''}</strong></td>
+            <td style="padding:10px;">${c.firstName || '-'}</td>
+            <td style="padding:10px;">${c.lastName || '-'}</td>
+            <td style="padding:10px;">${c.role || '-'}</td>
+            <td style="padding:10px;">${c.phone || '-'}</td>
+            <td style="padding:10px;">${c.email || '-'}</td>
+            <td style="padding:10px;">${c.company ? c.company.name : '-'}</td>
         `;
+        tbody.appendChild(tr);
     });
 }
 
@@ -957,41 +960,44 @@ function renderCompanies() {
     if(!tbody) return;
     tbody.innerHTML = '';
     globalCompanies.forEach(c => {
-        tbody.innerHTML += `
-            <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:10px;"><strong>${c.name}</strong></td>
-                <td style="padding:10px;">${c.rut || '-'}</td>
-                <td style="padding:10px;">${c.size || '-'}</td>
-                <td style="padding:10px;">${c.industry || '-'}</td>
-                <td style="padding:10px;">${c.contacts ? c.contacts.length : 0}</td>
-            </tr>
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--border)';
+        tr.onclick = () => openCrmModal(c);
+        tr.innerHTML = `
+            <td style="padding:10px;"><strong>${c.name}</strong></td>
+            <td style="padding:10px;">${c.rut || '-'}</td>
+            <td style="padding:10px;">${c.size || '-'}</td>
+            <td style="padding:10px;">${c.industry || '-'}</td>
+            <td style="padding:10px;">${c.contacts ? c.contacts.length : 0}</td>
         `;
+        tbody.appendChild(tr);
     });
 }
 
-function openCrmModal() {
+function openCrmModal(editData = null) {
+    crmEditingId = editData ? editData.id : null;
     const title = document.getElementById('crm-modal-title');
     const fields = document.getElementById('crm-modal-fields');
     fields.innerHTML = '';
 
     if (crmCurrentTab === 'companies') {
-        title.textContent = 'Nueva Empresa';
+        title.textContent = editData ? 'Editar Empresa' : 'Nueva Empresa';
         fields.innerHTML = `
-            <div class="form-group"><label>Nombre</label><input type="text" name="name" required></div>
-            <div class="form-group"><label>RUT</label><input type="text" name="rut"></div>
-            <div class="form-group"><label>Tamaño</label><input type="text" name="size"></div>
-            <div class="form-group"><label>Industria</label><input type="text" name="industry"></div>
-            <div class="form-group"><label>Propietario</label><input type="text" name="owner"></div>
+            <div class="form-group"><label>Nombre</label><input type="text" name="name" value="${editData ? (editData.name || '') : ''}" required></div>
+            <div class="form-group"><label>RUT</label><input type="text" name="rut" value="${editData ? (editData.rut || '') : ''}"></div>
+            <div class="form-group"><label>Tamaño</label><input type="text" name="size" value="${editData ? (editData.size || '') : ''}"></div>
+            <div class="form-group"><label>Industria</label><input type="text" name="industry" value="${editData ? (editData.industry || '') : ''}"></div>
+            <div class="form-group"><label>Propietario</label><input type="text" name="owner" value="${editData ? (editData.owner || '') : ''}"></div>
         `;
     } else if (crmCurrentTab === 'contacts') {
-        title.textContent = 'Nuevo Contacto';
-        const compOptions = globalCompanies.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        title.textContent = editData ? 'Editar Contacto' : 'Nuevo Contacto';
+        const compOptions = globalCompanies.map(c => `<option value="${c.id}" ${editData && editData.companyId === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
         fields.innerHTML = `
-            <div class="form-group"><label>Nombre</label><input type="text" name="firstName" required></div>
-            <div class="form-group"><label>Apellido</label><input type="text" name="lastName"></div>
-            <div class="form-group"><label>Cargo</label><input type="text" name="role"></div>
-            <div class="form-group"><label>Teléfono</label><input type="text" name="phone"></div>
-            <div class="form-group"><label>Email</label><input type="email" name="email"></div>
+            <div class="form-group"><label>Nombre</label><input type="text" name="firstName" value="${editData ? (editData.firstName || '') : ''}" required></div>
+            <div class="form-group"><label>Apellido</label><input type="text" name="lastName" value="${editData ? (editData.lastName || '') : ''}"></div>
+            <div class="form-group"><label>Cargo</label><input type="text" name="role" value="${editData ? (editData.role || '') : ''}"></div>
+            <div class="form-group"><label>Teléfono</label><input type="text" name="phone" value="${editData ? (editData.phone || '') : ''}"></div>
+            <div class="form-group"><label>Email</label><input type="email" name="email" value="${editData ? (editData.email || '') : ''}"></div>
             <div class="form-group"><label>Empresa</label>
                 <select name="companyId"><option value="">Ninguna</option>${compOptions}</select>
             </div>
@@ -1095,13 +1101,15 @@ async function handleFormSubmit(e) {
     const data = Object.fromEntries(formData.entries());
 
     let endpoint = '';
-    if (crmCurrentTab === 'companies') endpoint = '/crm/api/companies';
-    else if (crmCurrentTab === 'contacts') endpoint = '/crm/api/contacts';
-    else if (crmCurrentTab === 'opportunities') endpoint = '/crm/api/opportunities';
+    let method = crmEditingId ? 'PUT' : 'POST';
+
+    if (crmCurrentTab === 'companies') endpoint = '/crm/api/companies' + (crmEditingId ? `/${crmEditingId}` : '');
+    else if (crmCurrentTab === 'contacts') endpoint = '/crm/api/contacts' + (crmEditingId ? `/${crmEditingId}` : '');
+    else if (crmCurrentTab === 'opportunities') endpoint = '/crm/api/opportunities' + (crmEditingId ? `/${crmEditingId}` : '');
 
     try {
         await fetch(endpoint, {
-            method: 'POST',
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
