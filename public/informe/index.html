@@ -411,6 +411,20 @@
                   
                   <div id="pdf-flota-clone" style="transform: scale(0.85); transform-origin: top left; width: 117%;"></div>
 
+                  <div style="margin-top:15px;">
+                    <strong style="color:var(--text-main); font-size:14px;">Documentos Vencidos y por Vencer (Equipos con Contrato):</strong>
+                    <table style="width:100%; border-collapse: collapse; font-size:12px; margin-top:5px; text-align:left;">
+                        <thead>
+                            <tr style="background:#fee2e2; border-bottom:1px solid #fca5a5; color:#991b1b;">
+                                <th style="padding:6px;">Equipo</th>
+                                <th style="padding:6px;">Documento</th>
+                                <th style="padding:6px;">Vencimiento</th>
+                                <th style="padding:6px;">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pdf-docs-table"></tbody>
+                    </table>
+                  </div>
                   <div style="margin-top:5px;">
                     <strong style="color:var(--text-main); font-size:14px;">Análisis de Arriendo:</strong>
                     <textarea id="input-analysis-rental" style="width:100%; height:80px; margin-top:5px; padding:10px; border:1px solid #ccc; border-radius:4px; font-family:inherit; font-size:12px;" placeholder="Esperando análisis de IA..."></textarea>
@@ -439,7 +453,8 @@
                     <thead>
                       <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
                         <th style="padding:8px;">Etapa</th>
-                        <th style="padding:8px;">Oportunidades</th>
+                        <th style="padding:8px;">Oportunidad</th>
+                        <th style="padding:8px;">Probabilidad</th>
                         <th style="padding:8px;">Monto Total</th>
                       </tr>
                     </thead>

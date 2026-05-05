@@ -1329,6 +1329,8 @@ function openNewReportView() {
     if (flotaTable) flotaTable.remove();
     const flotaHeader = flotaClone.querySelector('.section-title');
     if (flotaHeader) flotaHeader.remove();
+    const flotaFilter = flotaClone.querySelector('.filter-bar');
+    if (flotaFilter) flotaFilter.remove();
     document.getElementById('pdf-flota-clone').innerHTML = '';
     document.getElementById('pdf-flota-clone').appendChild(flotaClone);
 
@@ -1337,12 +1339,14 @@ function openNewReportView() {
     facClone.style.display = 'block';
     const facHeader = facClone.querySelector('.section-title');
     if (facHeader) facHeader.remove();
+    const facFilter = facClone.querySelector('.filter-bar');
+    if (facFilter) facFilter.remove();
     document.getElementById('pdf-fac-clone').innerHTML = '';
     document.getElementById('pdf-fac-clone').appendChild(facClone);
 
     // Redibujar Canvas
     setTimeout(() => {
-        ['chartTipo', 'chartCliente', 'chartFacturacion', 'chartFacTipo', 'chartFacCliente'].forEach(chartId => {
+        ['chart-arriendo-tipo', 'chart-arriendo-cliente', 'chartFacturacion', 'chartFacTipo', 'chartFacCliente'].forEach(chartId => {
             const orig = document.getElementById(chartId);
             const clones = document.getElementById('pdf-content').querySelectorAll(`#${chartId}`);
             clones.forEach(clone => {
@@ -1353,30 +1357,61 @@ function openNewReportView() {
         });
     }, 500);
 
+    // Documentos vencidos
+    const docsTable = document.getElementById('pdf-docs-table');
+    if (docsTable) {
+        docsTable.innerHTML = '';
+        globalEquipos.forEach(e => {
+            const hasContrato = safeLower(e.arrendado) === 'contrato';
+            if (!hasContrato) return;
+            
+            const docs = [
+                { name: 'Permiso Cir.', date: e.venc_permiso },
+                { name: 'SOAP', date: e.venc_soap },
+                { name: 'Rev. Téc.', date: e.venc_rev },
+                { name: 'Gases', date: e.venc_gases }
+            ];
+            
+            docs.forEach(doc => {
+                const d = parseDate(doc.date);
+                if (!d) return;
+                const diffDays = (d - new Date()) / (1000 * 60 * 60 * 24);
+                if (diffDays <= 30) {
+                    const estado = diffDays < 0 ? 'Vencido' : 'Por Vencer';
+                    const color = diffDays < 0 ? '#ef4444' : '#f59e0b';
+                    docsTable.innerHTML += `
+                        <tr style="border-bottom:1px solid #f1f5f9;">
+                            <td style="padding:4px; font-weight:600;">${e.id || e.patente || '-'}</td>
+                            <td style="padding:4px;">${doc.name}</td>
+                            <td style="padding:4px;">${doc.date}</td>
+                            <td style="padding:4px; color:${color}; font-weight:bold;">${estado}</td>
+                        </tr>
+                    `;
+                }
+            });
+        });
+    }
+
     // Pipeline
     const pipeTable = document.getElementById('pdf-pipeline-table');
-    pipeTable.innerHTML = '';
-    let stagesData = {};
-    STAGES.forEach(s => stagesData[s] = { count: 0, amount: 0 });
-    
-    globalOpportunities.forEach(o => {
-        if (stagesData[o.stage]) {
-            stagesData[o.stage].count++;
-            stagesData[o.stage].amount += o.amount;
-        }
-    });
-    
-    STAGES.forEach(s => {
-        if (stagesData[s].count > 0) {
-            pipeTable.innerHTML += `
-                <tr style="border-bottom:1px solid #e2e8f0;">
-                    <td style="padding:8px; font-weight:600;">${s}</td>
-                    <td style="padding:8px;">${stagesData[s].count}</td>
-                    <td style="padding:8px;">$${stagesData[s].amount.toLocaleString('es-CL')}</td>
-                </tr>
-            `;
-        }
-    });
+    if (pipeTable) {
+        pipeTable.innerHTML = '';
+        STAGES.forEach(s => {
+            const opps = globalOpportunities.filter(o => o.stage === s);
+            if (opps.length > 0) {
+                opps.forEach((o, i) => {
+                    pipeTable.innerHTML += `
+                        <tr style="border-bottom:1px solid #e2e8f0;">
+                            ${i === 0 ? `<td rowspan="${opps.length}" style="padding:8px; font-weight:600; border-right:1px solid #e2e8f0; vertical-align:top; width:25%;">${s}</td>` : ''}
+                            <td style="padding:8px;">${o.name}</td>
+                            <td style="padding:8px; text-align:center;">${o.probability}%</td>
+                            <td style="padding:8px; font-weight:600;">$${o.amount.toLocaleString('es-CL')}</td>
+                        </tr>
+                    `;
+                });
+            }
+        });
+    }
     
     // Reset textareas
     ['rental', 'billing', 'pipeline'].forEach(k => {
