@@ -71,6 +71,21 @@ router.put('/api/companies/:id', async (req, res) => {
     }
 });
 
+// Eliminar empresas masivamente
+router.post('/api/companies/bulk-delete', async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !ids.length) return res.status(400).json({ error: 'No IDs provided' });
+        const result = await prisma.company.deleteMany({
+            where: { id: { in: ids } }
+        });
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al eliminar empresas' });
+    }
+});
+
 // ==========================================
 // CONTACTS (Contactos)
 // ==========================================
@@ -139,6 +154,21 @@ router.put('/api/contacts/:id', async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error al actualizar contacto' });
+    }
+});
+
+// Eliminar contactos masivamente
+router.post('/api/contacts/bulk-delete', async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !ids.length) return res.status(400).json({ error: 'No IDs provided' });
+        const result = await prisma.contact.deleteMany({
+            where: { id: { in: ids } }
+        });
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al eliminar contactos' });
     }
 });
 

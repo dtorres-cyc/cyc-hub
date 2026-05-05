@@ -217,6 +217,7 @@
           <div class="crm-header-actions">
             <h2 class="section-title" style="margin:0;">🤝 Pipeline CRM Interactivo</h2>
             <div style="display:flex; gap:10px;">
+              <button class="action-btn" id="btn-bulk-delete" style="display:none; background:var(--c-red); color:white;" onclick="bulkDelete()">🗑️ Borrar Seleccionados</button>
               <button class="action-btn" style="background:var(--c-gray); color:var(--text-main);" onclick="document.getElementById('csv-file').click()">⬆ Carga Masiva CSV</button>
               <input type="file" id="csv-file" accept=".csv" style="display:none;" onchange="handleCSVUpload(event)">
               <button class="action-btn" id="btn-nuevo" onclick="openCrmModal()">+ Crear Nuevo</button>
@@ -242,6 +243,7 @@
               <table class="data-table" style="width:100%; text-align:left;">
                 <thead>
                   <tr style="background:var(--c-gray);">
+                    <th style="padding:10px; width:40px;"><input type="checkbox" onclick="toggleAllCheckboxes(this)"></th>
                     <th style="padding:10px;">Nombre Completo</th>
                     <th style="padding:10px;">Nombre</th>
                     <th style="padding:10px;">Apellido</th>
@@ -262,6 +264,7 @@
               <table class="data-table" style="width:100%; text-align:left;">
                 <thead>
                   <tr style="background:var(--c-gray);">
+                    <th style="padding:10px; width:40px;"><input type="checkbox" onclick="toggleAllCheckboxes(this)"></th>
                     <th style="padding:10px;">Nombre</th>
                     <th style="padding:10px;">RUT</th>
                     <th style="padding:10px;">Tamaño</th>

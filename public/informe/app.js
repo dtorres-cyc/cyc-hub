@@ -859,9 +859,25 @@ function renderKanban() {
     if(!board) return;
     board.innerHTML = '';
 
+    const stageColors = {
+        'Prospecto': '#94a3b8',
+        'Calificado': '#3b82f6',
+        'Cotización Enviada': '#eab308',
+        'Negociación': '#f97316',
+        'Ganado': '#22c55e',
+        'Perdido': '#ef4444'
+    };
+
+    const priorityColors = {
+        'Alta': '#fee2e2',
+        'Media': '#fef3c7',
+        'Baja': '#e0f2fe'
+    };
+
     STAGES.forEach(stage => {
         const col = document.createElement('div');
         col.className = 'kanban-column';
+        col.style.borderTop = `4px solid ${stageColors[stage] || '#ccc'}`;
         
         const h3 = document.createElement('h3');
         h3.textContent = stage;
@@ -887,14 +903,19 @@ function renderKanban() {
             card.draggable = true;
             card.dataset.id = opp.id;
             
+            // Color pastel de prioridad
+            if (opp.priority && priorityColors[opp.priority]) {
+                card.style.backgroundColor = priorityColors[opp.priority];
+            }
+            
             card.addEventListener('dragstart', e => {
                 e.dataTransfer.setData('text/plain', opp.id);
             });
 
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    <span style="font-size:10px; background:var(--c-gray); padding:2px 6px; border-radius:4px;">${new Date(opp.createdAt).toLocaleDateString()}</span>
-                    <span style="font-size:10px; font-weight:bold; color: ${opp.priority === 'Alta' ? 'var(--c-orange)' : (opp.priority === 'Media' ? 'var(--c-primary)' : 'var(--text-muted)')}">${opp.priority}</span>
+                    <span style="font-size:10px; background:rgba(255,255,255,0.6); padding:2px 6px; border-radius:4px;">${new Date(opp.createdAt).toLocaleDateString()}</span>
+                    <span style="font-size:10px; font-weight:bold; color: ${opp.priority === 'Alta' ? '#b91c1c' : (opp.priority === 'Media' ? '#b45309' : '#0369a1')}">${opp.priority}</span>
                 </div>
                 <div class="title">${opp.name}</div>
                 <div class="company" style="margin-bottom:4px;">🏢 ${opp.company ? opp.company.name : 'Sin empresa'}</div>
@@ -943,6 +964,7 @@ function renderContacts() {
         tr.style.borderBottom = '1px solid var(--border)';
         tr.onclick = () => openCrmModal(c);
         tr.innerHTML = `
+            <td style="padding:10px;"><input type="checkbox" class="cb-row" value="${c.id}" onclick="event.stopPropagation(); checkSelection();"></td>
             <td style="padding:10px;"><strong>${c.firstName} ${c.lastName || ''}</strong></td>
             <td style="padding:10px;">${c.firstName || '-'}</td>
             <td style="padding:10px;">${c.lastName || '-'}</td>
@@ -964,6 +986,7 @@ function renderCompanies() {
         tr.style.borderBottom = '1px solid var(--border)';
         tr.onclick = () => openCrmModal(c);
         tr.innerHTML = `
+            <td style="padding:10px;"><input type="checkbox" class="cb-row" value="${c.id}" onclick="event.stopPropagation(); checkSelection();"></td>
             <td style="padding:10px;"><strong>${c.name}</strong></td>
             <td style="padding:10px;">${c.rut || '-'}</td>
             <td style="padding:10px;">${c.size || '-'}</td>
@@ -999,9 +1022,13 @@ function openCrmModal(editData = null) {
             <div class="form-group"><label>Teléfono</label><input type="text" name="phone" value="${editData ? (editData.phone || '') : ''}"></div>
             <div class="form-group"><label>Email</label><input type="email" name="email" value="${editData ? (editData.email || '') : ''}"></div>
             <div class="form-group"><label>Empresa</label>
-                <select name="companyId"><option value="">Ninguna</option>${compOptions}</select>
+                <select name="companyId" onchange="showCompanyInfoCard(this.value)"><option value="">Ninguna</option>${compOptions}</select>
             </div>
+            <div id="company-info-card" style="display:none; margin-top:10px; padding:10px; background:var(--bg-card); border:1px solid var(--border); border-radius:4px; font-size:12px;"></div>
         `;
+        if (editData && editData.companyId) {
+            setTimeout(() => showCompanyInfoCard(editData.companyId), 50);
+        }
     } else if (crmCurrentTab === 'opportunities') {
         title.textContent = 'Nueva Oportunidad';
         const compOptions = globalCompanies.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
@@ -1180,4 +1207,78 @@ function handleCSVUpload(event) {
         event.target.value = '';
     };
     reader.readAsText(file);
+}
+
+function toggleAllCheckboxes(source) {
+    const viewId = crmCurrentTab === 'companies' ? 'view-companies' : 'view-contacts';
+    const view = document.getElementById(viewId);
+    if (!view) return;
+    const checkboxes = view.querySelectorAll('.cb-row');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+    checkSelection();
+}
+
+function showCompanyInfoCard(companyId) {
+    const card = document.getElementById('company-info-card');
+    if (!card) return;
+    if (!companyId) {
+        card.style.display = 'none';
+        return;
+    }
+    const comp = globalCompanies.find(c => c.id == companyId);
+    if (comp) {
+        card.style.display = 'block';
+        card.innerHTML = `
+            <strong>🏢 ${comp.name}</strong><br>
+            <span style="color:var(--text-muted);">RUT: ${comp.rut || 'N/A'} | Tamaño: ${comp.size || 'N/A'} | Ind: ${comp.industry || 'N/A'}</span>
+        `;
+    } else {
+        card.style.display = 'none';
+    }
+}
+
+function checkSelection() {
+    const viewId = crmCurrentTab === 'companies' ? 'view-companies' : 'view-contacts';
+    const view = document.getElementById(viewId);
+    if (!view) return;
+    const checkboxes = view.querySelectorAll('.cb-row:checked');
+    const btnDelete = document.getElementById('btn-bulk-delete');
+    if (checkboxes.length > 0) {
+        btnDelete.style.display = 'block';
+    } else {
+        btnDelete.style.display = 'none';
+        const selectAll = view.querySelector('th input[type="checkbox"]');
+        if (selectAll) selectAll.checked = false;
+    }
+}
+
+async function bulkDelete() {
+    const viewId = crmCurrentTab === 'companies' ? 'view-companies' : 'view-contacts';
+    const view = document.getElementById(viewId);
+    const checkboxes = view.querySelectorAll('.cb-row:checked');
+    if (checkboxes.length === 0) return;
+
+    if (!confirm(`¿Estás seguro que deseas eliminar ${checkboxes.length} elementos seleccionados?`)) return;
+
+    const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
+    const endpoint = crmCurrentTab === 'companies' ? '/crm/api/companies/bulk-delete' : '/crm/api/contacts/bulk-delete';
+
+    try {
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids })
+        });
+        if (res.ok) {
+            fetchCrmData();
+            document.getElementById('btn-bulk-delete').style.display = 'none';
+            const selectAll = view.querySelector('th input[type="checkbox"]');
+            if (selectAll) selectAll.checked = false;
+        } else {
+            alert('Hubo un error al eliminar');
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Error de red al eliminar');
+    }
 }
