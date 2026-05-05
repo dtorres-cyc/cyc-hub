@@ -13,6 +13,7 @@ model Company {
   rut            String?
   industry       String?
   segment        String?
+  size           String?
   owner          String?
   totalInvoiced  Float     @default(0)
   createdAt      DateTime  @default(now())

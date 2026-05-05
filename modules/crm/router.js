@@ -26,9 +26,9 @@ router.get('/api/companies', async (req, res) => {
 // Crear una empresa
 router.post('/api/companies', async (req, res) => {
     try {
-        const { name, rut, industry, segment, owner } = req.body;
+        const { name, rut, industry, segment, size, owner } = req.body;
         const newCompany = await prisma.company.create({
-            data: { name, rut, industry, segment, owner }
+            data: { name, rut, industry, segment, size, owner }
         });
         res.json(newCompany);
     } catch (error) {
@@ -43,6 +43,7 @@ router.post('/api/companies/bulk', async (req, res) => {
         const companies = req.body.map(c => ({
             name: c.name || c.Nombre || 'Sin Nombre',
             rut: c.rut || c.RUT || null,
+            size: c.size || c.Tamaño || c.Tamano || null,
             industry: c.industry || c.Industria || null,
             owner: c.owner || c.Propietario || null
         }));
@@ -94,7 +95,8 @@ router.post('/api/contacts/bulk', async (req, res) => {
         const contacts = req.body.map(c => ({
             firstName: c.firstName || c.Nombre || 'Sin Nombre',
             lastName: c.lastName || c.Apellido || null,
-            email: c.email || c.Email || null,
+            role: c.role || c.Cargo || null,
+            email: c.email || c.Email || c.Correo || null,
             phone: c.phone || c.Telefono || c.Teléfono || null
         }));
         const result = await prisma.contact.createMany({ data: contacts });

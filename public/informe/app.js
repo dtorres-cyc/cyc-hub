@@ -941,8 +941,11 @@ function renderContacts() {
         tbody.innerHTML += `
             <tr style="border-bottom:1px solid var(--border);">
                 <td style="padding:10px;"><strong>${c.firstName} ${c.lastName || ''}</strong></td>
-                <td style="padding:10px;">${c.email || '-'}</td>
+                <td style="padding:10px;">${c.firstName || '-'}</td>
+                <td style="padding:10px;">${c.lastName || '-'}</td>
+                <td style="padding:10px;">${c.role || '-'}</td>
                 <td style="padding:10px;">${c.phone || '-'}</td>
+                <td style="padding:10px;">${c.email || '-'}</td>
                 <td style="padding:10px;">${c.company ? c.company.name : '-'}</td>
             </tr>
         `;
@@ -958,7 +961,9 @@ function renderCompanies() {
             <tr style="border-bottom:1px solid var(--border);">
                 <td style="padding:10px;"><strong>${c.name}</strong></td>
                 <td style="padding:10px;">${c.rut || '-'}</td>
+                <td style="padding:10px;">${c.size || '-'}</td>
                 <td style="padding:10px;">${c.industry || '-'}</td>
+                <td style="padding:10px;">${c.contacts ? c.contacts.length : 0}</td>
             </tr>
         `;
     });
@@ -974,6 +979,7 @@ function openCrmModal() {
         fields.innerHTML = `
             <div class="form-group"><label>Nombre</label><input type="text" name="name" required></div>
             <div class="form-group"><label>RUT</label><input type="text" name="rut"></div>
+            <div class="form-group"><label>Tamaño</label><input type="text" name="size"></div>
             <div class="form-group"><label>Industria</label><input type="text" name="industry"></div>
             <div class="form-group"><label>Propietario</label><input type="text" name="owner"></div>
         `;
@@ -983,6 +989,8 @@ function openCrmModal() {
         fields.innerHTML = `
             <div class="form-group"><label>Nombre</label><input type="text" name="firstName" required></div>
             <div class="form-group"><label>Apellido</label><input type="text" name="lastName"></div>
+            <div class="form-group"><label>Cargo</label><input type="text" name="role"></div>
+            <div class="form-group"><label>Teléfono</label><input type="text" name="phone"></div>
             <div class="form-group"><label>Email</label><input type="email" name="email"></div>
             <div class="form-group"><label>Empresa</label>
                 <select name="companyId"><option value="">Ninguna</option>${compOptions}</select>
