@@ -59,3 +59,21 @@ model Opportunity {
   contactId      Int?
   contact        Contact?  @relation(fields: [contactId], references: [id])
 }
+
+model WeeklyReport {
+  id                  Int      @id @default(autoincrement())
+  createdAt           DateTime @default(now())
+  
+  // Snapshots
+  rentedEquipments    Int      @default(0)
+  workshopEquipments  Int      @default(0)
+  monthlyBilled       Float    @default(0)
+  pipelineValue       Float    @default(0)
+  pipelineClosedValue Float    @default(0)
+
+  // Analysis texts
+  analysisRental      String?
+  analysisWorkshop    String?
+  analysisBilling     String?
+  analysisPipeline    String?
+}

@@ -36,6 +36,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             populateFacFilters(globalFacturas);
             applyFacFilters();
         }
+        
+        fetchReports();
     } catch (e) {
         console.error('Error fetching data', e);
     }
@@ -1281,4 +1283,183 @@ async function bulkDelete() {
         console.error(e);
         alert('Error de red al eliminar');
     }
+}
+
+// ==========================================
+// INFORMES COMERCIALES
+// ==========================================
+async function fetchReports() {
+    try {
+        const res = await fetch('/crm/api/reports');
+        if (!res.ok) return;
+        const reports = await res.json();
+        const tbody = document.getElementById('table-reports');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        reports.forEach(r => {
+            tbody.innerHTML += `
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:10px;">#${r.id}</td>
+                    <td style="padding:10px;">${new Date(r.createdAt).toLocaleDateString('es-CL')}</td>
+                    <td style="padding:10px;">${r.rentedEquipments}</td>
+                    <td style="padding:10px;">$${r.monthlyBilled.toLocaleString('es-CL')}</td>
+                    <td style="padding:10px;">$${r.pipelineValue.toLocaleString('es-CL')}</td>
+                    <td style="padding:10px;">
+                        <button class="action-btn" style="padding:5px 10px; font-size:11px; background:var(--c-primary);" onclick="viewPastReport(${r.id})">Ver Resumen</button>
+                    </td>
+                </tr>
+            `;
+        });
+    } catch (err) {
+        console.error("Error fetching reports", err);
+    }
+}
+
+function openNewReportView() {
+    document.getElementById('reports-list-view').style.display = 'none';
+    document.getElementById('report-generator-view').style.display = 'block';
+    
+    // Auto-fill Data
+    document.getElementById('pdf-date').textContent = "Fecha: " + new Date().toLocaleDateString('es-CL');
+    
+    const rented = window.equipos_lists && window.equipos_lists['arrendados_total'] ? window.equipos_lists['arrendados_total'].length : 0;
+    const workshop = window.equipos_lists && window.equipos_lists['taller'] ? window.equipos_lists['taller'].length : 0;
+    document.getElementById('pdf-rented').textContent = rented;
+    document.getElementById('pdf-workshop').textContent = workshop;
+    
+    // Docs Priority (Equipos con Arriendo)
+    let docsHtml = '';
+    const docsViewVencidos = document.getElementById('vencidos-content');
+    if (docsViewVencidos) {
+        const uls = docsViewVencidos.querySelectorAll('ul');
+        if (uls.length > 0) docsHtml += uls[0].innerHTML; // The first UL is "Equipos con Contrato"
+    }
+    document.getElementById('pdf-docs-list').innerHTML = docsHtml || '<li>Ninguno</li>';
+
+    // Billing
+    const billed = document.getElementById('fac-mes').textContent;
+    document.getElementById('pdf-billed').textContent = billed;
+    
+    let invHtml = '';
+    if (window.facLists && window.facLists.vencidas) {
+        invHtml += window.facLists.vencidas.slice(0, 5).map(i => `<li>${i.f.cliente}: $${(i.f.saldo/1000000).toFixed(1)}M (${i.f.alerta})</li>`).join('');
+    }
+    if (window.facLists && window.facLists.porvencer) {
+        invHtml += window.facLists.porvencer.slice(0, 5).map(i => `<li style="color:#666;">${i.f.cliente}: $${(i.f.saldo/1000000).toFixed(1)}M (${i.f.alerta})</li>`).join('');
+    }
+    document.getElementById('pdf-invoices-list').innerHTML = invHtml || '<li>Ninguno</li>';
+
+    // Pipeline
+    let pipeTotal = 0;
+    let pipeWon = 0;
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    globalOpportunities.forEach(o => {
+        pipeTotal += o.amount;
+        if (o.stage === 'Ganado') {
+            const updatedAt = new Date(o.updatedAt);
+            if (updatedAt >= oneWeekAgo) {
+                pipeWon += o.amount;
+            }
+        }
+    });
+    document.getElementById('pdf-pipeline-total').textContent = pipeTotal.toLocaleString('es-CL');
+    document.getElementById('pdf-pipeline-won').textContent = pipeWon.toLocaleString('es-CL');
+    
+    // Reset textareas
+    ['rental', 'billing', 'pipeline'].forEach(k => {
+        document.getElementById(`input-analysis-${k}`).style.display = 'block';
+        document.getElementById(`text-analysis-${k}`).style.display = 'none';
+        document.getElementById(`input-analysis-${k}`).value = '';
+    });
+}
+
+function closeReportView() {
+    document.getElementById('reports-list-view').style.display = 'block';
+    document.getElementById('report-generator-view').style.display = 'none';
+    const chartContainer = document.getElementById('pdf-charts-container');
+    if (chartContainer) chartContainer.innerHTML = ''; // Limpiar clon de canvas
+}
+
+function viewPastReport(id) {
+    alert("Vista de reporte histórico en desarrollo. Por favor genere uno nuevo para exportar a PDF.");
+}
+
+async function saveAndExportReport() {
+    // 1. Convertir textareas a divs para el PDF
+    ['rental', 'billing', 'pipeline'].forEach(k => {
+        const input = document.getElementById(`input-analysis-${k}`);
+        const text = document.getElementById(`text-analysis-${k}`);
+        text.textContent = input.value || 'Sin análisis.';
+        input.style.display = 'none';
+        text.style.display = 'block';
+    });
+
+    // 2. Clonar gráficos
+    const chartContainer = document.getElementById('pdf-charts-container');
+    chartContainer.innerHTML = ''; // clear
+    const facturacionCanvas = document.getElementById('chartFacturacion');
+    const facTipoCanvas = document.getElementById('chartFacTipo');
+    
+    if (facturacionCanvas) {
+        const img1 = document.createElement('img');
+        img1.src = facturacionCanvas.toDataURL("image/png");
+        img1.style.height = '100%';
+        img1.style.objectFit = 'contain';
+        chartContainer.appendChild(img1);
+    }
+    if (facTipoCanvas) {
+        const img2 = document.createElement('img');
+        img2.src = facTipoCanvas.toDataURL("image/png");
+        img2.style.height = '100%';
+        img2.style.objectFit = 'contain';
+        chartContainer.appendChild(img2);
+    }
+
+    // 3. Obtener valores para DB
+    const rentedStr = document.getElementById('pdf-rented').textContent;
+    const workshopStr = document.getElementById('pdf-workshop').textContent;
+    const billedStr = document.getElementById('pdf-billed').textContent.replace(/\./g, '').replace(',', '.');
+    const pipeTotalStr = document.getElementById('pdf-pipeline-total').textContent.replace(/\./g, '').replace(',', '.');
+    const pipeWonStr = document.getElementById('pdf-pipeline-won').textContent.replace(/\./g, '').replace(',', '.');
+
+    const data = {
+        rentedEquipments: parseInt(rentedStr) || 0,
+        workshopEquipments: parseInt(workshopStr) || 0,
+        monthlyBilled: parseFloat(billedStr) || 0,
+        pipelineValue: parseFloat(pipeTotalStr) || 0,
+        pipelineClosedValue: parseFloat(pipeWonStr) || 0,
+        analysisRental: document.getElementById('input-analysis-rental').value,
+        analysisWorkshop: '', // Combinado en rental por simplicidad en UI
+        analysisBilling: document.getElementById('input-analysis-billing').value,
+        analysisPipeline: document.getElementById('input-analysis-pipeline').value
+    };
+
+    // 4. Guardar en DB
+    try {
+        await fetch('/crm/api/reports', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        fetchReports();
+    } catch(err) {
+        console.error("Error guardando reporte", err);
+    }
+
+    // 5. Exportar a PDF
+    const element = document.getElementById('pdf-content');
+    const opt = {
+        margin:       10,
+        filename:     `Informe_Comercial_CYC_${new Date().toISOString().slice(0,10)}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+    };
+    
+    html2pdf().set(opt).from(element).save().then(() => {
+        // Restaurar vista
+        closeReportView();
+    });
 }

@@ -259,4 +259,47 @@ router.patch('/api/opportunities/:id/stage', async (req, res) => {
     }
 });
 
+// ==========================================
+// WEEKLY REPORTS (Informes)
+// ==========================================
+router.get('/api/reports', async (req, res) => {
+    try {
+        const reports = await prisma.weeklyReport.findMany({
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(reports);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al obtener informes' });
+    }
+});
+
+router.post('/api/reports', async (req, res) => {
+    try {
+        const { 
+            rentedEquipments, workshopEquipments, monthlyBilled, 
+            pipelineValue, pipelineClosedValue,
+            analysisRental, analysisWorkshop, analysisBilling, analysisPipeline
+        } = req.body;
+        
+        const newReport = await prisma.weeklyReport.create({
+            data: {
+                rentedEquipments: parseInt(rentedEquipments || 0),
+                workshopEquipments: parseInt(workshopEquipments || 0),
+                monthlyBilled: parseFloat(monthlyBilled || 0),
+                pipelineValue: parseFloat(pipelineValue || 0),
+                pipelineClosedValue: parseFloat(pipelineClosedValue || 0),
+                analysisRental,
+                analysisWorkshop,
+                analysisBilling,
+                analysisPipeline
+            }
+        });
+        res.json(newReport);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al guardar informe' });
+    }
+});
+
 module.exports = router;
