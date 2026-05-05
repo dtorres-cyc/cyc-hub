@@ -4,6 +4,7 @@ let chartTipo = null;
 let chartCliente = null;
 let chartFacturacion = null;
 let chartFacCliente = null;
+let chartFacTipo = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Activar ChartDataLabels
@@ -545,6 +546,8 @@ function calculateFacKPIs(facturas) {
 
     let deudaPorCliente = {};
 
+    let facturacionPorTipo = {};
+
     facturas.forEach(f => {
         const netoM = f.neto / 1000000;
         const saldoM = f.saldo / 1000000;
@@ -557,6 +560,9 @@ function calculateFacKPIs(facturas) {
             if (f.mes_emi >= 1 && f.mes_emi <= 12) mensual_2026[f.mes_emi - 1] += netoM;
             if (f.mes_emi === currentMonth) mes_act_2026 += netoM;
         }
+
+        const tipoStr = f.tipo || 'Otros';
+        facturacionPorTipo[tipoStr] = (facturacionPorTipo[tipoStr] || 0) + netoM;
 
         if (f.estado !== 'pagado') {
             nopag_total += saldoM;
@@ -614,8 +620,43 @@ function calculateFacKPIs(facturas) {
         },
         options: {
             responsive: true,
-            plugins: { legend: { position: 'top' } },
+            maintainAspectRatio: false,
+            plugins: { 
+                legend: { position: 'top' },
+                datalabels: { display: false } // Ocultar datalabels porque se ven mal en mensual plano
+            },
             scales: { y: { beginAtZero: true } }
+        }
+    });
+
+    if (chartFacTipo) chartFacTipo.destroy();
+    const ctxFacTipo = document.getElementById('chart-fac-tipo').getContext('2d');
+    let tiposArr = Object.keys(facturacionPorTipo).map(t => ({ tipo: t, monto: facturacionPorTipo[t] })).sort((a,b) => b.monto - a.monto);
+    chartFacTipo = new Chart(ctxFacTipo, {
+        type: 'doughnut',
+        data: {
+            labels: tiposArr.map(t => t.tipo),
+            datasets: [{
+                data: tiposArr.map(t => Math.round(t.monto*10)/10),
+                backgroundColor: [
+                    'rgba(52,152,219,0.6)', 'rgba(46,204,113,0.6)', 'rgba(231,76,60,0.6)', 
+                    'rgba(241,196,15,0.6)', 'rgba(155,89,182,0.6)', 'rgba(149,165,166,0.6)'
+                ],
+                borderColor: ['#3498db', '#2ecc71', '#e74c3c', '#f1c40f', '#9b59b6', '#95a5a6'],
+                borderWidth: 2,
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 10 } } },
+                datalabels: {
+                    color: '#fff',
+                    font: { weight: 'bold', size: 10 },
+                    formatter: (value) => value > 0 ? value : ''
+                }
+            }
         }
     });
 
@@ -631,7 +672,7 @@ function calculateFacKPIs(facturas) {
     chartFacCliente = new Chart(ctxFacCli, {
         type: 'pie',
         data: {
-            labels: topDeuda.map(d => d.cliente.substring(0, 15) + (d.cliente.length > 15 ? '...' : '')),
+            labels: topDeuda.map(d => d.cliente), // No recortar el texto
             datasets: [{
                 data: topDeuda.map(d => Math.round(d.monto * 10) / 10),
                 backgroundColor: [
