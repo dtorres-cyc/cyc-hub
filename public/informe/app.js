@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             applyFilters(); // Calcula KPIs, gráficos y dibuja tabla
         }
         
-        renderCRM(data.crm);
+        // CRM ahora carga desde la API real de Prisma, no se usa renderCRM con data mockeada.
         
         if (data.facturacion && data.facturacion.facturas) {
             globalFacturas = data.facturacion.facturas;
@@ -491,44 +491,6 @@ function filterTable() {
 
 function formatterM(val) {
     return '$' + val.toLocaleString('es-CL') + 'M';
-}
-
-function renderCRM(crm) {
-    if(!crm) return;
-    let totalPipeline = 0;
-    const negContainer = document.getElementById('crm-negociaciones');
-    negContainer.innerHTML = '';
-    crm.negociacion.forEach(item => {
-        totalPipeline += item[2];
-        negContainer.innerHTML += `
-            <div class="crm-item">
-                <div class="crm-item-info"><strong>${item[0]}</strong><span>${item[1]}</span></div>
-                <div class="crm-item-val val-${item[3].toLowerCase()}">$${item[2]}M</div>
-            </div>`;
-    });
-
-    const cotContainer = document.getElementById('crm-cotizar');
-    cotContainer.innerHTML = '';
-    crm.enviar_cot.forEach(item => {
-        totalPipeline += item[2];
-        cotContainer.innerHTML += `
-            <div class="crm-item" style="border-left: 4px solid var(--c-orange)">
-                <div class="crm-item-info"><strong>${item[0]}</strong><span>${item[1]}</span></div>
-                <div class="crm-item-val" style="color:var(--c-orange)">$${item[2]}M</div>
-            </div>`;
-    });
-
-    const retContainer = document.getElementById('crm-retomar');
-    retContainer.innerHTML = '';
-    crm.retomar_top3.forEach(item => {
-        totalPipeline += item[2] || 0;
-        retContainer.innerHTML += `
-            <div class="crm-item" style="border-left: 4px solid var(--c-primary)">
-                <div class="crm-item-info"><strong>${item[0]}</strong><span>${item[1]} - ${item[3]}</span></div>
-                <div class="crm-item-val" style="color:var(--c-primary)">$${item[2]}M</div>
-            </div>`;
-    });
-    document.getElementById('pipeline-total').textContent = formatterM(totalPipeline);
 }
 
 function populateFacFilters(facturas) {
