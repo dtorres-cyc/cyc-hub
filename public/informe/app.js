@@ -1322,64 +1322,74 @@ function openNewReportView() {
     // Auto-fill Data
     document.getElementById('pdf-date').textContent = "Fecha: " + new Date().toLocaleDateString('es-CL');
     
-    const rented = window.equipos_lists && window.equipos_lists['arrendados_total'] ? window.equipos_lists['arrendados_total'].length : 0;
-    const workshop = window.equipos_lists && window.equipos_lists['taller'] ? window.equipos_lists['taller'].length : 0;
-    document.getElementById('pdf-rented').textContent = rented;
-    document.getElementById('pdf-workshop').textContent = workshop;
-    
-    // Docs Priority (Equipos con Arriendo)
-    let docsHtml = '';
-    const docsViewVencidos = document.getElementById('vencidos-content');
-    if (docsViewVencidos) {
-        const uls = docsViewVencidos.querySelectorAll('ul');
-        if (uls.length > 0) docsHtml += uls[0].innerHTML; // The first UL is "Equipos con Contrato"
-    }
-    document.getElementById('pdf-docs-list').innerHTML = docsHtml || '<li>Ninguno</li>';
+    // Clonar Flota
+    const flotaClone = document.getElementById('tab-flota').cloneNode(true);
+    flotaClone.style.display = 'block';
+    const flotaTable = flotaClone.querySelector('.table-container');
+    if (flotaTable) flotaTable.remove();
+    const flotaHeader = flotaClone.querySelector('.section-title');
+    if (flotaHeader) flotaHeader.remove();
+    document.getElementById('pdf-flota-clone').innerHTML = '';
+    document.getElementById('pdf-flota-clone').appendChild(flotaClone);
 
-    // Billing
-    const billed = document.getElementById('fac-mes').textContent;
-    document.getElementById('pdf-billed').textContent = billed;
-    
-    let invHtml = '';
-    if (window.facLists && window.facLists.vencidas) {
-        invHtml += window.facLists.vencidas.slice(0, 5).map(i => `<li>${i.f.cliente}: $${(i.f.saldo/1000000).toFixed(1)}M (${i.f.alerta})</li>`).join('');
-    }
-    if (window.facLists && window.facLists.porvencer) {
-        invHtml += window.facLists.porvencer.slice(0, 5).map(i => `<li style="color:#666;">${i.f.cliente}: $${(i.f.saldo/1000000).toFixed(1)}M (${i.f.alerta})</li>`).join('');
-    }
-    document.getElementById('pdf-invoices-list').innerHTML = invHtml || '<li>Ninguno</li>';
+    // Clonar Facturación
+    const facClone = document.getElementById('tab-facturacion').cloneNode(true);
+    facClone.style.display = 'block';
+    const facHeader = facClone.querySelector('.section-title');
+    if (facHeader) facHeader.remove();
+    document.getElementById('pdf-fac-clone').innerHTML = '';
+    document.getElementById('pdf-fac-clone').appendChild(facClone);
+
+    // Redibujar Canvas
+    setTimeout(() => {
+        ['chartTipo', 'chartCliente', 'chartFacturacion', 'chartFacTipo', 'chartFacCliente'].forEach(chartId => {
+            const orig = document.getElementById(chartId);
+            const clones = document.getElementById('pdf-content').querySelectorAll(`#${chartId}`);
+            clones.forEach(clone => {
+                if (orig && clone) {
+                    clone.getContext('2d').drawImage(orig, 0, 0);
+                }
+            });
+        });
+    }, 500);
 
     // Pipeline
-    let pipeTotal = 0;
-    let pipeWon = 0;
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const pipeTable = document.getElementById('pdf-pipeline-table');
+    pipeTable.innerHTML = '';
+    let stagesData = {};
+    STAGES.forEach(s => stagesData[s] = { count: 0, amount: 0 });
     
     globalOpportunities.forEach(o => {
-        pipeTotal += o.amount;
-        if (o.stage === 'Ganado') {
-            const updatedAt = new Date(o.updatedAt);
-            if (updatedAt >= oneWeekAgo) {
-                pipeWon += o.amount;
-            }
+        if (stagesData[o.stage]) {
+            stagesData[o.stage].count++;
+            stagesData[o.stage].amount += o.amount;
         }
     });
-    document.getElementById('pdf-pipeline-total').textContent = pipeTotal.toLocaleString('es-CL');
-    document.getElementById('pdf-pipeline-won').textContent = pipeWon.toLocaleString('es-CL');
+    
+    STAGES.forEach(s => {
+        if (stagesData[s].count > 0) {
+            pipeTable.innerHTML += `
+                <tr style="border-bottom:1px solid #e2e8f0;">
+                    <td style="padding:8px; font-weight:600;">${s}</td>
+                    <td style="padding:8px;">${stagesData[s].count}</td>
+                    <td style="padding:8px;">$${stagesData[s].amount.toLocaleString('es-CL')}</td>
+                </tr>
+            `;
+        }
+    });
     
     // Reset textareas
     ['rental', 'billing', 'pipeline'].forEach(k => {
-        document.getElementById(`input-analysis-${k}`).style.display = 'block';
-        document.getElementById(`text-analysis-${k}`).style.display = 'none';
-        document.getElementById(`input-analysis-${k}`).value = '';
+        const input = document.getElementById(`input-analysis-${k}`);
+        const text = document.getElementById(`text-analysis-${k}`);
+        if(input) { input.style.display = 'block'; input.value = ''; }
+        if(text) text.style.display = 'none';
     });
 }
 
 function closeReportView() {
     document.getElementById('reports-list-view').style.display = 'block';
     document.getElementById('report-generator-view').style.display = 'none';
-    const chartContainer = document.getElementById('pdf-charts-container');
-    if (chartContainer) chartContainer.innerHTML = ''; // Limpiar clon de canvas
 }
 
 function viewPastReport(id) {
@@ -1391,52 +1401,42 @@ async function saveAndExportReport() {
     ['rental', 'billing', 'pipeline'].forEach(k => {
         const input = document.getElementById(`input-analysis-${k}`);
         const text = document.getElementById(`text-analysis-${k}`);
-        text.textContent = input.value || 'Sin análisis.';
-        input.style.display = 'none';
-        text.style.display = 'block';
+        if (input && text) {
+            text.textContent = input.value || 'Sin análisis.';
+            input.style.display = 'none';
+            text.style.display = 'block';
+        }
     });
 
-    // 2. Clonar gráficos
-    const chartContainer = document.getElementById('pdf-charts-container');
-    chartContainer.innerHTML = ''; // clear
-    const facturacionCanvas = document.getElementById('chartFacturacion');
-    const facTipoCanvas = document.getElementById('chartFacTipo');
+    // 2. Obtener valores para DB
+    const rented = window.equipos_lists && window.equipos_lists['arrendados_total'] ? window.equipos_lists['arrendados_total'].length : 0;
+    const workshop = window.equipos_lists && window.equipos_lists['taller'] ? window.equipos_lists['taller'].length : 0;
+    const billedStr = document.getElementById('fac-mes') ? document.getElementById('fac-mes').textContent.replace(/\./g, '').replace(',', '.') : '0';
     
-    if (facturacionCanvas) {
-        const img1 = document.createElement('img');
-        img1.src = facturacionCanvas.toDataURL("image/png");
-        img1.style.height = '100%';
-        img1.style.objectFit = 'contain';
-        chartContainer.appendChild(img1);
-    }
-    if (facTipoCanvas) {
-        const img2 = document.createElement('img');
-        img2.src = facTipoCanvas.toDataURL("image/png");
-        img2.style.height = '100%';
-        img2.style.objectFit = 'contain';
-        chartContainer.appendChild(img2);
-    }
-
-    // 3. Obtener valores para DB
-    const rentedStr = document.getElementById('pdf-rented').textContent;
-    const workshopStr = document.getElementById('pdf-workshop').textContent;
-    const billedStr = document.getElementById('pdf-billed').textContent.replace(/\./g, '').replace(',', '.');
-    const pipeTotalStr = document.getElementById('pdf-pipeline-total').textContent.replace(/\./g, '').replace(',', '.');
-    const pipeWonStr = document.getElementById('pdf-pipeline-won').textContent.replace(/\./g, '').replace(',', '.');
+    let pipeTotal = 0;
+    let pipeWon = 0;
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    globalOpportunities.forEach(o => {
+        pipeTotal += o.amount;
+        if (o.stage === 'Ganado' && new Date(o.updatedAt) >= oneWeekAgo) {
+            pipeWon += o.amount;
+        }
+    });
 
     const data = {
-        rentedEquipments: parseInt(rentedStr) || 0,
-        workshopEquipments: parseInt(workshopStr) || 0,
+        rentedEquipments: rented,
+        workshopEquipments: workshop,
         monthlyBilled: parseFloat(billedStr) || 0,
-        pipelineValue: parseFloat(pipeTotalStr) || 0,
-        pipelineClosedValue: parseFloat(pipeWonStr) || 0,
-        analysisRental: document.getElementById('input-analysis-rental').value,
-        analysisWorkshop: '', // Combinado en rental por simplicidad en UI
-        analysisBilling: document.getElementById('input-analysis-billing').value,
-        analysisPipeline: document.getElementById('input-analysis-pipeline').value
+        pipelineValue: pipeTotal,
+        pipelineClosedValue: pipeWon,
+        analysisRental: document.getElementById('input-analysis-rental') ? document.getElementById('input-analysis-rental').value : '',
+        analysisWorkshop: '',
+        analysisBilling: document.getElementById('input-analysis-billing') ? document.getElementById('input-analysis-billing').value : '',
+        analysisPipeline: document.getElementById('input-analysis-pipeline') ? document.getElementById('input-analysis-pipeline').value : ''
     };
 
-    // 4. Guardar en DB
+    // 3. Guardar en DB
     try {
         await fetch('/crm/api/reports', {
             method: 'POST',
@@ -1448,13 +1448,13 @@ async function saveAndExportReport() {
         console.error("Error guardando reporte", err);
     }
 
-    // 5. Exportar a PDF
+    // 4. Exportar a PDF
     const element = document.getElementById('pdf-content');
     const opt = {
-        margin:       10,
+        margin:       [10, 10, 10, 10], // top, left, bottom, right
         filename:     `Informe_Comercial_CYC_${new Date().toISOString().slice(0,10)}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
+        html2canvas:  { scale: 2, useCORS: true },
         jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
     };
     
@@ -1462,4 +1462,62 @@ async function saveAndExportReport() {
         // Restaurar vista
         closeReportView();
     });
+}
+
+async function generateAIAnalysis() {
+    const btn = document.getElementById('btn-ai');
+    btn.textContent = "⏳ Analizando...";
+    btn.disabled = true;
+
+    try {
+        const rented = window.equipos_lists && window.equipos_lists['arrendados_total'] ? window.equipos_lists['arrendados_total'].length : 0;
+        const workshop = window.equipos_lists && window.equipos_lists['taller'] ? window.equipos_lists['taller'].length : 0;
+        const billedStr = document.getElementById('fac-mes') ? document.getElementById('fac-mes').textContent : "0";
+        
+        let vencidas = [];
+        let porVencer = [];
+        if (window.facLists && window.facLists.vencidas) {
+            vencidas = window.facLists.vencidas.slice(0, 5).map(i => ({ cliente: i.f.cliente, monto: i.f.saldo }));
+        }
+        if (window.facLists && window.facLists.porvencer) {
+            porVencer = window.facLists.porvencer.slice(0, 5).map(i => ({ cliente: i.f.cliente, monto: i.f.saldo }));
+        }
+
+        let pipeTotal = 0;
+        let pipeWon = 0;
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        globalOpportunities.forEach(o => {
+            pipeTotal += o.amount;
+            if (o.stage === 'Ganado' && new Date(o.updatedAt) >= oneWeekAgo) {
+                pipeWon += o.amount;
+            }
+        });
+
+        const res = await fetch('/crm/api/reports/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                rentalData: { rented, workshop },
+                billingData: { billed: billedStr, vencidas, porVencer },
+                pipelineData: { total: pipeTotal, won: pipeWon }
+            })
+        });
+
+        if (res.ok) {
+            const analysis = await res.json();
+            if (analysis.rental) document.getElementById('input-analysis-rental').value = analysis.rental;
+            if (analysis.billing) document.getElementById('input-analysis-billing').value = analysis.billing;
+            if (analysis.pipeline) document.getElementById('input-analysis-pipeline').value = analysis.pipeline;
+        } else {
+            const err = await res.json();
+            alert("Error IA: " + (err.error || "No se pudo generar"));
+        }
+    } catch(err) {
+        console.error(err);
+        alert("Error de red llamando a la IA.");
+    }
+
+    btn.textContent = "✨ Generar Análisis con IA";
+    btn.disabled = false;
 }

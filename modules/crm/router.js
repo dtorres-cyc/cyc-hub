@@ -262,6 +262,7 @@ router.patch('/api/opportunities/:id/stage', async (req, res) => {
 // ==========================================
 // WEEKLY REPORTS (Informes)
 // ==========================================
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 router.get('/api/reports', async (req, res) => {
     try {
         const reports = await prisma.weeklyReport.findMany({
@@ -299,6 +300,57 @@ router.post('/api/reports', async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error al guardar informe' });
+    }
+});
+
+router.post('/api/reports/analyze', async (req, res) => {
+    try {
+        const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+        if (!apiKey) {
+            return res.status(500).json({ error: "Falta configurar GEMINI_API_KEY en Railway." });
+        }
+        
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        const { rentalData, billingData, pipelineData } = req.body;
+
+        const prompt = `Eres el Gerente Comercial de CYC. Realiza un análisis ejecutivo, breve y profesional de máximo 2 párrafos para cada una de las siguientes áreas basándote ÚNICAMENTE en estos datos de la semana:
+
+1. ESTADO DE ARRIENDO:
+- Equipos arrendados: ${rentalData.rented}
+- Equipos en taller: ${rentalData.workshop}
+
+2. FACTURACIÓN Y COBRANZA:
+- Proyección mensual de facturación: $${rentalData.billed}
+- Top 5 facturas vencidas (monto y cliente): ${JSON.stringify(billingData.vencidas)}
+- Top 5 facturas por vencer (monto y cliente): ${JSON.stringify(billingData.porVencer)}
+
+3. PIPELINE CRM Y VENTAS:
+- Valor total del pipeline: $${pipelineData.total}
+- Valor cerrado ganado los últimos 7 días: $${pipelineData.won}
+
+Devuelve tu respuesta EXACTAMENTE en el siguiente formato JSON, sin texto extra, sin markdown de bloques de código:
+{
+  "rental": "texto del análisis de arriendo y taller...",
+  "billing": "texto del análisis de facturación y cobranza...",
+  "pipeline": "texto del análisis de ventas y pipeline..."
+}`;
+
+        const result = await model.generateContent(prompt);
+        let text = result.response.text();
+        
+        // Limpiar el json de backticks si el modelo los pone
+        if(text.includes('```json')) {
+            text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        }
+
+        const analysis = JSON.parse(text);
+        res.json(analysis);
+
+    } catch (error) {
+        console.error("Error en AI Analysis:", error);
+        res.status(500).json({ error: 'Error al generar análisis con IA' });
     }
 });
 
