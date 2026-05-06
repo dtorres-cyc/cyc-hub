@@ -1588,7 +1588,12 @@ function openOppDrawer(opp) {
         </div>
         <div class="detail-field">
             <label>Prioridad</label>
-            <span style="color:${priorityColor[opp.priority] || '#666'}; font-weight:700;">${opp.priority || '—'}</span>
+            <select onchange="quickChangePriority(${opp.id}, this.value)" 
+                style="padding:6px 10px; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; color:${priorityColor[opp.priority] || '#666'}; background:white;">
+                <option value="Baja"  ${opp.priority==='Baja'  ? 'selected' : ''}>🔵 Baja</option>
+                <option value="Media" ${opp.priority==='Media' ? 'selected' : ''}>🟡 Media</option>
+                <option value="Alta"  ${opp.priority==='Alta'  ? 'selected' : ''}>🔴 Alta</option>
+            </select>
         </div>
         <div class="detail-field">
             <label>Creado el</label>
@@ -1765,6 +1770,21 @@ async function quickChangeStage(oppId, newStage) {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ stage: newStage })
+        });
+        const updated = await fetch('/crm/api/opportunities').then(r => r.json());
+        globalOpportunities = updated;
+        renderKanban();
+        const opp = updated.find(o => o.id === oppId);
+        if (opp) openOppDrawer(opp);
+    } catch(err) { console.error(err); }
+}
+
+async function quickChangePriority(oppId, newPriority) {
+    try {
+        await fetch(`/crm/api/opportunities/${oppId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ priority: newPriority })
         });
         const updated = await fetch('/crm/api/opportunities').then(r => r.json());
         globalOpportunities = updated;
