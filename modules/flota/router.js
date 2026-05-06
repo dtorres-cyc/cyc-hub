@@ -8,6 +8,7 @@ const fs       = require('fs');
 
 const { fetchEquipos, fetchContactos } = require('./notion');
 const { getTransporter, buildEmailHtml } = require('./email');
+const { fetchContactosCRM } = require('./crm-contacts');
 
 // ── Servir frontend de flota ──────────────────────────────────────────────────
 router.use(express.static(path.join(__dirname, '..', '..', 'public', 'flota')));
@@ -43,12 +44,29 @@ router.get('/api/equipos', async (req, res) => {
 
 router.get('/api/contactos', async (req, res) => {
   try {
-    const contactos = await fetchContactos();
-    res.json({ ok: true, contactos });
+    // Intentar traer desde el CRM primero
+    let contactos = await fetchContactosCRM();
+
+    // Fallback a Notion si la BD del CRM está vacía
+    if (!contactos.length) {
+      console.log('   ⚠️  CRM vacío, usando Notion como fallback para contactos...');
+      contactos = await fetchContactos();
+    } else {
+      console.log(`   ✅ Contactos desde CRM: ${contactos.length}`);
+    }
+
+    res.json({ ok: true, contactos, source: contactos.length ? 'crm' : 'notion' });
   } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
+    // Si falla CRM, intentar Notion
+    try {
+      const contactos = await fetchContactos();
+      res.json({ ok: true, contactos, source: 'notion_fallback' });
+    } catch (err2) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
   }
 });
+
 
 router.post('/api/preview', async (req, res) => {
   try {
@@ -147,4 +165,139 @@ router.post('/api/send-campaign', async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════
+//  CRUD EQUIPOS — Base de Datos Local (reemplaza Notion)
+// ═══════════════════════════════════════════════════════
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+// Helper: convierte registro DB al formato que usa el frontend de flota
+function dbEquipoToFlota(e) {
+  const tipoMaquinaria = e.tipoMaquinaria;
+  const marca  = e.marca  || '';
+  const modelo = e.modelo || '';
+  const anio   = e.anio   || '';
+  const horometro = e.horometro || '';
+  const detalle   = e.detalle   || '';
+
+  const especificacionesHtml = [
+    marca     ? `<strong>Marca:</strong> ${marca}`           : '',
+    modelo    ? `<strong>Modelo:</strong> ${modelo}`         : '',
+    anio      ? `<strong>Año:</strong> ${anio}`              : '',
+    horometro ? `<strong>Horómetro:</strong> ${horometro} hrs` : '',
+    detalle   ? `<strong>Detalle:</strong> ${detalle}`       : '',
+  ].filter(Boolean).join('<br>');
+
+  return {
+    id:               String(e.id),
+    tipoMaquinaria,
+    marca, modelo,
+    año:              anio,
+    horometro,
+    detalle,
+    tarifa:           e.tarifa      || '',
+    imagenUrl:        e.imagenUrl   || null,
+    numeroInterno:    e.numeroInterno || '',
+    especificacionesHtml,
+    textoWpp: [tipoMaquinaria, marca, modelo, anio ? `(${anio})` : ''].filter(Boolean).join(' '),
+  };
+}
+
+// GET /flota/api/equipos/db — lista todos los equipos de la BD
+router.get('/api/equipos/db', async (req, res) => {
+  try {
+    const equipos = await prisma.flotaEquipo.findMany({
+      where: { activo: true },
+      orderBy: { tipoMaquinaria: 'asc' }
+    });
+    res.json({ ok: true, equipos: equipos.map(dbEquipoToFlota), total: equipos.length });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /flota/api/equipos/admin — lista TODOS (incl. inactivos) para gestión
+router.get('/api/equipos/admin', async (req, res) => {
+  try {
+    const equipos = await prisma.flotaEquipo.findMany({ orderBy: { tipoMaquinaria: 'asc' } });
+    res.json({ ok: true, equipos });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /flota/api/equipos/db — crear equipo
+router.post('/api/equipos/db', async (req, res) => {
+  try {
+    const { tipoMaquinaria, marca, modelo, anio, horometro, detalle, tarifa, imagenUrl, numeroInterno } = req.body;
+    const eq = await prisma.flotaEquipo.create({
+      data: { tipoMaquinaria, marca, modelo, anio, horometro, detalle, tarifa, imagenUrl, numeroInterno }
+    });
+    res.json({ ok: true, equipo: eq });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// PUT /flota/api/equipos/db/:id — actualizar equipo
+router.put('/api/equipos/db/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { tipoMaquinaria, marca, modelo, anio, horometro, detalle, tarifa, imagenUrl, numeroInterno, activo } = req.body;
+    const eq = await prisma.flotaEquipo.update({
+      where: { id },
+      data: { tipoMaquinaria, marca, modelo, anio, horometro, detalle, tarifa, imagenUrl, numeroInterno,
+              activo: activo !== undefined ? Boolean(activo) : undefined }
+    });
+    res.json({ ok: true, equipo: eq });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// DELETE /flota/api/equipos/db/:id — eliminar equipo
+router.delete('/api/equipos/db/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await prisma.flotaEquipo.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /flota/api/equipos/import-notion — importar desde Notion → BD (migración única)
+router.post('/api/equipos/import-notion', async (req, res) => {
+  try {
+    const notionEquipos = await fetchEquipos();
+    let creados = 0, existentes = 0;
+
+    for (const e of notionEquipos) {
+      const existing = e.id ? await prisma.flotaEquipo.findUnique({ where: { notionId: e.id } }) : null;
+      if (existing) { existentes++; continue; }
+
+      await prisma.flotaEquipo.create({
+        data: {
+          tipoMaquinaria: e.tipoMaquinaria || 'Sin Tipo',
+          marca:          e.marca || null,
+          modelo:         e.modelo || null,
+          anio:           e.año || null,
+          horometro:      e.horometro || null,
+          detalle:        e.detalle || null,
+          tarifa:         e.tarifa || null,
+          imagenUrl:      e.imagenUrl || null,
+          numeroInterno:  e.numeroInterno || null,
+          notionId:       e.id || null,
+        }
+      });
+      creados++;
+    }
+
+    res.json({ ok: true, creados, existentes, total: notionEquipos.length });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;
+

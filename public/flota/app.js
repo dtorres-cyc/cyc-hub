@@ -26,8 +26,16 @@ async function loadEquipos() {
     hide('equipmentTableWrap');
 
     try {
-        const res  = await fetch('api/equipos');
-        const data = await res.json();
+        // Intentar primero desde BD local
+        let res  = await fetch('api/equipos/db');
+        let data = await res.json();
+
+        // Si la BD está vacía, usar Notion
+        if (!data.ok || !data.equipos?.length) {
+            res  = await fetch('api/equipos');
+            data = await res.json();
+        }
+
         if (!data.ok) throw new Error(data.error);
 
         allEquipos      = data.equipos;
@@ -40,6 +48,7 @@ async function loadEquipos() {
         toast(`Error cargando equipos: ${err.message}`, 'error');
     }
 }
+
 
 // ── Filtros ───────────────────────────────────────────────────────
 function buildFilterOptions() {
@@ -592,3 +601,144 @@ function toast(msg, type = 'info') {
     document.getElementById('toastArea').appendChild(el);
     setTimeout(() => el.remove(), 5000);
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// ADMIN DE EQUIPOS — Gestión de Inventario desde BD
+// ═══════════════════════════════════════════════════════════════════
+async function showAdminEquipos() {
+    show('adminEquiposOverlay');
+    await loadAdminEquipos();
+}
+
+function closeAdminEquipos() { hide('adminEquiposOverlay'); }
+
+function showNewEquipoForm() {
+    const f = document.getElementById('new-equipo-form');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+async function loadAdminEquipos() {
+    const tbody = document.getElementById('admin-equipos-table');
+    const empty = document.getElementById('admin-equipos-empty');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted);">Cargando...</td></tr>';
+
+    try {
+        const res  = await fetch('api/equipos/admin');
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+
+        const equipos = data.equipos;
+        document.getElementById('admin-source-badge').textContent = `${equipos.length} equipo(s) en base de datos`;
+
+        if (!equipos.length) {
+            tbody.innerHTML = '';
+            empty.style.display = 'block';
+            return;
+        }
+        empty.style.display = 'none';
+        renderAdminTable(equipos);
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color:red;padding:16px;">${err.message}</td></tr>`;
+    }
+}
+
+function renderAdminTable(equipos) {
+    const tbody = document.getElementById('admin-equipos-table');
+    tbody.innerHTML = equipos.map(e => `
+        <tr style="border-bottom:1px solid #e2e8f0; background:${e.activo ? 'white' : '#fef2f2'};">
+            <td style="padding:10px 12px; font-weight:600;">${e.tipoMaquinaria}</td>
+            <td style="padding:10px 12px; color:#64748b;">${e.numeroInterno || '—'}</td>
+            <td style="padding:10px 12px;">${[e.marca, e.modelo].filter(Boolean).join(' ') || '—'}</td>
+            <td style="padding:10px 12px; color:#64748b;">${e.anio || '—'}</td>
+            <td style="padding:10px 12px; color:#059669; font-weight:600;">${e.tarifa || '—'}</td>
+            <td style="padding:10px; text-align:center;">
+                <label style="cursor:pointer;">
+                    <input type="checkbox" ${e.activo ? 'checked' : ''} onchange="toggleEquipoActivo(${e.id}, this.checked)" style="accent-color:#2563eb; width:16px; height:16px;">
+                </label>
+            </td>
+            <td style="padding:10px; text-align:center;">
+                <button onclick="deleteEquipo(${e.id})" style="background:#fee2e2; color:#dc2626; border:none; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:12px;">🗑</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function saveNewEquipo() {
+    const tipo = document.getElementById('ne-tipo').value.trim();
+    if (!tipo) { toast('El tipo de maquinaria es obligatorio', 'error'); return; }
+
+    const data = {
+        tipoMaquinaria: tipo,
+        marca:          document.getElementById('ne-marca').value.trim() || null,
+        modelo:         document.getElementById('ne-modelo').value.trim() || null,
+        anio:           document.getElementById('ne-anio').value.trim() || null,
+        horometro:      document.getElementById('ne-horometro').value.trim() || null,
+        tarifa:         document.getElementById('ne-tarifa').value.trim() || null,
+        numeroInterno:  document.getElementById('ne-numero').value.trim() || null,
+        imagenUrl:      document.getElementById('ne-imagen').value.trim() || null,
+        detalle:        document.getElementById('ne-detalle').value.trim() || null,
+    };
+
+    try {
+        const res = await fetch('api/equipos/db', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        if (!result.ok) throw new Error(result.error);
+        toast('✅ Equipo creado correctamente', 'success');
+        document.getElementById('new-equipo-form').style.display = 'none';
+        // Limpiar form
+        ['ne-tipo','ne-marca','ne-modelo','ne-anio','ne-horometro','ne-tarifa','ne-numero','ne-imagen','ne-detalle'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        await loadAdminEquipos();
+        // Recargar equipos en el selector principal también
+        await loadEquipos();
+    } catch (err) {
+        toast(`Error: ${err.message}`, 'error');
+    }
+}
+
+async function toggleEquipoActivo(id, activo) {
+    try {
+        await fetch(`api/equipos/db/${id}`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ activo })
+        });
+        toast(activo ? 'Equipo activado' : 'Equipo desactivado', 'success');
+        await loadAdminEquipos();
+        await loadEquipos();
+    } catch (err) { toast(`Error: ${err.message}`, 'error'); }
+}
+
+async function deleteEquipo(id) {
+    if (!confirm('¿Eliminar este equipo? Esta acción no se puede deshacer.')) return;
+    try {
+        await fetch(`api/equipos/db/${id}`, { method: 'DELETE' });
+        toast('Equipo eliminado', 'success');
+        await loadAdminEquipos();
+        await loadEquipos();
+    } catch (err) { toast(`Error: ${err.message}`, 'error'); }
+}
+
+async function importFromNotion() {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '⏳ Importando...';
+
+    try {
+        const res  = await fetch('api/equipos/import-notion', { method: 'POST' });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        toast(`✅ Importados ${data.creados} equipos nuevos (${data.existentes} ya existían)`, 'success');
+        await loadAdminEquipos();
+        await loadEquipos();
+    } catch (err) {
+        toast(`Error importando: ${err.message}`, 'error');
+    }
+    btn.disabled = false;
+    btn.textContent = '⬇ Importar desde Notion';
+}
+

@@ -240,6 +240,16 @@
 
           <!-- VISTA: CONTACTOS -->
           <div id="view-contacts" style="display: none;">
+            <!-- Controles de filtro -->
+            <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; align-items:center;">
+              <input type="text" id="filter-contacts" placeholder="🔍 Buscar por nombre, email o empresa..." oninput="renderContacts()" style="flex:1; min-width:200px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:13px; background:var(--bg-card); color:var(--text-main);">
+              <select id="sort-contacts" onchange="renderContacts()" style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:13px; background:var(--bg-card); color:var(--text-main); cursor:pointer;">
+                <option value="name_az">Nombre A→Z</option>
+                <option value="name_za">Nombre Z→A</option>
+                <option value="company">Por Empresa</option>
+              </select>
+              <button onclick="exportContactsCSV()" style="padding:8px 14px; background:var(--c-green); color:white; border:none; border-radius:8px; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;">↓ Exportar CSV</button>
+            </div>
             <div class="table-container">
               <table class="data-table" style="width:100%; text-align:left;">
                 <thead>
@@ -261,6 +271,16 @@
 
           <!-- VISTA: EMPRESAS -->
           <div id="view-companies" style="display: none;">
+            <!-- Controles de filtro -->
+            <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; align-items:center;">
+              <input type="text" id="filter-companies" placeholder="🔍 Buscar por nombre, RUT o industria..." oninput="renderCompanies()" style="flex:1; min-width:200px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:13px; background:var(--bg-card); color:var(--text-main);">
+              <select id="sort-companies" onchange="renderCompanies()" style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:13px; background:var(--bg-card); color:var(--text-main); cursor:pointer;">
+                <option value="name_az">Nombre A→Z</option>
+                <option value="name_za">Nombre Z→A</option>
+                <option value="contacts">Por N° Contactos</option>
+              </select>
+              <button onclick="exportCompaniesCSV()" style="padding:8px 14px; background:var(--c-green); color:white; border:none; border-radius:8px; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;">↓ Exportar CSV</button>
+            </div>
             <div class="table-container">
               <table class="data-table" style="width:100%; text-align:left;">
                 <thead>

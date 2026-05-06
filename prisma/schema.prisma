@@ -112,3 +112,21 @@ model QuoteRecord {
   opportunityId  Int
   opportunity    Opportunity @relation(fields: [opportunityId], references: [id])
 }
+
+model FlotaEquipo {
+  id              Int      @id @default(autoincrement())
+  tipoMaquinaria  String
+  marca           String?
+  modelo          String?
+  anio            String?
+  horometro       String?
+  detalle         String?
+  tarifa          String?
+  imagenUrl       String?
+  numeroInterno   String?
+  activo          Boolean  @default(true)
+  notionId        String?  @unique  // Para evitar duplicados en importación
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+

@@ -965,8 +965,29 @@ async function handleDrop(e) {
 function renderContacts() {
     const tbody = document.getElementById('table-contacts');
     if(!tbody) return;
+
+    const q = (document.getElementById('filter-contacts')?.value || '').toLowerCase();
+    const sort = document.getElementById('sort-contacts')?.value || 'name_az';
+
+    let list = [...globalContacts];
+    // Filtrar
+    if (q) {
+        list = list.filter(c => {
+            const name = `${c.firstName} ${c.lastName || ''}`.toLowerCase();
+            return name.includes(q) || (c.email || '').toLowerCase().includes(q) || (c.company?.name || '').toLowerCase().includes(q) || (c.role || '').toLowerCase().includes(q);
+        });
+    }
+    // Ordenar
+    if (sort === 'name_az') list.sort((a,b) => `${a.firstName}${a.lastName||''}`.localeCompare(`${b.firstName}${b.lastName||''}`, 'es'));
+    else if (sort === 'name_za') list.sort((a,b) => `${b.firstName}${b.lastName||''}`.localeCompare(`${a.firstName}${a.lastName||''}`, 'es'));
+    else if (sort === 'company') list.sort((a,b) => (a.company?.name||'').localeCompare(b.company?.name||'', 'es'));
+
     tbody.innerHTML = '';
-    globalContacts.forEach(c => {
+    if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-muted);">Sin resultados para "${q}"</td></tr>`;
+        return;
+    }
+    list.forEach(c => {
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid var(--border)';
         tr.onclick = () => openCrmModal(c);
@@ -987,8 +1008,28 @@ function renderContacts() {
 function renderCompanies() {
     const tbody = document.getElementById('table-companies');
     if(!tbody) return;
+
+    const q = (document.getElementById('filter-companies')?.value || '').toLowerCase();
+    const sort = document.getElementById('sort-companies')?.value || 'name_az';
+
+    let list = [...globalCompanies];
+    if (q) {
+        list = list.filter(c =>
+            (c.name || '').toLowerCase().includes(q) ||
+            (c.rut || '').toLowerCase().includes(q) ||
+            (c.industry || '').toLowerCase().includes(q)
+        );
+    }
+    if (sort === 'name_az') list.sort((a,b) => (a.name||'').localeCompare(b.name||'', 'es'));
+    else if (sort === 'name_za') list.sort((a,b) => (b.name||'').localeCompare(a.name||'', 'es'));
+    else if (sort === 'contacts') list.sort((a,b) => (b.contacts?.length||0) - (a.contacts?.length||0));
+
     tbody.innerHTML = '';
-    globalCompanies.forEach(c => {
+    if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">Sin resultados para "${q}"</td></tr>`;
+        return;
+    }
+    list.forEach(c => {
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid var(--border)';
         tr.onclick = () => openCrmModal(c);
@@ -1002,6 +1043,35 @@ function renderCompanies() {
         `;
         tbody.appendChild(tr);
     });
+}
+
+function exportContactsCSV() {
+    const rows = [['Nombre','Apellido','Nombre Completo','Cargo','Telefono','Email','Empresa','Status']];
+    globalContacts.forEach(c => rows.push([
+        c.firstName, c.lastName||'', `${c.firstName} ${c.lastName||''}`,
+        c.role||'', c.phone||'', c.email||'',
+        c.company?.name||'', c.status||''
+    ]));
+    downloadCSV('contactos_crm.csv', rows);
+}
+
+function exportCompaniesCSV() {
+    const rows = [['Nombre','RUT','Tamano','Industria','Propietario','N_Contactos']];
+    globalCompanies.forEach(c => rows.push([
+        c.name, c.rut||'', c.size||'', c.industry||'',
+        c.owner||'', c.contacts?.length||0
+    ]));
+    downloadCSV('empresas_crm.csv', rows);
+}
+
+function downloadCSV(filename, rows) {
+    const bom = '\uFEFF';
+    const content = bom + rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
 }
 
 function openCrmModal(editData = null) {
@@ -1037,51 +1107,48 @@ function openCrmModal(editData = null) {
             setTimeout(() => showCompanyInfoCard(editData.companyId), 50);
         }
     } else if (crmCurrentTab === 'opportunities') {
-        title.textContent = 'Nueva Oportunidad';
-        const compOptions = globalCompanies.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-        const contOptions = globalContacts.map(c => `<option value="${c.id}">${c.firstName} ${c.lastName || ''}</option>`).join('');
+        title.textContent = editData ? 'Editar Oportunidad' : 'Nueva Oportunidad';
+        const selComp = editData?.companyId || '';
+        const selCont = editData?.contactId || '';
         
         fields.innerHTML = `
-            <div class="form-group"><label>Nombre del Negocio</label><input type="text" name="name" required></div>
-            <div class="form-group"><label>Monto Estimado ($)</label><input type="number" name="amount" required></div>
+            <div class="form-group"><label>Nombre del Negocio</label><input type="text" name="name" value="${editData ? (editData.name||'') : ''}" required></div>
+            <div class="form-group"><label>Monto Estimado ($)</label><input type="number" name="amount" value="${editData ? (editData.amount||0) : ''}" required></div>
             
             <div style="display:flex; gap:10px;">
                 <div class="form-group" style="flex:1;"><label>Prioridad</label>
-                    <select name="priority"><option value="Baja">Baja</option><option value="Media" selected>Media</option><option value="Alta">Alta</option></select>
+                    <select name="priority">
+                        <option value="Baja" ${editData?.priority==='Baja'?'selected':''}>Baja</option>
+                        <option value="Media" ${!editData||editData?.priority==='Media'?'selected':''}>Media</option>
+                        <option value="Alta" ${editData?.priority==='Alta'?'selected':''}>Alta</option>
+                    </select>
                 </div>
                 <div class="form-group" style="flex:1;"><label>Cierre Esperado</label>
-                    <input type="date" name="expectedClose">
+                    <input type="date" name="expectedClose" value="${editData?.expectedClose ? editData.expectedClose.split('T')[0] : ''}">
                 </div>
             </div>
 
             <div class="form-group"><label>Etapa</label>
-                <select name="stage">${STAGES.map(s => `<option value="${s}">${s}</option>`).join('')}</select>
+                <select name="stage">${STAGES.map(s => `<option value="${s}" ${editData?.stage===s?'selected':''}>${s}</option>`).join('')}</select>
             </div>
 
             <div style="border-top:1px solid var(--border); padding-top:15px; margin-top:15px;">
-                <h4 style="font-size:13px; margin-bottom:10px; color:var(--text-main);">Asignar Empresa</h4>
-                <div class="form-group">
-                    <select name="companyId" id="opp-comp-select" onchange="toggleNewCompany()">
-                        <option value="">-- Crear Nueva Empresa --</option>
-                        ${compOptions}
-                    </select>
-                </div>
-                <div class="form-group" id="opp-comp-new">
-                    <input type="text" name="newCompanyName" placeholder="Nombre de la nueva empresa">
+                <h4 style="font-size:13px; margin-bottom:10px; color:var(--text-main);">Empresa</h4>
+                <div class="form-group" style="position:relative;">
+                    <input type="text" id="opp-company-search" placeholder="Buscar empresa..." autocomplete="off"
+                        value="${editData?.company?.name || ''}" oninput="filterOppCompany()">
+                    <input type="hidden" name="companyId" id="opp-company-id" value="${selComp}">
+                    <div id="opp-company-dropdown" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid var(--border); border-radius:6px; max-height:160px; overflow-y:auto; z-index:9999; display:none; box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
                 </div>
             </div>
 
-            <div style="border-top:1px solid var(--border); padding-top:15px; margin-top:15px;">
-                <h4 style="font-size:13px; margin-bottom:10px; color:var(--text-main);">Asignar Contacto</h4>
-                <div class="form-group">
-                    <select name="contactId" id="opp-cont-select" onchange="toggleNewContact()">
-                        <option value="">-- Crear Nuevo Contacto --</option>
-                        ${contOptions}
-                    </select>
-                </div>
-                <div id="opp-cont-new" style="display:flex; gap:10px;">
-                    <input type="text" name="newContactFirstName" placeholder="Nombre" style="flex:1; padding:8px; border:1px solid var(--border); border-radius:4px;">
-                    <input type="text" name="newContactLastName" placeholder="Apellido" style="flex:1; padding:8px; border:1px solid var(--border); border-radius:4px;">
+            <div style="border-top:1px solid var(--border); padding-top:15px; margin-top:5px;">
+                <h4 style="font-size:13px; margin-bottom:10px; color:var(--text-main);">Contacto</h4>
+                <div class="form-group" style="position:relative;">
+                    <input type="text" id="opp-contact-search" placeholder="Buscar contacto..." autocomplete="off"
+                        value="${editData?.contact ? editData.contact.firstName+' '+(editData.contact.lastName||'') : ''}" oninput="filterOppContact()">
+                    <input type="hidden" name="contactId" id="opp-contact-id" value="${selCont}">
+                    <div id="opp-contact-dropdown" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid var(--border); border-radius:6px; max-height:160px; overflow-y:auto; z-index:9999; display:none; box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
                 </div>
             </div>
         `;
@@ -1108,20 +1175,60 @@ function toggleNewCompany() {
     }
 }
 
-function toggleNewContact() {
-    const select = document.getElementById('opp-cont-select');
-    const newDiv = document.getElementById('opp-cont-new');
-    if(select && newDiv) {
-        if(select.value === '') {
-            newDiv.style.display = 'flex';
-        } else {
-            newDiv.style.display = 'none';
-            const i1 = document.querySelector('input[name="newContactFirstName"]');
-            const i2 = document.querySelector('input[name="newContactLastName"]');
-            if(i1) i1.value = '';
-            if(i2) i2.value = '';
-        }
-    }
+function filterOppCompany() {
+    const q = document.getElementById('opp-company-search')?.value.toLowerCase() || '';
+    const drop = document.getElementById('opp-company-dropdown');
+    if (!drop) return;
+
+    if (!q) { drop.style.display = 'none'; document.getElementById('opp-company-id').value = ''; return; }
+
+    const hits = globalCompanies.filter(c => c.name.toLowerCase().includes(q)).slice(0, 8);
+    if (!hits.length) { drop.style.display = 'none'; return; }
+
+    drop.innerHTML = hits.map(c => `
+        <div onclick="selectOppCompany(${c.id}, '${c.name.replace(/'/g,"\'")}')" 
+             style="padding:8px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid #f1f5f9; hover:background:#f8fafc;">
+            <strong>${c.name}</strong>${c.industry ? ` <span style="color:#94a3b8; font-size:11px;">&bull; ${c.industry}</span>` : ''}
+        </div>
+    `).join('');
+    drop.querySelectorAll('div').forEach(d => { d.onmouseover = () => d.style.background='#f8fafc'; d.onmouseout = () => d.style.background=''; });
+    drop.style.display = 'block';
+}
+
+function selectOppCompany(id, name) {
+    document.getElementById('opp-company-search').value = name;
+    document.getElementById('opp-company-id').value = id;
+    document.getElementById('opp-company-dropdown').style.display = 'none';
+}
+
+function filterOppContact() {
+    const q = document.getElementById('opp-contact-search')?.value.toLowerCase() || '';
+    const drop = document.getElementById('opp-contact-dropdown');
+    if (!drop) return;
+
+    if (!q) { drop.style.display = 'none'; document.getElementById('opp-contact-id').value = ''; return; }
+
+    const hits = globalContacts.filter(c => {
+        const name = `${c.firstName} ${c.lastName||''}`.toLowerCase();
+        return name.includes(q) || (c.company?.name||'').toLowerCase().includes(q);
+    }).slice(0, 8);
+
+    if (!hits.length) { drop.style.display = 'none'; return; }
+
+    drop.innerHTML = hits.map(c => `
+        <div onclick="selectOppContact(${c.id}, '${(c.firstName+' '+(c.lastName||'')).trim().replace(/'/g,"\'")}')" 
+             style="padding:8px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid #f1f5f9;">
+            <strong>${c.firstName} ${c.lastName||''}</strong>${c.company ? ` <span style="color:#94a3b8; font-size:11px;">&bull; ${c.company.name}</span>` : ''}
+        </div>
+    `).join('');
+    drop.querySelectorAll('div').forEach(d => { d.onmouseover = () => d.style.background='#f8fafc'; d.onmouseout = () => d.style.background=''; });
+    drop.style.display = 'block';
+}
+
+function selectOppContact(id, name) {
+    document.getElementById('opp-contact-search').value = name;
+    document.getElementById('opp-contact-id').value = id;
+    document.getElementById('opp-contact-dropdown').style.display = 'none';
 }
 
 function closeCrmModal() {
@@ -1133,6 +1240,14 @@ async function handleFormSubmit(e) {
     e.preventDefault();
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
+
+    // Para oportunidades, los IDs vienen de hidden inputs (autocomplete)
+    if (crmCurrentTab === 'opportunities') {
+        const companyId = document.getElementById('opp-company-id')?.value;
+        const contactId = document.getElementById('opp-contact-id')?.value;
+        if (companyId) data.companyId = companyId;
+        if (contactId) data.contactId = contactId;
+    }
 
     let endpoint = '';
     let method = crmEditingId ? 'PUT' : 'POST';
@@ -1148,7 +1263,7 @@ async function handleFormSubmit(e) {
             body: JSON.stringify(data)
         });
         closeCrmModal();
-        fetchCrmData(); 
+        fetchCrmData();
     } catch (err) {
         console.error("Error al guardar:", err);
         alert("Ocurrió un error al guardar.");
