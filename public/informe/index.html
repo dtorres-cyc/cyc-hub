@@ -495,6 +495,68 @@
     <h4 id="kpi-details-title" style="color:var(--text-main); margin-bottom:20px; font-size:18px; font-weight:700;">Detalle</h4>
     <div id="kpi-details-content"></div>
   </div>
+  <!-- ═══════ OPP DRAWER ═══════ -->
+  <div id="opp-drawer-overlay" onclick="closeOppDrawer()"></div>
+  <div id="opp-drawer">
+    <div class="drawer-header">
+      <button class="drawer-close-btn" onclick="closeOppDrawer()">✕</button>
+      <div class="opp-stage-badge" id="drawer-stage">—</div>
+      <h2 id="drawer-name">Oportunidad</h2>
+      <div class="drawer-amount" id="drawer-amount">$0</div>
+      <div class="opp-meta">
+        <span>🏢 <span id="drawer-company">—</span></span>
+        <span>👤 <span id="drawer-contact">—</span></span>
+        <span>📅 <span id="drawer-close">—</span></span>
+        <span>🎯 <span id="drawer-prob">—</span></span>
+      </div>
+    </div>
+
+    <div class="drawer-tabs">
+      <div class="drawer-tab active" onclick="switchDrawerTab('detail')">📋 Detalle</div>
+      <div class="drawer-tab" onclick="switchDrawerTab('comments')">💬 Comentarios <span id="drawer-comments-count" style="background:#e2e8f0;padding:1px 6px;border-radius:10px;font-size:11px;margin-left:4px;">0</span></div>
+      <div class="drawer-tab" onclick="switchDrawerTab('files')">📎 Archivos <span id="drawer-files-count" style="background:#e2e8f0;padding:1px 6px;border-radius:10px;font-size:11px;margin-left:4px;">0</span></div>
+      <div class="drawer-tab" onclick="switchDrawerTab('quotes')">📄 Cotizaciones <span id="drawer-quotes-count" style="background:#e2e8f0;padding:1px 6px;border-radius:10px;font-size:11px;margin-left:4px;">0</span></div>
+    </div>
+
+    <div class="drawer-body">
+      <!-- Detalle -->
+      <div class="drawer-pane active" id="drawer-pane-detail">
+        <div class="detail-grid" id="drawer-detail-grid"></div>
+      </div>
+
+      <!-- Comentarios -->
+      <div class="drawer-pane" id="drawer-pane-comments">
+        <div class="comment-box">
+          <textarea id="new-comment-text" placeholder="Escribe un comentario, nota o seguimiento..."></textarea>
+          <button class="comment-send-btn" onclick="submitComment()">➤ Enviar comentario</button>
+        </div>
+        <div class="comment-list" id="comment-list"></div>
+      </div>
+
+      <!-- Archivos -->
+      <div class="drawer-pane" id="drawer-pane-files">
+        <div class="upload-zone" onclick="document.getElementById('file-input').click()">
+          <div class="upload-icon">📂</div>
+          <p><strong>Haz clic para subir archivos o fotos</strong></p>
+          <p style="margin-top:4px; font-size:12px;">PDF, Word, Excel, imágenes...</p>
+          <input type="file" id="file-input" multiple accept="*/*" onchange="handleFileUpload(event)">
+        </div>
+        <div class="attachment-list" id="attachment-list"></div>
+      </div>
+
+      <!-- Cotizaciones -->
+      <div class="drawer-pane" id="drawer-pane-quotes">
+        <div class="quote-cta">
+          <div>
+            <h4>Generar nueva cotización</h4>
+            <p>Abre el cotizador con los datos de esta oportunidad pre-llenados</p>
+          </div>
+          <button class="quote-cta-btn" onclick="openCotizadorForOpp()">📝 Nueva Cotización</button>
+        </div>
+        <div class="quote-list" id="quote-list"></div>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>

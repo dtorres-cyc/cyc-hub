@@ -58,6 +58,10 @@ model Opportunity {
 
   contactId      Int?
   contact        Contact?  @relation(fields: [contactId], references: [id])
+
+  comments       Comment[]
+  attachments    Attachment[]
+  quotes         QuoteRecord[]
 }
 
 model WeeklyReport {
@@ -76,4 +80,35 @@ model WeeklyReport {
   analysisWorkshop    String?
   analysisBilling     String?
   analysisPipeline    String?
+}
+
+model Comment {
+  id             Int       @id @default(autoincrement())
+  text           String
+  createdAt      DateTime  @default(now())
+  
+  opportunityId  Int
+  opportunity    Opportunity @relation(fields: [opportunityId], references: [id])
+}
+
+model Attachment {
+  id             Int       @id @default(autoincrement())
+  filename       String
+  path           String
+  createdAt      DateTime  @default(now())
+  
+  opportunityId  Int
+  opportunity    Opportunity @relation(fields: [opportunityId], references: [id])
+}
+
+model QuoteRecord {
+  id             Int       @id @default(autoincrement())
+  quoteNumber    Int
+  amount         Float
+  pdfPath        String?
+  driveUrl       String?
+  createdAt      DateTime  @default(now())
+
+  opportunityId  Int
+  opportunity    Opportunity @relation(fields: [opportunityId], references: [id])
 }

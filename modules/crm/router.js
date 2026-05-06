@@ -180,7 +180,13 @@ router.post('/api/contacts/bulk-delete', async (req, res) => {
 router.get('/api/opportunities', async (req, res) => {
     try {
         const opportunities = await prisma.opportunity.findMany({
-            include: { company: true, contact: true }
+            include: { 
+                company: true, 
+                contact: true,
+                comments: { orderBy: { createdAt: 'desc' } },
+                attachments: { orderBy: { createdAt: 'desc' } },
+                quotes: { orderBy: { createdAt: 'desc' } }
+            }
         });
         res.json(opportunities);
     } catch (error) {
@@ -256,6 +262,104 @@ router.patch('/api/opportunities/:id/stage', async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error al actualizar etapa' });
+    }
+});
+
+// Actualizar oportunidad completa (Editar)
+router.put('/api/opportunities/:id', async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const { name, amount, stage, probability, priority, expectedClose, businessType, companyId, contactId } = req.body;
+        const updatedOpp = await prisma.opportunity.update({
+            where: { id },
+            data: { 
+                name, 
+                amount: amount ? parseFloat(amount) : undefined, 
+                stage, 
+                probability: probability ? parseInt(probability) : undefined, 
+                priority, 
+                expectedClose: expectedClose ? new Date(expectedClose) : null,
+                businessType,
+                companyId: companyId ? parseInt(companyId) : null,
+                contactId: contactId ? parseInt(contactId) : null
+            }
+        });
+        res.json(updatedOpp);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al actualizar oportunidad' });
+    }
+});
+
+// Añadir comentario a oportunidad
+router.post('/api/opportunities/:id/comments', async (req, res) => {
+    try {
+        const opportunityId = parseInt(req.params.id);
+        const { text } = req.body;
+        const newComment = await prisma.comment.create({
+            data: { text, opportunityId }
+        });
+        res.json(newComment);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al añadir comentario' });
+    }
+});
+
+// Añadir archivo adjunto (Base64) a oportunidad
+router.post('/api/opportunities/:id/attachments', async (req, res) => {
+    try {
+        const opportunityId = parseInt(req.params.id);
+        const { filename, base64 } = req.body;
+        // Solo para demo: guardamos un log del archivo. En produccion, usaríamos S3 o Google Drive.
+        // Como tenemos Google Drive API disponible en cotizador, podríamos subirlo allá,
+        // pero por simplicidad guardaremos la URL si es un enlace, o guardaremos el archivo localmente.
+        const fs = require('fs');
+        const path = require('path');
+        
+        const uploadsDir = path.join(__dirname, '..', '..', 'public', 'uploads');
+        if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        
+        const safeName = Date.now() + '_' + filename.replace(/[^a-z0-9.]/gi, '_');
+        const filePath = path.join(uploadsDir, safeName);
+        
+        const base64Data = base64.replace(/^data:([A-Za-z-+/]+);base64,/, '');
+        fs.writeFileSync(filePath, base64Data, 'base64');
+        
+        const newAttachment = await prisma.attachment.create({
+            data: { 
+                filename, 
+                path: '/uploads/' + safeName,
+                opportunityId 
+            }
+        });
+        res.json(newAttachment);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al subir archivo' });
+    }
+});
+
+// Añadir Cotización a oportunidad
+router.post('/api/opportunities/:id/quotes', async (req, res) => {
+    try {
+        const opportunityId = parseInt(req.params.id);
+        const { quoteNumber, amount, pdfPath, driveUrl } = req.body;
+        const newQuote = await prisma.quoteRecord.create({
+            data: { 
+                quoteNumber: parseInt(quoteNumber), 
+                amount: parseFloat(amount), 
+                pdfPath, 
+                driveUrl,
+                opportunityId 
+            }
+        });
+        res.json(newQuote);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al guardar cotización' });
     }
 });
 

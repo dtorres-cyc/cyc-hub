@@ -913,6 +913,11 @@ function renderKanban() {
             card.addEventListener('dragstart', e => {
                 e.dataTransfer.setData('text/plain', opp.id);
             });
+            card.addEventListener('click', e => {
+                // Evitar abrir el drawer al arrastrar
+                if (!e.defaultPrevented) openOppDrawer(opp);
+            });
+            card.style.cursor = 'pointer';
 
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
@@ -1556,3 +1561,222 @@ async function generateAIAnalysis() {
     btn.textContent = "✨ Generar Análisis con IA";
     btn.disabled = false;
 }
+
+// =============================================
+// OPP DRAWER — Panel lateral de oportunidad
+// =============================================
+let currentOppId = null;
+
+function openOppDrawer(opp) {
+    currentOppId = opp.id;
+
+    // Header
+    document.getElementById('drawer-stage').textContent = opp.stage;
+    document.getElementById('drawer-name').textContent = opp.name;
+    document.getElementById('drawer-amount').textContent = '$' + opp.amount.toLocaleString('es-CL');
+    document.getElementById('drawer-company').textContent = opp.company ? opp.company.name : 'Sin empresa';
+    document.getElementById('drawer-contact').textContent = opp.contact ? (opp.contact.firstName + ' ' + (opp.contact.lastName || '')) : 'Sin contacto';
+    document.getElementById('drawer-close').textContent = opp.expectedClose ? new Date(opp.expectedClose).toLocaleDateString('es-CL') : 'Sin fecha';
+    document.getElementById('drawer-prob').textContent = (opp.probability || 0) + '% prob.';
+
+    // Detalle
+    const priorityColor = { Alta: '#dc2626', Media: '#f59e0b', Baja: '#2563eb' };
+    document.getElementById('drawer-detail-grid').innerHTML = `
+        <div class="detail-field">
+            <label>Tipo de Negocio</label>
+            <span>${opp.businessType || '—'}</span>
+        </div>
+        <div class="detail-field">
+            <label>Prioridad</label>
+            <span style="color:${priorityColor[opp.priority] || '#666'}; font-weight:700;">${opp.priority || '—'}</span>
+        </div>
+        <div class="detail-field">
+            <label>Creado el</label>
+            <span>${new Date(opp.createdAt).toLocaleDateString('es-CL')}</span>
+        </div>
+        <div class="detail-field">
+            <label>Última actualización</label>
+            <span>${new Date(opp.updatedAt).toLocaleDateString('es-CL')}</span>
+        </div>
+        <div class="detail-field full" style="margin-top:8px;">
+            <label>Cambiar Etapa</label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                ${STAGES.map(s => `<button onclick="quickChangeStage(${opp.id},'${s}')" 
+                    style="padding:6px 12px; border:1px solid var(--border); border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; background:${opp.stage===s?'var(--c-primary)':'white'}; color:${opp.stage===s?'white':'var(--text-main)'}; font-family:inherit; transition:all 0.15s;">${s}</button>`).join('')}
+            </div>
+        </div>
+    `;
+
+    // Contadores y listas
+    renderDrawerComments(opp.comments || []);
+    renderDrawerFiles(opp.attachments || []);
+    renderDrawerQuotes(opp.quotes || []);
+
+    // Abrir
+    switchDrawerTab('detail');
+    document.getElementById('opp-drawer-overlay').classList.add('open');
+    document.getElementById('opp-drawer').classList.add('open');
+}
+
+function closeOppDrawer() {
+    document.getElementById('opp-drawer-overlay').classList.remove('open');
+    document.getElementById('opp-drawer').classList.remove('open');
+    currentOppId = null;
+}
+
+function switchDrawerTab(tab) {
+    const tabs = ['detail', 'comments', 'files', 'quotes'];
+    document.querySelectorAll('.drawer-tab').forEach((t, i) => {
+        t.classList.toggle('active', tabs[i] === tab);
+    });
+    document.querySelectorAll('.drawer-pane').forEach(p => p.classList.remove('active'));
+    document.getElementById(`drawer-pane-${tab}`).classList.add('active');
+}
+
+function renderDrawerComments(comments) {
+    document.getElementById('drawer-comments-count').textContent = comments.length;
+    const list = document.getElementById('comment-list');
+    if (!comments.length) {
+        list.innerHTML = `<div class="empty-state"><span class="empty-icon">💬</span>Sin comentarios aún. Agrega notas y seguimientos aquí.</div>`;
+        return;
+    }
+    list.innerHTML = comments.map(c => `
+        <div class="comment-item">
+            <div class="comment-text">${escapeHtml(c.text)}</div>
+            <div class="comment-date">${new Date(c.createdAt).toLocaleString('es-CL')}</div>
+        </div>
+    `).join('');
+}
+
+function renderDrawerFiles(files) {
+    document.getElementById('drawer-files-count').textContent = files.length;
+    const list = document.getElementById('attachment-list');
+    if (!files.length) {
+        list.innerHTML = `<div class="empty-state"><span class="empty-icon">📎</span>Sin archivos adjuntos aún.</div>`;
+        return;
+    }
+    const iconMap = { pdf: '📄', jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', doc: '📝', docx: '📝', xls: '📊', xlsx: '📊' };
+    list.innerHTML = files.map(f => {
+        const ext = (f.filename.split('.').pop() || '').toLowerCase();
+        const icon = iconMap[ext] || '📎';
+        return `
+            <div class="attachment-item">
+                <span class="att-icon">${icon}</span>
+                <div class="att-info">
+                    <div class="att-name">${escapeHtml(f.filename)}</div>
+                    <div class="att-date">${new Date(f.createdAt).toLocaleDateString('es-CL')}</div>
+                </div>
+                <a href="${f.path}" target="_blank">Ver →</a>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderDrawerQuotes(quotes) {
+    document.getElementById('drawer-quotes-count').textContent = quotes.length;
+    const list = document.getElementById('quote-list');
+    if (!quotes.length) {
+        list.innerHTML = `<div class="empty-state"><span class="empty-icon">📄</span>No hay cotizaciones enviadas para esta oportunidad.</div>`;
+        return;
+    }
+    list.innerHTML = quotes.map(q => `
+        <div class="quote-item">
+            <div class="quote-num">N°${String(q.quoteNumber).padStart(4,'0')}</div>
+            <div class="quote-info">
+                <div class="quote-amount">$${q.amount.toLocaleString('es-CL')}</div>
+                <div class="quote-date">${new Date(q.createdAt).toLocaleDateString('es-CL')}</div>
+            </div>
+            ${q.driveUrl ? `<a href="${q.driveUrl}" target="_blank">📁 Ver en Drive</a>` : '<span style="color:var(--text-muted); font-size:12px;">Sin enlace</span>'}
+        </div>
+    `).join('');
+}
+
+async function submitComment() {
+    const textarea = document.getElementById('new-comment-text');
+    const text = textarea.value.trim();
+    if (!text || !currentOppId) return;
+
+    const btn = document.querySelector('.comment-send-btn');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+
+    try {
+        const res = await fetch(`/crm/api/opportunities/${currentOppId}/comments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text })
+        });
+        if (res.ok) {
+            textarea.value = '';
+            const updated = await fetch('/crm/api/opportunities').then(r => r.json());
+            globalOpportunities = updated;
+            const opp = updated.find(o => o.id === currentOppId);
+            if (opp) renderDrawerComments(opp.comments || []);
+        }
+    } catch(err) { console.error(err); }
+    btn.disabled = false;
+    btn.textContent = '➤ Enviar comentario';
+}
+
+async function handleFileUpload(event) {
+    if (!currentOppId) return;
+    const files = Array.from(event.target.files);
+    if (!files.length) return;
+
+    for (const file of files) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                await fetch(`/crm/api/opportunities/${currentOppId}/attachments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: file.name, base64: e.target.result })
+                });
+                const updated = await fetch('/crm/api/opportunities').then(r => r.json());
+                globalOpportunities = updated;
+                const opp = updated.find(o => o.id === currentOppId);
+                if (opp) renderDrawerFiles(opp.attachments || []);
+            } catch(err) { console.error(err); }
+        };
+        reader.readAsDataURL(file);
+    }
+    event.target.value = '';
+}
+
+function openCotizadorForOpp() {
+    if (!currentOppId) return;
+    const opp = globalOpportunities.find(o => o.id === currentOppId);
+    if (!opp) return;
+
+    const params = new URLSearchParams({
+        oppId: opp.id,
+        empresa: opp.company ? opp.company.name : '',
+        contacto: opp.contact ? (opp.contact.firstName + ' ' + (opp.contact.lastName || '')) : '',
+        email: opp.contact ? (opp.contact.email || '') : '',
+        cargo: opp.contact ? (opp.contact.role || '') : '',
+        fono: opp.contact ? (opp.contact.phone || '') : ''
+    });
+    window.open(`/cotizador?${params.toString()}`, '_blank');
+}
+
+async function quickChangeStage(oppId, newStage) {
+    try {
+        await fetch(`/crm/api/opportunities/${oppId}/stage`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stage: newStage })
+        });
+        const updated = await fetch('/crm/api/opportunities').then(r => r.json());
+        globalOpportunities = updated;
+        renderKanban();
+        const opp = updated.find(o => o.id === oppId);
+        if (opp) openOppDrawer(opp);
+    } catch(err) { console.error(err); }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+}
+

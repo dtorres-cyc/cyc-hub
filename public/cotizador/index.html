@@ -410,6 +410,23 @@ async function init() {
     : '<span style="color:#a93226">❌ credentials.json no encontrado</span>';
   await loadCatalog();
   loadHistory();
+
+  // Pre-llenar desde CRM si viene con parámetros
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('oppId')) {
+    window._crmOppId = params.get('oppId');
+    if (params.get('empresa'))  document.getElementById('cEmpresa').value = params.get('empresa');
+    if (params.get('contacto')) document.getElementById('cNombre').value  = params.get('contacto');
+    if (params.get('email'))    document.getElementById('cEmail').value   = params.get('email');
+    if (params.get('cargo'))    document.getElementById('cCargo').value   = params.get('cargo');
+    if (params.get('fono'))     document.getElementById('cFono').value    = params.get('fono');
+
+    // Banner informativo
+    const banner = document.createElement('div');
+    banner.style = 'background:#1e40af;color:white;padding:10px 20px;font-size:13px;font-weight:600;text-align:center;';
+    banner.innerHTML = `📎 Cotización vinculada a oportunidad CRM #${window._crmOppId} — Al generar, quedará guardada automáticamente.`;
+    document.body.insertBefore(banner, document.body.firstChild);
+  }
 }
 
 // ─── Valor UF ──────────────────────────────────────────────────────────────
@@ -724,6 +741,24 @@ async function generate(sendEmail, emailTo, emailCc) {
     if (res.email_sent) msgs.push("📧 Correo enviado");
     res.errors.forEach(e=>toast("⚠ "+e,"inf"));
     toast(msgs.join(" · "),"ok");
+
+    // Guardar en CRM si viene vinculado a una oportunidad
+    if (window._crmOppId) {
+      try {
+        await fetch(`/crm/api/opportunities/${window._crmOppId}/quotes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            quoteNumber: res.numero,
+            amount: total,
+            driveUrl: res.drive_url || ''
+          })
+        });
+        toast(`📎 Cotización N°${pad(res.numero)} guardada en la oportunidad CRM`, "ok");
+      } catch(crmErr) {
+        console.warn('No se pudo guardar en CRM:', crmErr);
+      }
+    }
 
     nextNum = res.numero+1;
     document.getElementById("quoteNum").textContent = pad(nextNum);
