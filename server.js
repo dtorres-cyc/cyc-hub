@@ -12,9 +12,12 @@ const cotizadorRouter = require('./modules/cotizador/router');
 const flotaRouter     = require('./modules/flota/router');
 const informeRouter   = require('./modules/informe/router');
 const crmRouter       = require('./modules/crm/router');
+const arriendoRouter  = require('./modules/arriendo/router');
+
 
 // ── Cron Jobs ─────────────────────────────────────────────────────────────────
 require('./modules/cron/weeklyReport');
+require('./modules/cron/monthlyEdp');
 
 // Inicializar base de datos del cotizador
 const { initDb } = require('./modules/cotizador/db');
@@ -32,6 +35,8 @@ app.use('/cotizador', cotizadorRouter);
 app.use('/flota',     flotaRouter);
 app.use('/informe',   informeRouter);
 app.use('/crm',       crmRouter);
+app.use('/arriendo',  arriendoRouter);
+
 
 // ── Arranque ──────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
@@ -45,6 +50,8 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`  🚜  Flota:      http://localhost:${PORT}/flota`);
   console.log(`  📊  Informe:    http://localhost:${PORT}/informe/index.html`);
   console.log(`  🤝  CRM:        http://localhost:${PORT}/crm`);
+  console.log(`  📅  Arriendo:   http://localhost:${PORT}/arriendo`);
+
   console.log('═══════════════════════════════════════════════════');
   console.log('');
 });

@@ -130,3 +130,115 @@ model FlotaEquipo {
   updatedAt       DateTime @updatedAt
 }
 
+// ─── Gestión de Arriendo ──────────────────────────────────────────────────────
+
+model Contrato {
+  id              Int       @id @default(autoincrement())
+  numeroContrato  String
+  cliente         String
+  equipos         String?   // Legacy fallback JSON
+  fechaInicio     DateTime
+  fechaTermino    DateTime
+  activo          Boolean   @default(true)
+
+  // Checklist Documentación
+  docOC           Boolean   @default(false)
+  docContrato     Boolean   @default(false)
+  docActaEntrega  Boolean   @default(false)
+
+  notas           String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  contratoEquipos ContratoEquipo[]
+  edps            EDP[]
+  danosMermas     DanosMerma[]
+}
+
+model ContratoEquipo {
+  id               Int       @id @default(autoincrement())
+  contratoId       Int
+  contrato         Contrato  @relation(fields: [contratoId], references: [id])
+
+  equipoId         String    // N° Interno
+  equipoTipo       String?   // Tolva, Aljibe, etc.
+
+  // Entrega
+  fechaEntrega     DateTime?
+  horometroEntrega Float?
+
+  // Cobro
+  tipoCobro        String    @default("fijo") // "fijo" | "hora"
+  moneda           String    @default("CLP")  // "CLP" | "UF"
+  valorFijo        Float?    // Si tipoCobro == "fijo"
+  tarifaHora       Float?    // Si tipoCobro == "hora"
+  horasMinimas     Float?    // Si tipoCobro == "hora"
+  valorHoraExtra   Float?    // Si tipoCobro == "hora"
+
+  // Baja individual del equipo
+  activo           Boolean   @default(true)
+  fechaBaja        DateTime?
+  motivoBaja       String?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  danosMermas      DanosMerma[]
+}
+
+
+model EDP {
+  id              Int       @id @default(autoincrement())
+  contratoId      Int
+  contrato        Contrato  @relation(fields: [contratoId], references: [id])
+
+  mes             Int       // 1-12
+  anio            Int
+  periodo         String    // "Mayo 2026"
+
+  // Etapas: 1=Pedir horómetros | 2=Enviar EDP | 3=Negociación | 4=EDP Facturado
+  etapa           Int       @default(1)
+
+  horometroSolicitado DateTime?
+  horometroRecibido   DateTime?
+  edpEnviado          DateTime?
+  negociacionInicio   DateTime?
+  facturado           DateTime?
+
+  montoEdp        Float?
+  observaciones   String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model DanosMerma {
+  id               Int            @id @default(autoincrement())
+  contratoId       Int?
+  contrato         Contrato?      @relation(fields: [contratoId], references: [id])
+  contratoEquipoId Int?
+  contratoEquipo   ContratoEquipo? @relation(fields: [contratoEquipoId], references: [id])
+
+  equipoId         String
+  equipoDesc       String?
+  cliente          String?
+
+  // Etapas: 1=Recepcionar | 2=Levantamiento | 3=Enviar informe | 4=Negociación | 5=Facturado | 6=Pagado
+  etapa            Int       @default(1)
+
+  recepcionFecha     DateTime?
+  recepcionFotos     String?
+  levantamientoFecha DateTime?
+  informeEnviado     DateTime?
+  negociacionInicio  DateTime?
+  facturadoFecha     DateTime?
+  pagadoFecha        DateTime?
+
+  montoDano        Float?
+  observaciones    String?
+
+  activo           Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}

@@ -246,57 +246,80 @@ Quería saber si requieren cotizar algún tipo de maquinaria para estos días. T
 
     <!-- MODAL: GESTIÓN DE EQUIPOS -->
     <div class="overlay hidden" id="adminEquiposOverlay" onclick="closeAdminEquipos()">
-        <div class="modal" onclick="event.stopPropagation()" style="width:min(900px,95vw); max-height:85vh; display:flex; flex-direction:column;">
-            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
-                <h2 class="modal-title">⚙ Gestión de Inventario de Equipos</h2>
-                <button class="modal-close" onclick="closeAdminEquipos()">✕</button>
-            </div>
-            <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; gap:10px; flex-wrap:wrap;">
-                <button onclick="importFromNotion()" style="padding:8px 16px; background:#6366f1; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:13px;">
-                    ⬇ Importar desde Notion
-                </button>
-                <button onclick="showNewEquipoForm()" style="padding:8px 16px; background:var(--accent); color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:13px;">
-                    + Agregar Equipo Manual
-                </button>
-                <span id="admin-source-badge" style="margin-left:auto; font-size:12px; color:var(--text-muted); align-self:center;"></span>
-            </div>
-            <!-- Formulario nuevo equipo -->
-            <div id="new-equipo-form" style="display:none; padding:16px 20px; background:#f8fafc; border-bottom:1px solid var(--border);">
-                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px;">
-                    <input id="ne-tipo" placeholder="Tipo Maquinaria *" style="padding:7px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
-                    <input id="ne-marca" placeholder="Marca" style="padding:7px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
-                    <input id="ne-modelo" placeholder="Modelo" style="padding:7px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
-                    <input id="ne-anio" placeholder="Año" style="padding:7px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
-                    <input id="ne-horometro" placeholder="Horómetro (hrs)" style="padding:7px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
-                    <input id="ne-tarifa" placeholder="Tarifa 180H" style="padding:7px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
-                    <input id="ne-numero" placeholder="N° Interno" style="padding:7px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
-                    <input id="ne-imagen" placeholder="URL Imagen (opcional)" style="padding:7px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; grid-column:span 2;">
+        <div class="modal" onclick="event.stopPropagation()" style="width:min(1100px,97vw); max-height:90vh; display:flex; flex-direction:column; border-radius:12px; overflow:hidden;">
+            
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,#1e293b,#0f172a); color:white; padding:20px 24px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
+                <div>
+                    <h2 style="margin:0; font-size:18px; font-weight:800;">⚙ Gestión de Equipos</h2>
+                    <p style="margin:4px 0 0; font-size:12px; opacity:0.6;" id="admin-source-badge">Cargando...</p>
                 </div>
-                <textarea id="ne-detalle" placeholder="Detalle / Especificaciones" rows="2" style="width:100%; padding:7px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-bottom:10px; box-sizing:border-box;"></textarea>
+                <button onclick="closeAdminEquipos()" style="background:rgba(255,255,255,0.1); border:none; color:white; width:32px; height:32px; border-radius:50%; font-size:18px; cursor:pointer;">✕</button>
+            </div>
+
+            <!-- Toolbar de acciones -->
+            <div style="padding:14px 20px; border-bottom:1px solid #e2e8f0; display:flex; gap:10px; flex-wrap:wrap; align-items:center; background:#f8fafc; flex-shrink:0;">
+                <button onclick="showNewEquipoForm()" style="padding:8px 16px; background:#2563eb; color:white; border:none; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; font-family:inherit;">+ Nuevo Equipo</button>
+                <label style="padding:8px 16px; background:#6366f1; color:white; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; display:flex; align-items:center; gap:6px;">
+                    📋 Importar CSV
+                    <input type="file" id="csv-equipos-input" accept=".csv" style="display:none;" onchange="handleEquipoCSV(event)">
+                </label>
+                <button onclick="downloadPlantillaCSV()" style="padding:8px 14px; background:#e2e8f0; color:#334155; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:12px; font-family:inherit;">↓ Plantilla CSV</button>
+                <button onclick="importFromNotion(this)" style="padding:8px 14px; background:#f59e0b; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:12px; font-family:inherit;">⬇ Importar Notion</button>
+                <span id="admin-filter-count" style="margin-left:auto; font-size:12px; color:#64748b; font-weight:600;"></span>
+            </div>
+
+            <!-- Formulario nuevo equipo (colapsable) -->
+            <div id="new-equipo-form" style="display:none; padding:16px 20px; background:#f0f9ff; border-bottom:1px solid #bae6fd; flex-shrink:0;">
+                <p style="font-weight:700; margin:0 0 12px; font-size:13px; color:#0369a1;">➕ Nuevo Equipo</p>
+                <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
+                    <input id="ne-tipo"      placeholder="Tipo Maquinaria *" style="padding:7px 10px; border:1px solid #bae6fd; border-radius:6px; font-size:13px; font-family:inherit;">
+                    <input id="ne-numero"    placeholder="N° Interno"        style="padding:7px 10px; border:1px solid #bae6fd; border-radius:6px; font-size:13px; font-family:inherit;">
+                    <input id="ne-marca"     placeholder="Marca"             style="padding:7px 10px; border:1px solid #bae6fd; border-radius:6px; font-size:13px; font-family:inherit;">
+                    <input id="ne-modelo"    placeholder="Modelo"            style="padding:7px 10px; border:1px solid #bae6fd; border-radius:6px; font-size:13px; font-family:inherit;">
+                    <input id="ne-anio"      placeholder="Año"               style="padding:7px 10px; border:1px solid #bae6fd; border-radius:6px; font-size:13px; font-family:inherit;">
+                    <input id="ne-horometro" placeholder="Horómetro hrs"     style="padding:7px 10px; border:1px solid #bae6fd; border-radius:6px; font-size:13px; font-family:inherit;">
+                    <input id="ne-tarifa"    placeholder="Tarifa 180H"       style="padding:7px 10px; border:1px solid #bae6fd; border-radius:6px; font-size:13px; font-family:inherit;">
+                </div>
+                <textarea id="ne-detalle" placeholder="Detalle / especificaciones..." rows="2" style="width:100%; box-sizing:border-box; padding:7px 10px; border:1px solid #bae6fd; border-radius:6px; font-size:13px; font-family:inherit; margin-bottom:8px; resize:vertical;"></textarea>
                 <div style="display:flex; gap:8px;">
-                    <button onclick="saveNewEquipo()" style="padding:7px 18px; background:var(--accent); color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:13px;">Guardar</button>
-                    <button onclick="document.getElementById('new-equipo-form').style.display='none'" style="padding:7px 14px; background:var(--border); color:var(--text-primary); border:none; border-radius:6px; cursor:pointer; font-size:13px;">Cancelar</button>
+                    <button onclick="saveNewEquipo()" style="padding:7px 18px; background:#2563eb; color:white; border:none; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; font-family:inherit;">Guardar</button>
+                    <button onclick="document.getElementById('new-equipo-form').style.display='none'" style="padding:7px 14px; background:#e2e8f0; color:#334155; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-family:inherit;">Cancelar</button>
                 </div>
             </div>
-            <!-- Tabla equipos -->
-            <div style="overflow-y:auto; flex:1;">
-                <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                    <thead style="position:sticky; top:0; background:var(--bg-sidebar); color:white;">
-                        <tr>
-                            <th style="padding:10px; text-align:left;">Tipo</th>
-                            <th style="padding:10px; text-align:left;">N° Int.</th>
-                            <th style="padding:10px; text-align:left;">Marca / Modelo</th>
-                            <th style="padding:10px; text-align:left;">Año</th>
-                            <th style="padding:10px; text-align:left;">Tarifa</th>
-                            <th style="padding:10px; text-align:center;">Activo</th>
-                            <th style="padding:10px; text-align:center;">Acciones</th>
+
+            <!-- Tabla editable de equipos -->
+            <div style="overflow:auto; flex:1;">
+                <table id="admin-equipos-tbl" style="width:100%; border-collapse:collapse; font-size:12.5px; min-width:900px;">
+                    <thead>
+                        <tr style="background:#1e293b; color:white; position:sticky; top:0; z-index:10;">
+                            <th style="padding:10px 8px; text-align:left; width:36px;"></th>
+                            <th style="padding:10px 8px; text-align:left; min-width:140px;">Tipo Maquinaria</th>
+                            <th style="padding:10px 8px; text-align:left; width:80px;">N° Interno</th>
+                            <th style="padding:10px 8px; text-align:left; width:90px;">Marca</th>
+                            <th style="padding:10px 8px; text-align:left; width:100px;">Modelo</th>
+                            <th style="padding:10px 8px; text-align:left; width:60px;">Año</th>
+                            <th style="padding:10px 8px; text-align:left; width:90px;">Horómetro</th>
+                            <th style="padding:10px 8px; text-align:left; width:90px;">Tarifa 180H</th>
+                            <th style="padding:10px 8px; text-align:left; min-width:120px;">Detalle</th>
+                            <th style="padding:10px 8px; text-align:center; width:70px;">Foto</th>
+                            <th style="padding:10px 8px; text-align:center; width:70px;">Activo</th>
+                            <th style="padding:10px 8px; text-align:center; width:60px;">✕</th>
                         </tr>
                     </thead>
                     <tbody id="admin-equipos-table"></tbody>
                 </table>
-                <p id="admin-equipos-empty" style="text-align:center; padding:32px; color:var(--text-muted); display:none;">
-                    Sin equipos. Importa desde Notion o agrega uno manualmente.
+                <p id="admin-equipos-empty" style="text-align:center; padding:40px; color:#94a3b8; display:none; font-size:14px;">
+                    Sin equipos en la base de datos.<br>
+                    <span style="font-size:12px;">Importa desde Notion, sube un CSV o agrega equipos manualmente.</span>
                 </p>
+            </div>
+
+            <!-- Footer con botón guardar cambios (para ediciones inline pendientes) -->
+            <div style="padding:12px 20px; border-top:1px solid #e2e8f0; display:flex; align-items:center; gap:12px; background:#f8fafc; flex-shrink:0;">
+                <span id="admin-pending-badge" style="font-size:12px; color:#dc2626; font-weight:600; display:none;">⚠ Hay cambios sin guardar</span>
+                <span style="flex:1;"></span>
+                <button onclick="closeAdminEquipos()" style="padding:8px 20px; background:#e2e8f0; color:#334155; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:13px; font-family:inherit;">Cerrar</button>
             </div>
         </div>
     </div>
@@ -304,4 +327,5 @@ Quería saber si requieren cotizar algún tipo de maquinaria para estos días. T
     <script src="app.js"></script>
 </body>
 </html>
+
 

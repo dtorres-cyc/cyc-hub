@@ -38,6 +38,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         fetchReports();
+        // Cargar módulo Arriendo & Daños (definido en arriendo.js)
+        if (typeof loadArriendo === 'function') loadArriendo();
     } catch (e) {
         console.error('Error fetching data', e);
     }

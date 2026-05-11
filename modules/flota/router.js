@@ -170,6 +170,29 @@ router.post('/api/send-campaign', async (req, res) => {
 // ═══════════════════════════════════════════════════════
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const multer = require('multer');
+
+// Almacenamiento de fotos de equipos
+const uploadDir = path.join(__dirname, '..', '..', 'public', 'uploads', 'equipos');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+const equipoStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename:    (req, file, cb) => {
+    const ext  = path.extname(file.originalname).toLowerCase();
+    const name = `equipo_${Date.now()}${ext}`;
+    cb(null, name);
+  }
+});
+const uploadFoto = multer({
+  storage: equipoStorage,
+  limits:  { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: (req, file, cb) => {
+    if (/^image\//i.test(file.mimetype)) cb(null, true);
+    else cb(new Error('Solo se permiten imágenes'));
+  }
+});
+
 
 // Helper: convierte registro DB al formato que usa el frontend de flota
 function dbEquipoToFlota(e) {
@@ -299,5 +322,73 @@ router.post('/api/equipos/import-notion', async (req, res) => {
   }
 });
 
+// POST /flota/api/equipos/db/:id/foto — subir/reemplazar foto de un equipo
+router.post('/api/equipos/db/:id/foto', uploadFoto.single('foto'), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!req.file) return res.status(400).json({ ok: false, error: 'No se recibió imagen' });
+
+    // Eliminar foto anterior si existe
+    const prev = await prisma.flotaEquipo.findUnique({ where: { id } });
+    if (prev?.imagenUrl && prev.imagenUrl.startsWith('/uploads/equipos/')) {
+      const prevPath = path.join(__dirname, '..', '..', 'public', prev.imagenUrl);
+      if (fs.existsSync(prevPath)) fs.unlinkSync(prevPath);
+    }
+
+    const imagenUrl = `/uploads/equipos/${req.file.filename}`;
+    const eq = await prisma.flotaEquipo.update({ where: { id }, data: { imagenUrl } });
+    res.json({ ok: true, imagenUrl, equipo: eq });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /flota/api/equipos/import-csv — importación masiva desde CSV
+router.post('/api/equipos/import-csv', async (req, res) => {
+  try {
+    const { rows } = req.body; // Array de objetos con los datos
+    if (!Array.isArray(rows) || !rows.length) {
+      return res.status(400).json({ ok: false, error: 'No se recibieron filas' });
+    }
+
+    let creados = 0, actualizados = 0, errores = 0;
+
+    for (const row of rows) {
+      const tipo = (row.tipoMaquinaria || row.tipo || row.Tipo || row['Tipo Maquinaria'] || '').trim();
+      if (!tipo) { errores++; continue; }
+
+      const data = {
+        tipoMaquinaria: tipo,
+        marca:          (row.marca  || row.Marca  || '').trim() || null,
+        modelo:         (row.modelo || row.Modelo || '').trim() || null,
+        anio:           (row.anio   || row.año    || row.Año    || row.Anio || '').trim() || null,
+        horometro:      (row.horometro || row.Horometro || row['Horómetro'] || '').trim() || null,
+        detalle:        (row.detalle   || row.Detalle   || '').trim() || null,
+        tarifa:         (row.tarifa    || row.Tarifa    || row['Tarifa 180H'] || '').trim() || null,
+        numeroInterno:  (row.numeroInterno || row['N° Interno'] || row['Numero Interno'] || '').trim() || null,
+        imagenUrl:      (row.imagenUrl || row.imagen || '').trim() || null,
+      };
+
+      // Si hay numeroInterno, intentar actualizar el existente
+      if (data.numeroInterno) {
+        const existing = await prisma.flotaEquipo.findFirst({ where: { numeroInterno: data.numeroInterno } });
+        if (existing) {
+          await prisma.flotaEquipo.update({ where: { id: existing.id }, data });
+          actualizados++;
+          continue;
+        }
+      }
+
+      await prisma.flotaEquipo.create({ data });
+      creados++;
+    }
+
+    res.json({ ok: true, creados, actualizados, errores, total: rows.length });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;
+
 

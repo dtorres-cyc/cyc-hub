@@ -605,22 +605,27 @@ function toast(msg, type = 'info') {
 // ═══════════════════════════════════════════════════════════════════
 // ADMIN DE EQUIPOS — Gestión de Inventario desde BD
 // ═══════════════════════════════════════════════════════════════════
+const EDITABLE_FIELDS = ['tipoMaquinaria','numeroInterno','marca','modelo','anio','horometro','tarifa','detalle'];
+
 async function showAdminEquipos() {
     show('adminEquiposOverlay');
     await loadAdminEquipos();
 }
 
-function closeAdminEquipos() { hide('adminEquiposOverlay'); }
+function closeAdminEquipos() {
+    hide('adminEquiposOverlay');
+}
 
 function showNewEquipoForm() {
     const f = document.getElementById('new-equipo-form');
     f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    if (f.style.display !== 'none') document.getElementById('ne-tipo').focus();
 }
 
 async function loadAdminEquipos() {
     const tbody = document.getElementById('admin-equipos-table');
     const empty = document.getElementById('admin-equipos-empty');
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted);">Cargando...</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:24px;color:#94a3b8;">Cargando...</td></tr>`;
 
     try {
         const res  = await fetch('api/equipos/admin');
@@ -628,7 +633,8 @@ async function loadAdminEquipos() {
         if (!data.ok) throw new Error(data.error);
 
         const equipos = data.equipos;
-        document.getElementById('admin-source-badge').textContent = `${equipos.length} equipo(s) en base de datos`;
+        document.getElementById('admin-source-badge').textContent = `${equipos.length} equipo(s) en la base de datos`;
+        document.getElementById('admin-filter-count').textContent  = `${equipos.filter(e=>e.activo).length} activos`;
 
         if (!equipos.length) {
             tbody.innerHTML = '';
@@ -638,27 +644,100 @@ async function loadAdminEquipos() {
         empty.style.display = 'none';
         renderAdminTable(equipos);
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="7" style="color:red;padding:16px;">${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="12" style="color:#dc2626;padding:16px;">${err.message}</td></tr>`;
     }
 }
 
+// ── Render de tabla editable ────────────────────────────────────────
 function renderAdminTable(equipos) {
     const tbody = document.getElementById('admin-equipos-table');
-    tbody.innerHTML = equipos.map(e => `
-        <tr style="border-bottom:1px solid #e2e8f0; background:${e.activo ? 'white' : '#fef2f2'};">
-            <td style="padding:10px 12px; font-weight:600;">${e.tipoMaquinaria}</td>
-            <td style="padding:10px 12px; color:#64748b;">${e.numeroInterno || '—'}</td>
-            <td style="padding:10px 12px;">${[e.marca, e.modelo].filter(Boolean).join(' ') || '—'}</td>
-            <td style="padding:10px 12px; color:#64748b;">${e.anio || '—'}</td>
-            <td style="padding:10px 12px; color:#059669; font-weight:600;">${e.tarifa || '—'}</td>
-            <td style="padding:10px; text-align:center;">
-                <label style="cursor:pointer;">
-                    <input type="checkbox" ${e.activo ? 'checked' : ''} onchange="toggleEquipoActivo(${e.id}, this.checked)" style="accent-color:#2563eb; width:16px; height:16px;">
-                </label>
-            </td>
-            <td style="padding:10px; text-align:center;">
-                <button onclick="deleteEquipo(${e.id})" style="background:#fee2e2; color:#dc2626; border:none; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:12px;">🗑</button>
-            </td>
+    tbody.innerHTML = equipos.map(e => buildEquipoRow(e)).join('');
+}
+
+function buildEquipoRow(e) {
+    const fotoHtml = e.imagenUrl
+        ? `<img src="${e.imagenUrl}" style="width:38px;height:38px;object-fit:cover;border-radius:6px;display:block;margin:0 auto;">`
+        : `<div style="width:38px;height:38px;background:#f1f5f9;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto;">📷</div>`;
+
+    const inp = (field, val, placeholder='') =>
+        `<input data-id="${e.id}" data-field="${field}"
+            value="${(val||'').replace(/"/g,'&quot;')}"
+            placeholder="${placeholder}"
+            onblur="saveInlineField(this)"
+            onkeydown="if(event.key==='Enter'){this.blur();}"
+            style="width:100%;padding:4px 6px;border:1px solid transparent;border-radius:4px;font-size:12px;font-family:inherit;background:transparent;color:#1e293b;box-sizing:border-box;"
+            onfocus="this.style.border='1px solid #2563eb';this.style.background='white';"
+        >`;
+
+    return `
+    <tr id="eq-row-${e.id}" style="border-bottom:1px solid #f1f5f9;background:${e.activo ? 'white' : '#fff7f7'};" onmouseover="this.style.background='${e.activo ? '#f8fafc' : '#fff0f0'}'" onmouseout="this.style.background='${e.activo ? 'white' : '#fff7f7'}'">
+        <td style="padding:6px 4px;text-align:center;">
+            <label title="Subir foto" style="cursor:pointer;">
+                ${fotoHtml}
+                <input type="file" accept="image/*" style="display:none;" onchange="uploadEquipoFoto(${e.id}, this)">
+            </label>
+        </td>
+        <td style="padding:4px 6px;">${inp('tipoMaquinaria', e.tipoMaquinaria, 'Tipo *')}</td>
+        <td style="padding:4px 6px;">${inp('numeroInterno', e.numeroInterno, 'N°')}</td>
+        <td style="padding:4px 6px;">${inp('marca', e.marca, 'Marca')}</td>
+        <td style="padding:4px 6px;">${inp('modelo', e.modelo, 'Modelo')}</td>
+        <td style="padding:4px 6px;">${inp('anio', e.anio, 'Año')}</td>
+        <td style="padding:4px 6px;">${inp('horometro', e.horometro, 'Hrs')}</td>
+        <td style="padding:4px 6px;">${inp('tarifa', e.tarifa, 'Tarifa')}</td>
+        <td style="padding:4px 6px;">${inp('detalle', e.detalle, 'Detalle...')}</td>
+        <td style="padding:4px;text-align:center;">
+            <label style="cursor:pointer;font-size:11px;color:#6366f1;display:block;text-align:center;">
+                📷
+                <input type="file" accept="image/*" style="display:none;" onchange="uploadEquipoFoto(${e.id}, this)">
+            </label>
+        </td>
+        <td style="padding:4px;text-align:center;">
+            <input type="checkbox" ${e.activo ? 'checked' : ''} onchange="toggleEquipoActivo(${e.id}, this.checked)" style="accent-color:#2563eb;width:15px;height:15px;cursor:pointer;">
+        </td>
+        <td style="padding:4px;text-align:center;">
+            <button onclick="deleteEquipo(${e.id})" style="background:#fee2e2;color:#dc2626;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:11px;" title="Eliminar">✕</button>
+        </td>
+    </tr>`;
+}
+
+// ── Guardar campo editado inline ────────────────────────────────────
+async function saveInlineField(input) {
+    input.style.border = '1px solid transparent';
+    input.style.background = 'transparent';
+    const id    = parseInt(input.dataset.id);
+    const field = input.dataset.field;
+    const value = input.value.trim() || null;
+
+    try {
+        const res = await fetch(`api/equipos/db/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [field]: value })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        input.style.border = '1px solid #86efac'; // verde flash
+        setTimeout(() => { input.style.border = '1px solid transparent'; }, 1000);
+        // Actualizar también la lista de equipos de la pantalla principal
+        loadEquipos();
+    } catch (err) {
+        input.style.border = '1px solid #fca5a5';
+        toast(`Error al guardar: ${err.message}`, 'error');
+    }
+}
+
+// ── Subida de foto ────────────────────────�
+// ── Eliminar equipo ─────────────────────────────────────────────────
+async function deleteEquipo(id) {
+    if (!confirm('¿Eliminar este equipo? Esta acción no se puede deshacer.')) return;
+    try {
+        await fetch(`api/equipos/db/${id}`, { method: 'DELETE' });
+        toast('Equipo eliminado', 'success');
+        await loadAdminEquipos();
+        await loadEquipos();
+    } catch (err) { toast(`Error: ${err.message}`, 'error'); }
+}
+td>
         </tr>
     `).join('');
 }

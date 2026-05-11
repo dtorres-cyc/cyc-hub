@@ -4,26 +4,28 @@
   "description": "CYC Hub — Plataforma unificada de herramientas para Transportes CYC",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "postinstall": "prisma generate",
+    "start": "npx prisma db push && node server.js",
     "dev": "node --watch server.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@notionhq/client": "^2.2.14",
+    "@prisma/client": "^5.22.0",
     "better-sqlite3": "^9.4.3",
     "express": "^4.18.3",
     "googleapis": "^144.0.0",
+    "multer": "^2.1.1",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.9",
     "pdfkit": "^0.15.0",
+    "prisma": "^5.22.0",
     "sqlite3": "^6.0.1"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "devDependencies": {
-    "@prisma/client": "^5.22.0",
-    "dotenv": "^17.4.2",
-    "prisma": "^5.22.0"
+    "dotenv": "^17.4.2"
   }
 }

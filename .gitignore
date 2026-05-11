@@ -8,6 +8,12 @@ node_modules/
 cotizaciones.db
 cotizaciones.db-shm
 cotizaciones.db-wal
+dev.db
+dev.db-shm
+dev.db-wal
+prisma/*.db
+prisma/*.db-shm
+prisma/*.db-wal
 
 # ── Credenciales Google (van como env vars en Railway) ────────────────────────
 credentials.json
