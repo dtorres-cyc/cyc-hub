@@ -707,7 +707,7 @@
           <span>Equipos por N° Interno</span>
           <span id="c-equipos-count" style="font-size:11px; color:var(--c-primary); font-weight:700;"></span>
         </label>
-        <input type="text" id="c-equipos-search" placeholder="🔍 Buscar N° interno o tipo..." oninput="filterEquiposSelector()" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px 6px 0 0; font-family:inherit; font-size:13px; border-bottom:none;">
+        <input type="text" id="c-equipos-search" placeholder="🔍 Buscar N° interno o tipo..." oninput="filterEquiposSelector()" onkeydown="if(event.key==='Enter') { event.preventDefault(); return false; }" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px 6px 0 0; font-family:inherit; font-size:13px; border-bottom:none;">
         <div id="c-equipos-list" style="border:1px solid var(--border); border-radius:0 0 6px 6px; max-height:180px; overflow-y:auto; background:var(--bg-main);">
           <p style="padding:12px; color:var(--text-muted); font-size:12px; text-align:center;">Cargando equipos...</p>
         </div>

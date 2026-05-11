@@ -201,7 +201,9 @@ function renderEdpsKanban() {
 
 // ─── Selector de Equipos por N° Interno ──────────────────────────────────────
 
-function renderEquiposSelector(selectedIds = [], existingEquipoData = {}) {
+let modalEquiposData = {};
+
+function renderEquiposSelector() {
   const list    = document.getElementById('c-equipos-list');
   const search  = (document.getElementById('c-equipos-search')?.value || '').toLowerCase();
   const equipos = (typeof globalEquipos !== 'undefined' ? globalEquipos : []);
@@ -219,12 +221,12 @@ function renderEquiposSelector(selectedIds = [], existingEquipoData = {}) {
   }
 
   list.innerHTML = filtered.map(e => {
-    const checked = selectedIds.includes(e.id) ? 'checked' : '';
+    const checked = modalEquiposData[e.id] ? 'checked' : '';
     const arrendadoTag = e.arrendado && e.arrendado.toLowerCase() === 'contrato'
       ? `<span style="font-size:10px;background:rgba(220,38,38,0.1);color:var(--c-red);padding:1px 6px;border-radius:10px;">En contrato</span>` : '';
     return `
       <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--c-gray)'" onmouseout="this.style.background=''">
-        <input type="checkbox" value="${e.id}" data-tipo="${e.tipo || ''}" ${checked} onchange="onEquipoCheckChange()" style="width:15px;height:15px;cursor:pointer;">
+        <input type="checkbox" value="${e.id}" data-tipo="${e.tipo || ''}" ${checked} onchange="onEquipoCheckChange(this)" style="width:15px;height:15px;cursor:pointer;">
         <span style="font-weight:700;font-size:13px;min-width:80px;">${e.id}</span>
         <span style="font-size:12px;color:var(--text-muted);flex:1;">${e.tipo || ''}${e.patente ? ' · ' + e.patente : ''}</span>
         ${arrendadoTag}
@@ -232,69 +234,66 @@ function renderEquiposSelector(selectedIds = [], existingEquipoData = {}) {
   }).join('');
 
   updateEquiposCount();
-  renderEquiposConfig(existingEquipoData);
+  renderEquiposConfig();
 }
 
 function filterEquiposSelector() {
-  const selected = getSelectedEquipos();
-  const data     = collectEquiposConfigData();
-  renderEquiposSelector(selected, data);
+  syncModalEquiposData();
+  renderEquiposSelector();
 }
 
-function onEquipoCheckChange() {
+function onEquipoCheckChange(cb) {
+  syncModalEquiposData();
+  if (cb.checked) {
+    modalEquiposData[cb.value] = { equipoId: cb.value, equipoTipo: cb.dataset.tipo || '', tipoCobro: 'fijo', moneda: 'CLP' };
+  } else {
+    delete modalEquiposData[cb.value];
+  }
   updateEquiposCount();
   renderEquiposConfig();
 }
 
-function getSelectedEquipos() {
-  return Array.from(document.querySelectorAll('#c-equipos-list input[type=checkbox]:checked')).map(cb => cb.value);
-}
-
-function getSelectedEquiposWithTipo() {
-  return Array.from(document.querySelectorAll('#c-equipos-list input[type=checkbox]:checked'))
-    .map(cb => ({ id: cb.value, tipo: cb.dataset.tipo || '' }));
-}
-
 function updateEquiposCount() {
-  const count = getSelectedEquipos().length;
+  const count = Object.keys(modalEquiposData).length;
   const el = document.getElementById('c-equipos-count');
   if (el) el.textContent = count ? `${count} seleccionado${count !== 1 ? 's' : ''}` : '';
 }
 
+
 // ─── Config por equipo ────────────────────────────────────────────────────────
 
-function renderEquiposConfig(existingData = {}) {
-  const selected  = getSelectedEquiposWithTipo();
+function renderEquiposConfig() {
   const container = document.getElementById('c-equipos-config');
   const list      = document.getElementById('c-equipos-config-list');
   if (!container || !list) return;
 
+  const selected = Object.values(modalEquiposData);
   if (!selected.length) { container.style.display = 'none'; return; }
   container.style.display = 'block';
 
   list.innerHTML = selected.map(eq => {
-    const d = existingData[eq.id] || {};
+    const d = eq;
     const tipoCobro   = d.tipoCobro || 'fijo';
     const moneda      = d.moneda || 'CLP';
     const isHora      = tipoCobro === 'hora';
     return `
-    <div style="background:var(--c-gray);border:1px solid var(--border);border-radius:10px;padding:14px 16px;" id="cfg-${eq.id}">
+    <div style="background:var(--c-gray);border:1px solid var(--border);border-radius:10px;padding:14px 16px;" id="cfg-${eq.equipoId}">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-        <span style="font-size:14px;font-weight:800;color:var(--c-primary);">${eq.id}</span>
-        ${eq.tipo ? `<span style="font-size:11px;color:var(--text-muted);background:var(--bg-card);padding:2px 8px;border-radius:10px;border:1px solid var(--border);">${eq.tipo}</span>` : ''}
+        <span style="font-size:14px;font-weight:800;color:var(--c-primary);">${eq.equipoId}</span>
+        ${eq.equipoTipo ? `<span style="font-size:11px;color:var(--text-muted);background:var(--bg-card);padding:2px 8px;border-radius:10px;border:1px solid var(--border);">${eq.equipoTipo}</span>` : ''}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
         <div class="form-group" style="margin:0;">
           <label style="font-size:11px;">Fecha Entrega</label>
-          <input type="date" id="cfg-fecha-${eq.id}" value="${d.fechaEntrega ? d.fechaEntrega.split('T')[0] : ''}" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
+          <input type="date" id="cfg-fecha-${eq.equipoId}" value="${d.fechaEntrega ? (d.fechaEntrega.includes('T') ? d.fechaEntrega.split('T')[0] : d.fechaEntrega) : ''}" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
         </div>
         <div class="form-group" style="margin:0;">
           <label style="font-size:11px;">Horómetro Entrega</label>
-          <input type="number" id="cfg-horo-${eq.id}" value="${d.horometroEntrega || ''}" placeholder="ej: 12500" step="0.1" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
+          <input type="number" id="cfg-horo-${eq.equipoId}" value="${d.horometroEntrega || ''}" placeholder="ej: 12500" step="0.1" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
         </div>
         <div class="form-group" style="margin:0;">
           <label style="font-size:11px;">Moneda</label>
-          <select id="cfg-moneda-${eq.id}" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
+          <select id="cfg-moneda-${eq.equipoId}" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
             <option value="CLP" ${moneda === 'CLP' ? 'selected' : ''}>CLP</option>
             <option value="UF"  ${moneda === 'UF'  ? 'selected' : ''}>UF</option>
           </select>
@@ -305,34 +304,34 @@ function renderEquiposConfig(existingData = {}) {
         <label style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px;">TIPO DE COBRO</label>
         <div style="display:flex;gap:10px;margin-bottom:10px;">
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
-            <input type="radio" name="cfg-tipo-${eq.id}" value="fijo" ${!isHora ? 'checked' : ''} onchange="onTipoCobroChange('${eq.id}')">
+            <input type="radio" name="cfg-tipo-${eq.equipoId}" value="fijo" ${!isHora ? 'checked' : ''} onchange="onTipoCobroChange('${eq.equipoId}')">
             Valor Fijo
           </label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
-            <input type="radio" name="cfg-tipo-${eq.id}" value="hora" ${isHora ? 'checked' : ''} onchange="onTipoCobroChange('${eq.id}')">
+            <input type="radio" name="cfg-tipo-${eq.equipoId}" value="hora" ${isHora ? 'checked' : ''} onchange="onTipoCobroChange('${eq.equipoId}')">
             Valor × Hora
           </label>
         </div>
         <!-- Campos valor fijo -->
-        <div id="cfg-fijo-${eq.id}" style="display:${!isHora ? 'block' : 'none'}">
+        <div id="cfg-fijo-${eq.equipoId}" style="display:${!isHora ? 'block' : 'none'}">
           <div class="form-group" style="margin:0;">
             <label style="font-size:11px;">Valor Fijo (mensual)</label>
-            <input type="number" id="cfg-valorfijo-${eq.id}" value="${d.valorFijo || ''}" placeholder="ej: 6200000" step="any" min="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
+            <input type="number" id="cfg-valorfijo-${eq.equipoId}" value="${d.valorFijo || ''}" placeholder="ej: 6200000" step="any" min="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
           </div>
         </div>
         <!-- Campos valor por hora -->
-        <div id="cfg-hora-${eq.id}" style="display:${isHora ? 'grid' : 'none'};grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <div id="cfg-hora-${eq.equipoId}" style="display:${isHora ? 'grid' : 'none'};grid-template-columns:1fr 1fr 1fr;gap:10px;">
           <div class="form-group" style="margin:0;">
             <label style="font-size:11px;">Tarifa / Hora</label>
-            <input type="number" id="cfg-tarifah-${eq.id}" value="${d.tarifaHora || ''}" placeholder="ej: 45000" step="any" min="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
+            <input type="number" id="cfg-tarifah-${eq.equipoId}" value="${d.tarifaHora || ''}" placeholder="ej: 45000" step="any" min="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
           </div>
           <div class="form-group" style="margin:0;">
             <label style="font-size:11px;">Horas Mínimas</label>
-            <input type="number" id="cfg-horasmin-${eq.id}" value="${d.horasMinimas || ''}" placeholder="ej: 160" step="any" min="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
+            <input type="number" id="cfg-horasmin-${eq.equipoId}" value="${d.horasMinimas || ''}" placeholder="ej: 160" step="any" min="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
           </div>
           <div class="form-group" style="margin:0;">
             <label style="font-size:11px;">Val. Hora Extra</label>
-            <input type="number" id="cfg-horaextra-${eq.id}" value="${d.valorHoraExtra || ''}" placeholder="ej: 55000" step="any" min="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
+            <input type="number" id="cfg-horaextra-${eq.equipoId}" value="${d.valorHoraExtra || ''}" placeholder="ej: 55000" step="any" min="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
           </div>
         </div>
       </div>
@@ -347,25 +346,26 @@ function onTipoCobroChange(equipoId) {
   document.getElementById(`cfg-hora-${equipoId}`).style.display = isHora ? 'grid' : 'none';
 }
 
-function collectEquiposConfigData() {
-  const result = {};
-  getSelectedEquiposWithTipo().forEach(eq => {
-    const radio = document.querySelector(`input[name="cfg-tipo-${eq.id}"]:checked`);
-    const tipo  = radio?.value || 'fijo';
-    result[eq.id] = {
-      equipoId:         eq.id,
-      equipoTipo:       eq.tipo || null,
-      fechaEntrega:     document.getElementById(`cfg-fecha-${eq.id}`)?.value || null,
-      horometroEntrega: document.getElementById(`cfg-horo-${eq.id}`)?.value || null,
-      tipoCobro:        tipo,
-      moneda:           document.getElementById(`cfg-moneda-${eq.id}`)?.value || 'CLP',
-      valorFijo:        tipo === 'fijo' ? (document.getElementById(`cfg-valorfijo-${eq.id}`)?.value || null) : null,
-      tarifaHora:       tipo === 'hora' ? (document.getElementById(`cfg-tarifah-${eq.id}`)?.value || null) : null,
-      horasMinimas:     tipo === 'hora' ? (document.getElementById(`cfg-horasmin-${eq.id}`)?.value || null) : null,
-      valorHoraExtra:   tipo === 'hora' ? (document.getElementById(`cfg-horaextra-${eq.id}`)?.value || null) : null,
-    };
+function syncModalEquiposData() {
+  Object.keys(modalEquiposData).forEach(id => {
+    const container = document.getElementById(`cfg-${id}`);
+    if (container) {
+      const radio = document.querySelector(`input[name="cfg-tipo-${id}"]:checked`);
+      const tipo  = radio?.value || 'fijo';
+      modalEquiposData[id] = {
+        equipoId:         id,
+        equipoTipo:       modalEquiposData[id].equipoTipo,
+        fechaEntrega:     document.getElementById(`cfg-fecha-${id}`)?.value || null,
+        horometroEntrega: document.getElementById(`cfg-horo-${id}`)?.value || null,
+        tipoCobro:        tipo,
+        moneda:           document.getElementById(`cfg-moneda-${id}`)?.value || 'CLP',
+        valorFijo:        tipo === 'fijo' ? (document.getElementById(`cfg-valorfijo-${id}`)?.value || null) : null,
+        tarifaHora:       tipo === 'hora' ? (document.getElementById(`cfg-tarifah-${id}`)?.value || null) : null,
+        horasMinimas:     tipo === 'hora' ? (document.getElementById(`cfg-horasmin-${id}`)?.value || null) : null,
+        valorHoraExtra:   tipo === 'hora' ? (document.getElementById(`cfg-horaextra-${id}`)?.value || null) : null,
+      };
+    }
   });
-  return result;
 }
 
 function openContratoModal(contrato = null) {
@@ -381,14 +381,18 @@ function openContratoModal(contrato = null) {
   if (contrato?.fechaInicio)  document.getElementById('c-fecha-inicio').value  = contrato.fechaInicio.split('T')[0];
   if (contrato?.fechaTermino) document.getElementById('c-fecha-termino').value = contrato.fechaTermino.split('T')[0];
 
-  // Pre-cargar equipos desde contratoEquipos (nuevo modelo) o fallback legacy
+  // Inicializar estado modalEquiposData
+  modalEquiposData = {};
   const ceList = contrato?.contratoEquipos || [];
-  const selectedIds = ceList.map(e => e.equipoId);
-  // Armar mapa de datos existentes para pre-llenar config
-  const existingData = {};
-  ceList.forEach(eq => { existingData[eq.equipoId] = eq; });
+  ceList.forEach(eq => {
+    modalEquiposData[eq.equipoId] = {
+      ...eq,
+      equipoId: eq.equipoId,
+      equipoTipo: eq.equipoTipo || ''
+    };
+  });
 
-  renderEquiposSelector(selectedIds, existingData);
+  renderEquiposSelector();
   document.getElementById('contrato-modal-backdrop').style.display = 'block';
 }
 
@@ -403,8 +407,9 @@ function editContrato(id) {
 
 async function submitContratoForm(e) {
   e.preventDefault();
+  syncModalEquiposData();
   const id     = document.getElementById('c-edit-id').value;
-  const contratoEquipos = Object.values(collectEquiposConfigData());
+  const contratoEquipos = Object.values(modalEquiposData);
   const payload = {
     numeroContrato: document.getElementById('c-numero').value.trim(),
     cliente:        document.getElementById('c-cliente').value.trim(),
