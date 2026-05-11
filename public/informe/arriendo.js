@@ -317,22 +317,22 @@ function renderEquiposConfig(existingData = {}) {
         <div id="cfg-fijo-${eq.id}" style="display:${!isHora ? 'block' : 'none'}">
           <div class="form-group" style="margin:0;">
             <label style="font-size:11px;">Valor Fijo (mensual)</label>
-            <input type="number" id="cfg-valorfijo-${eq.id}" value="${d.valorFijo || ''}" placeholder="ej: 6200000" step="1000" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
+            <input type="number" id="cfg-valorfijo-${eq.id}" value="${d.valorFijo || ''}" placeholder="ej: 6200000" step="any" min="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
           </div>
         </div>
         <!-- Campos valor por hora -->
         <div id="cfg-hora-${eq.id}" style="display:${isHora ? 'grid' : 'none'};grid-template-columns:1fr 1fr 1fr;gap:10px;">
           <div class="form-group" style="margin:0;">
             <label style="font-size:11px;">Tarifa / Hora</label>
-            <input type="number" id="cfg-tarifah-${eq.id}" value="${d.tarifaHora || ''}" placeholder="ej: 45000" step="100" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
+            <input type="number" id="cfg-tarifah-${eq.id}" value="${d.tarifaHora || ''}" placeholder="ej: 45000" step="any" min="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
           </div>
           <div class="form-group" style="margin:0;">
             <label style="font-size:11px;">Horas Mínimas</label>
-            <input type="number" id="cfg-horasmin-${eq.id}" value="${d.horasMinimas || ''}" placeholder="ej: 160" step="1" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
+            <input type="number" id="cfg-horasmin-${eq.id}" value="${d.horasMinimas || ''}" placeholder="ej: 160" step="any" min="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
           </div>
           <div class="form-group" style="margin:0;">
             <label style="font-size:11px;">Val. Hora Extra</label>
-            <input type="number" id="cfg-horaextra-${eq.id}" value="${d.valorHoraExtra || ''}" placeholder="ej: 55000" step="100" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
+            <input type="number" id="cfg-horaextra-${eq.id}" value="${d.valorHoraExtra || ''}" placeholder="ej: 55000" step="any" min="0" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;">
           </div>
         </div>
       </div>
