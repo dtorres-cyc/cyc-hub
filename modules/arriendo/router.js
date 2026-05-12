@@ -331,7 +331,7 @@ router.get('/danos', async (req, res) => {
 // POST crear caso de daños/mermas (manual o automático desde dar de baja)
 router.post('/danos', async (req, res) => {
   try {
-    const { contratoId, equipoId, equipoDesc, cliente, observaciones } = req.body;
+    const { contratoId, equipoId, equipoDesc, cliente, observaciones, pdfLink } = req.body;
     const dano = await prisma.danosMerma.create({
       data: {
         contratoId: contratoId ? parseInt(contratoId) : null,
@@ -339,7 +339,8 @@ router.post('/danos', async (req, res) => {
         equipoDesc: equipoDesc || null,
         cliente: cliente || null,
         etapa: 1,
-        observaciones: observaciones || null
+        observaciones: observaciones || null,
+        pdfLink: pdfLink || null
       }
     });
     res.json(dano);
@@ -352,12 +353,13 @@ router.post('/danos', async (req, res) => {
 // PUT avanzar etapa / actualizar datos de daños
 router.put('/danos/:id', async (req, res) => {
   try {
-    const { etapa, montoDano, observaciones, recepcionFecha, levantamientoFecha,
+    const { etapa, montoDano, observaciones, pdfLink, recepcionFecha, levantamientoFecha,
             informeEnviado, negociacionInicio, facturadoFecha, pagadoFecha, activo } = req.body;
     const data = {};
     if (etapa !== undefined) data.etapa = parseInt(etapa);
     if (montoDano !== undefined) data.montoDano = parseFloat(montoDano);
     if (observaciones !== undefined) data.observaciones = observaciones;
+    if (pdfLink !== undefined) data.pdfLink = pdfLink;
     if (activo !== undefined) data.activo = !!activo;
     if (recepcionFecha !== undefined) data.recepcionFecha = recepcionFecha ? new Date(recepcionFecha) : null;
     if (levantamientoFecha !== undefined) data.levantamientoFecha = levantamientoFecha ? new Date(levantamientoFecha) : null;

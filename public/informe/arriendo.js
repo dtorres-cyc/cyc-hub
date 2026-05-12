@@ -561,7 +561,10 @@ function renderDanosKanban() {
       </div>
       ${col.cards.map(d => `
         <div class="dano-kanban-card" onclick="openDanoModal(${JSON.stringify(d).replace(/"/g,'&quot;')})">
-          <div class="dano-equipo">${d.equipoId}</div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div class="dano-equipo">${d.equipoId}</div>
+            ${d.pdfLink ? `<a href="${d.pdfLink}" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none;font-size:16px;" title="Ver PDF">📄</a>` : ''}
+          </div>
           ${d.equipoDesc ? `<div class="dano-cliente">${d.equipoDesc}</div>` : ''}
           ${d.cliente ? `<div class="dano-cliente">🏢 ${d.cliente}</div>` : ''}
           ${d.montoDano ? `<div class="dano-monto">$${d.montoDano.toLocaleString('es-CL')}</div>` : ''}
@@ -576,13 +579,26 @@ function openDanoModal(dano = null) {
   const esEdicion = !!dano?.id;
   document.getElementById('dan-edit-id').value    = dano?.id || '';
   document.getElementById('dan-etapa-actual').value = dano?.etapa || 1;
-  document.getElementById('dan-equipo-id').value  = dano?.equipoId || '';
-  document.getElementById('dan-equipo-desc').value = dano?.equipoDesc || '';
   document.getElementById('dan-cliente').value    = dano?.cliente || '';
   document.getElementById('dan-monto').value      = dano?.montoDano || '';
   document.getElementById('dan-obs').value        = dano?.observaciones || '';
-  document.getElementById('dan-equipo-id').readOnly = esEdicion;
+  document.getElementById('dan-pdf').value        = dano?.pdfLink || '';
   document.getElementById('dano-modal-title').textContent = esEdicion ? `🔧 ${dano.equipoId}` : '🔧 Registrar Daño / Merma';
+
+  const select = document.getElementById('dan-equipo-id');
+  const equipos = typeof globalEquipos !== 'undefined' ? globalEquipos : [];
+  
+  if (esEdicion) {
+    select.innerHTML = `<option value="${dano.equipoId}">${dano.equipoId}</option>`;
+    select.disabled = true;
+  } else {
+    select.disabled = false;
+    select.innerHTML = '<option value="">Selecciona equipo...</option>' + 
+      equipos.map(e => `<option value="${e.id}">${e.id} - ${e.tipo || 'Sin tipo'}</option>`).join('');
+  }
+  
+  select.value = dano?.equipoId || '';
+  document.getElementById('dan-equipo-desc').value = dano?.equipoDesc || '';
 
   // Stepper
   const stepper = document.getElementById('dano-stepper');
@@ -617,6 +633,18 @@ function closeDanoModal() {
   document.getElementById('dano-modal-backdrop').style.display = 'none';
 }
 
+function onDanoEquipoSelectChange() {
+  const select = document.getElementById('dan-equipo-id');
+  const eqId = select.value;
+  const equipos = typeof globalEquipos !== 'undefined' ? globalEquipos : [];
+  const equipo = equipos.find(e => e.id === eqId);
+  if (equipo) {
+    document.getElementById('dan-equipo-desc').value = equipo.tipo || '';
+  } else {
+    document.getElementById('dan-equipo-desc').value = '';
+  }
+}
+
 async function submitDanoForm(e) {
   e.preventDefault();
   const id    = document.getElementById('dan-edit-id').value;
@@ -626,7 +654,8 @@ async function submitDanoForm(e) {
     equipoDesc:    document.getElementById('dan-equipo-desc').value.trim(),
     cliente:       document.getElementById('dan-cliente').value.trim(),
     montoDano:     document.getElementById('dan-monto').value || null,
-    observaciones: document.getElementById('dan-obs').value.trim()
+    observaciones: document.getElementById('dan-obs').value.trim(),
+    pdfLink:       document.getElementById('dan-pdf').value.trim() || null
   };
   try {
     if (id) {

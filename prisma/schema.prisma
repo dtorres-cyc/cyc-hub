@@ -237,6 +237,7 @@ model DanosMerma {
 
   montoDano        Float?
   observaciones    String?
+  pdfLink          String?
 
   activo           Boolean   @default(true)
   createdAt        DateTime  @default(now())
