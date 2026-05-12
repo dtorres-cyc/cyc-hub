@@ -559,8 +559,9 @@ function renderDanosKanban() {
         <span>${col.icon} ${col.label}</span>
         <span style="background:rgba(0,0,0,0.08);padding:2px 8px;border-radius:10px;font-size:10px;">${col.cards.length}</span>
       </div>
+      <div class="dano-kanban-cards-container" style="flex:1; min-height:100px; display:flex; flex-direction:column; gap:10px;" ondragover="event.preventDefault()" ondrop="dropDano(event, ${col.etapa})">
       ${col.cards.map(d => `
-        <div class="dano-kanban-card" onclick="openDanoModal(${JSON.stringify(d).replace(/"/g,'&quot;')})">
+        <div class="dano-kanban-card" draggable="true" ondragstart="dragDano(event, ${d.id})" onclick="openDanoModal(${JSON.stringify(d).replace(/"/g,'&quot;')})">
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
             <div class="dano-equipo">${d.equipoId}</div>
             ${d.pdfLink ? `<a href="${d.pdfLink}" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none;font-size:16px;" title="Ver PDF">📄</a>` : ''}
@@ -569,8 +570,42 @@ function renderDanosKanban() {
           ${d.cliente ? `<div class="dano-cliente">🏢 ${d.cliente}</div>` : ''}
           ${d.montoDano ? `<div class="dano-monto">$${d.montoDano.toLocaleString('es-CL')}</div>` : ''}
           <div class="dano-fecha">${new Date(d.createdAt).toLocaleDateString('es-CL')}</div>
-        </div>`).join('') || `<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;">Sin casos</div>`}
+        </div>`).join('') || `<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;pointer-events:none;">Sin casos</div>`}
+      </div>
     </div>`).join('');
+}
+
+function dragDano(e, id) {
+  e.dataTransfer.setData('text/plain', id);
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+async function dropDano(e, nuevaEtapa) {
+  e.preventDefault();
+  const id = e.dataTransfer.getData('text/plain');
+  if (!id) return;
+  const dano = globalDanos.find(d => d.id == id);
+  if (!dano || dano.etapa === nuevaEtapa) return;
+
+  try {
+    const extra = {};
+    const ahora = new Date().toISOString();
+    if (nuevaEtapa === 1) extra.recepcionFecha = ahora;
+    if (nuevaEtapa === 2) extra.levantamientoFecha = ahora;
+    if (nuevaEtapa === 3) extra.informeEnviado = ahora;
+    if (nuevaEtapa === 4) extra.negociacionInicio = ahora;
+    if (nuevaEtapa === 5) extra.facturadoFecha = ahora;
+    if (nuevaEtapa === 6) extra.pagadoFecha = ahora;
+
+    await fetch(`/arriendo/danos/${id}`, { 
+      method: 'PUT', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify({ etapa: nuevaEtapa, ...extra }) 
+    });
+    await loadArriendo();
+  } catch(err) {
+    console.error('Error moviendo daño:', err);
+  }
 }
 
 // ─── Modal Daños ──────────────────────────────────────────────────────────────
@@ -585,19 +620,19 @@ function openDanoModal(dano = null) {
   document.getElementById('dan-pdf').value        = dano?.pdfLink || '';
   document.getElementById('dano-modal-title').textContent = esEdicion ? `🔧 ${dano.equipoId}` : '🔧 Registrar Daño / Merma';
 
-  const select = document.getElementById('dan-equipo-id');
+  const datalist = document.getElementById('dan-equipo-list');
+  const input = document.getElementById('dan-equipo-id');
   const equipos = typeof globalEquipos !== 'undefined' ? globalEquipos : [];
   
   if (esEdicion) {
-    select.innerHTML = `<option value="${dano.equipoId}">${dano.equipoId}</option>`;
-    select.disabled = true;
+    input.readOnly = true;
+    input.value = dano.equipoId;
   } else {
-    select.disabled = false;
-    select.innerHTML = '<option value="">Selecciona equipo...</option>' + 
-      equipos.map(e => `<option value="${e.id}">${e.id} - ${e.tipo || 'Sin tipo'}</option>`).join('');
+    input.readOnly = false;
+    datalist.innerHTML = equipos.map(e => `<option value="${e.id}">${e.tipo || ''}</option>`).join('');
+    input.value = dano?.equipoId || '';
   }
   
-  select.value = dano?.equipoId || '';
   document.getElementById('dan-equipo-desc').value = dano?.equipoDesc || '';
 
   // Stepper
@@ -634,8 +669,8 @@ function closeDanoModal() {
 }
 
 function onDanoEquipoSelectChange() {
-  const select = document.getElementById('dan-equipo-id');
-  const eqId = select.value;
+  const input = document.getElementById('dan-equipo-id');
+  const eqId = input.value;
   const equipos = typeof globalEquipos !== 'undefined' ? globalEquipos : [];
   const equipo = equipos.find(e => e.id === eqId);
   if (equipo) {

@@ -787,9 +787,8 @@
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
         <div class="form-group">
           <label>Equipo (N° Interno)</label>
-          <select id="dan-equipo-id" required onchange="onDanoEquipoSelectChange()" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; font-family:inherit;">
-            <option value="">Selecciona equipo...</option>
-          </select>
+          <input type="text" id="dan-equipo-id" list="dan-equipo-list" required onchange="onDanoEquipoSelectChange()" placeholder="Ej. RLLL-39" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; font-family:inherit;">
+          <datalist id="dan-equipo-list"></datalist>
         </div>
         <div class="form-group">
           <label>Descripción Equipo</label>
