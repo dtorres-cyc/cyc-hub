@@ -659,8 +659,8 @@ function openDanoModal(dano = null) {
   btns.innerHTML = `
     <button type="button" class="action-btn" style="background:var(--c-gray);color:var(--text-main);" onclick="closeDanoModal()">Cancelar</button>
     ${esEdicion && dano.etapa > 1 ? `<button type="button" class="action-btn" style="background:var(--c-orange);" onclick="retrocederDano()">← Retroceder</button>` : ''}
-    ${esEdicion && dano.etapa < 6 ? `<button type="submit" class="action-btn" style="background:var(--c-green);">Avanzar →</button>` : ''}
-    ${!esEdicion ? `<button type="submit" class="action-btn" style="background:var(--c-red);">Guardar</button>` : ''}
+    ${esEdicion ? `<button type="submit" class="action-btn" style="background:var(--c-blue);">Guardar</button>` : `<button type="submit" class="action-btn" style="background:var(--c-red);">Crear</button>`}
+    ${esEdicion && dano.etapa < 6 ? `<button type="button" class="action-btn" style="background:var(--c-green);" onclick="avanzarDanoModal()">Avanzar →</button>` : ''}
     ${esEdicion ? `<button type="button" class="action-btn" style="background:var(--c-red);" onclick="eliminarDano(${dano.id})">🗑 Eliminar</button>` : ''}`;
 
   document.getElementById('dano-modal-backdrop').style.display = 'block';
@@ -683,7 +683,15 @@ function onDanoEquipoSelectChange() {
 }
 
 async function submitDanoForm(e) {
-  e.preventDefault();
+  if (e) e.preventDefault();
+  await saveDanoData(false);
+}
+
+async function avanzarDanoModal() {
+  await saveDanoData(true);
+}
+
+async function saveDanoData(avanzar = false) {
   const id    = document.getElementById('dan-edit-id').value;
   const etapa = parseInt(document.getElementById('dan-etapa-actual').value);
   const payload = {
@@ -697,17 +705,20 @@ async function submitDanoForm(e) {
   };
   try {
     if (id) {
-      // Avanzar etapa
-      const newEtapa = Math.min(etapa + 1, 6);
-      const ahora    = new Date().toISOString();
-      const extra    = {};
-      if (etapa === 1) extra.recepcionFecha = ahora;
-      if (etapa === 2) extra.levantamientoFecha = ahora;
-      if (etapa === 3) extra.informeEnviado = ahora;
-      if (etapa === 4) extra.negociacionInicio = ahora;
-      if (etapa === 5) extra.facturadoFecha = ahora;
-      if (etapa === 6) extra.pagadoFecha = ahora;
-      await fetch(`/arriendo/danos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, etapa: newEtapa, ...extra }) });
+      if (avanzar) {
+        const newEtapa = Math.min(etapa + 1, 6);
+        const ahora    = new Date().toISOString();
+        const extra    = {};
+        if (etapa === 1) extra.recepcionFecha = ahora;
+        if (etapa === 2) extra.levantamientoFecha = ahora;
+        if (etapa === 3) extra.informeEnviado = ahora;
+        if (etapa === 4) extra.negociacionInicio = ahora;
+        if (etapa === 5) extra.facturadoFecha = ahora;
+        if (etapa === 6) extra.pagadoFecha = ahora;
+        await fetch(`/arriendo/danos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, etapa: newEtapa, ...extra }) });
+      } else {
+        await fetch(`/arriendo/danos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      }
     } else {
       await fetch('/arriendo/danos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     }
