@@ -226,16 +226,24 @@ router.get('/edps', async (req, res) => {
 // POST crear EDP manualmente
 router.post('/edps', async (req, res) => {
   try {
-    const { contratoId, mes, anio, periodo, montoEdp, observaciones } = req.body;
+    const { contratoId, mes, anio, periodo, mesConsumo, estado, valorUfCierre, subtotal, iva, total, montoEdp, observaciones, detalles, adicionales } = req.body;
     const edp = await prisma.eDP.create({
       data: {
         contratoId: parseInt(contratoId),
-        mes: parseInt(mes),
-        anio: parseInt(anio),
-        periodo,
+        mes: mes ? parseInt(mes) : null,
+        anio: anio ? parseInt(anio) : null,
+        periodo: periodo || null,
+        mesConsumo: mesConsumo || '',
+        estado: estado || 'Solicitud',
+        valorUfCierre: valorUfCierre ? parseFloat(valorUfCierre) : null,
+        subtotal: subtotal ? parseFloat(subtotal) : 0,
+        iva: iva ? parseFloat(iva) : 0,
+        total: total ? parseFloat(total) : 0,
         etapa: 1,
         montoEdp: montoEdp ? parseFloat(montoEdp) : null,
-        observaciones: observaciones || null
+        observaciones: observaciones || null,
+        detalles: detalles ? { create: detalles } : undefined,
+        adicionales: adicionales ? { create: adicionales } : undefined
       }
     });
     res.json(edp);
@@ -248,16 +256,31 @@ router.post('/edps', async (req, res) => {
 // PUT avanzar etapa EDP o actualizar datos
 router.put('/edps/:id', async (req, res) => {
   try {
-    const { etapa, montoEdp, observaciones, horometroSolicitado, horometroRecibido, edpEnviado, negociacionInicio, facturado } = req.body;
+    const { etapa, estado, mesConsumo, valorUfCierre, subtotal, iva, total, montoEdp, observaciones, horometroSolicitado, horometroRecibido, edpEnviado, negociacionInicio, facturado, detalles, adicionales } = req.body;
     const data = {};
     if (etapa !== undefined) data.etapa = parseInt(etapa);
-    if (montoEdp !== undefined) data.montoEdp = parseFloat(montoEdp);
+    if (estado !== undefined) data.estado = estado;
+    if (mesConsumo !== undefined) data.mesConsumo = mesConsumo;
+    if (valorUfCierre !== undefined) data.valorUfCierre = valorUfCierre !== null ? parseFloat(valorUfCierre) : null;
+    if (subtotal !== undefined) data.subtotal = parseFloat(subtotal);
+    if (iva !== undefined) data.iva = parseFloat(iva);
+    if (total !== undefined) data.total = parseFloat(total);
+    if (montoEdp !== undefined) data.montoEdp = montoEdp !== null ? parseFloat(montoEdp) : null;
     if (observaciones !== undefined) data.observaciones = observaciones;
     if (horometroSolicitado !== undefined) data.horometroSolicitado = horometroSolicitado ? new Date(horometroSolicitado) : null;
     if (horometroRecibido !== undefined) data.horometroRecibido = horometroRecibido ? new Date(horometroRecibido) : null;
     if (edpEnviado !== undefined) data.edpEnviado = edpEnviado ? new Date(edpEnviado) : null;
     if (negociacionInicio !== undefined) data.negociacionInicio = negociacionInicio ? new Date(negociacionInicio) : null;
     if (facturado !== undefined) data.facturado = facturado ? new Date(facturado) : null;
+
+    if (detalles) {
+      await prisma.eDPDetalleEquipo.deleteMany({ where: { edpId: parseInt(req.params.id) } });
+      data.detalles = { create: detalles };
+    }
+    if (adicionales) {
+      await prisma.eDPAdicional.deleteMany({ where: { edpId: parseInt(req.params.id) } });
+      data.adicionales = { create: adicionales };
+    }
 
     const edp = await prisma.eDP.update({
       where: { id: parseInt(req.params.id) },

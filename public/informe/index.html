@@ -746,30 +746,92 @@
   </div>
 </div>
 
-<!-- ═══ MODAL: DETALLE/EDP DE CONTRATO ═══ -->
+<!-- ═══ MODAL: DETALLE/EDP DE CONTRATO (MATRIZ DE COBROS) ═══ -->
 <div id="edp-modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:3000; backdrop-filter:blur(4px);" onclick="closeEdpModal()">
-  <div onclick="event.stopPropagation()" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-card); border-radius:16px; padding:32px; width:94%; max-width:560px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-    <h2 id="edp-modal-title" style="margin-bottom:8px; color:var(--c-primary); font-size:20px;">Actualizar EDP</h2>
-    <p id="edp-modal-sub" style="color:var(--text-muted); font-size:13px; margin-bottom:20px;"></p>
+  <div onclick="event.stopPropagation()" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-card); border-radius:16px; padding:32px; width:94%; max-width:900px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+      <div>
+        <h2 id="edp-modal-title" style="margin-bottom:8px; color:var(--c-primary); font-size:20px;">Calculadora de Cobros (EDP)</h2>
+        <p id="edp-modal-sub" style="color:var(--text-muted); font-size:13px;"></p>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:11px;">Mes de Consumo</label>
+          <input type="month" id="edp-mes-consumo" style="padding:6px; border:1px solid var(--border); border-radius:6px; font-size:12px;" required>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:11px;">UF de Cierre ($)</label>
+          <input type="number" id="edp-uf-cierre" placeholder="Ej. 37500" oninput="calcularMatrizEdp()" style="padding:6px; border:1px solid var(--border); border-radius:6px; font-size:12px; width:100px;">
+        </div>
+      </div>
+    </div>
 
     <!-- Etapas visuales -->
     <div id="edp-stepper" style="display:flex; gap:0; margin-bottom:24px; border-radius:8px; overflow:hidden; border:1px solid var(--border);"></div>
 
     <form id="form-edp" onsubmit="submitEdpForm(event)">
-      <div class="form-group">
-        <label>Monto EDP (CLP)</label>
-        <input type="number" id="edp-monto" placeholder="0" step="1000">
+      <!-- Matriz de Equipos -->
+      <h3 style="font-size:14px; margin-bottom:10px; color:var(--text-main);">Detalle por Equipo</h3>
+      <div style="overflow-x:auto; margin-bottom:20px; border:1px solid var(--border); border-radius:8px;">
+        <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
+          <thead style="background:var(--c-gray); color:var(--text-muted);">
+            <tr>
+              <th style="padding:10px;">Equipo</th>
+              <th style="padding:10px;">Tarifa</th>
+              <th style="padding:10px; width:80px;">Días Trab.</th>
+              <th style="padding:10px; width:100px;">Horómetro</th>
+              <th style="padding:10px; width:80px;">H. Extra</th>
+              <th style="padding:10px; text-align:right;">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody id="edp-equipos-tbody">
+            <!-- Renderizado dinámico desde arriendo.js -->
+          </tbody>
+        </table>
       </div>
-      <div class="form-group">
-        <label>Observaciones</label>
-        <textarea id="edp-obs" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; font-family:inherit; min-height:60px; resize:vertical;" placeholder="Estado actual del EDP..."></textarea>
+
+      <!-- Adicionales -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h3 style="font-size:14px; color:var(--text-main); mragin:0;">Adicionales (Fletes, Reparaciones, Descuentos)</h3>
+        <button type="button" class="action-btn" style="padding:4px 10px; font-size:11px; background:var(--c-primary);" onclick="addEdpAdicionalRow()">+ Agregar Ítem</button>
       </div>
+      <div id="edp-adicionales-container" style="display:flex; flex-direction:column; gap:8px; margin-bottom:24px;">
+        <!-- Filas dinámicas -->
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 300px; gap:20px; margin-bottom:24px;">
+        <div class="form-group" style="margin:0;">
+          <label>Observaciones del EDP</label>
+          <textarea id="edp-obs" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; font-family:inherit; min-height:80px; resize:vertical;" placeholder="Estado actual del EDP..."></textarea>
+        </div>
+        
+        <!-- Resumen Financiero -->
+        <div style="background:var(--c-gray); padding:16px; border-radius:8px; display:flex; flex-direction:column; justify-content:center; gap:8px;">
+          <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--text-muted);">
+            <span>Subtotal Neto:</span>
+            <span id="edp-resumen-subtotal" style="font-weight:700; color:var(--text-main);">$0</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--text-muted);">
+            <span>IVA (19%):</span>
+            <span id="edp-resumen-iva">$0</span>
+          </div>
+          <div style="height:1px; background:var(--border); margin:4px 0;"></div>
+          <div style="display:flex; justify-content:space-between; font-size:16px; font-weight:800; color:var(--c-primary);">
+            <span>Total:</span>
+            <span id="edp-resumen-total">$0</span>
+          </div>
+        </div>
+      </div>
+
       <input type="hidden" id="edp-edit-id">
+      <input type="hidden" id="edp-contrato-id">
       <input type="hidden" id="edp-etapa-actual">
+      
       <div style="display:flex; justify-content:flex-end; gap:10px;">
         <button type="button" class="action-btn" style="background:var(--c-gray); color:var(--text-main);" onclick="closeEdpModal()">Cancelar</button>
-        <button type="button" class="action-btn" style="background:var(--c-orange);" id="btn-edp-retroceder" onclick="retrocederEdp()">← Retroceder</button>
-        <button type="submit" class="action-btn" style="background:var(--c-green);">Avanzar Etapa →</button>
+        <div id="edp-form-btns" style="display:flex; gap:10px;">
+          <!-- Dinámico -->
+        </div>
       </div>
     </form>
   </div>

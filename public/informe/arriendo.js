@@ -448,13 +448,22 @@ async function darDeBajaEquipo(contratoEquipoId) {
 
 // ─── Modal EDP ────────────────────────────────────────────────────────────────
 
+let currentEdpAdicionales = [];
+let currentContratoEquipos = [];
+
 function openEdpModal(edp) {
   document.getElementById('edp-edit-id').value      = edp.id;
+  document.getElementById('edp-contrato-id').value  = edp.contratoId;
   document.getElementById('edp-etapa-actual').value = edp.etapa;
-  document.getElementById('edp-monto').value         = edp.montoEdp || '';
-  document.getElementById('edp-obs').value           = edp.observaciones || '';
-  document.getElementById('edp-modal-title').textContent = `EDP: ${edp.periodo}`;
-  document.getElementById('edp-modal-sub').textContent   = edp.clienteNombre ? `${edp.clienteNombre} · ${edp.contratoNum}` : '';
+  
+  document.getElementById('edp-mes-consumo').value  = edp.mesConsumo || '';
+  document.getElementById('edp-uf-cierre').value    = edp.valorUfCierre || '';
+  document.getElementById('edp-obs').value          = edp.observaciones || '';
+  
+  const contrato = globalContratos.find(c => c.id === edp.contratoId);
+  document.getElementById('edp-modal-title').textContent = `EDP: ${edp.periodo || edp.mesConsumo}`;
+  document.getElementById('edp-modal-sub').textContent   = contrato ? `${contrato.cliente} · ${contrato.numeroContrato}` : '';
+  
   // Stepper
   const stepper = document.getElementById('edp-stepper');
   stepper.innerHTML = EDP_ETAPAS.map((et, i) => {
@@ -462,8 +471,131 @@ function openEdpModal(edp) {
     let cls = n < edp.etapa ? 'done' : n === edp.etapa ? 'active' : '';
     return `<div class="step-item ${cls}" title="${et.label}">${et.icon}<br><span style="font-size:9px;">${et.label.split('.')[1]?.trim()}</span></div>`;
   }).join('');
-  document.getElementById('btn-edp-retroceder').style.display = edp.etapa > 1 ? 'inline-flex' : 'none';
+  
+  // Render Equipos
+  currentContratoEquipos = contrato ? contrato.contratoEquipos : [];
+  const tbody = document.getElementById('edp-equipos-tbody');
+  tbody.innerHTML = '';
+  
+  currentContratoEquipos.forEach(eq => {
+    if (!eq.activo && !edp.detalles?.find(d => d.contratoEquipoId === eq.id)) return;
+    
+    const det = edp.detalles?.find(d => d.contratoEquipoId === eq.id) || {};
+    const dias = det.diasTrabajados !== undefined ? det.diasTrabajados : 30;
+    const horometro = det.horometroCierre !== undefined && det.horometroCierre !== null ? det.horometroCierre : '';
+    const hExtras = det.horasExtras !== undefined && det.horasExtras !== null ? det.horasExtras : '';
+    
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border)';
+    tr.innerHTML = `
+      <td style="padding:10px; font-weight:600; color:var(--text-main);">${eq.equipoId} <span style="font-size:10px; font-weight:400; color:var(--text-muted); display:block;">${eq.equipoTipo||''}</span></td>
+      <td style="padding:10px; color:var(--text-muted);">
+        ${eq.tipoCobro === 'fijo' ? (eq.moneda==='UF' ? `${eq.valorFijo} UF/m` : `$${(eq.valorFijo||0).toLocaleString('es-CL')}/m`) : (eq.moneda==='UF' ? `${eq.tarifaHora} UF/h` : `$${(eq.tarifaHora||0).toLocaleString('es-CL')}/h`)}
+      </td>
+      <td style="padding:10px;">
+        <input type="number" class="edp-input-dias" data-eq="${eq.id}" value="${dias}" min="0" max="31" style="width:60px; padding:6px; border:1px solid var(--border); border-radius:6px;" oninput="calcularMatrizEdp()">
+      </td>
+      <td style="padding:10px;">
+        <input type="number" step="0.1" class="edp-input-horometro" data-eq="${eq.id}" value="${horometro}" style="width:80px; padding:6px; border:1px solid var(--border); border-radius:6px;" oninput="calcularMatrizEdp()">
+      </td>
+      <td style="padding:10px;">
+        <input type="number" step="0.1" class="edp-input-hextras" data-eq="${eq.id}" value="${hExtras}" style="width:60px; padding:6px; border:1px solid var(--border); border-radius:6px;" oninput="calcularMatrizEdp()">
+      </td>
+      <td style="padding:10px; text-align:right; font-weight:600; color:var(--text-main);" class="edp-row-subtotal" data-eq="${eq.id}">$0</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  
+  currentEdpAdicionales = edp.adicionales ? [...edp.adicionales] : [];
+  renderEdpAdicionales();
+  
+  const btns = document.getElementById('edp-form-btns');
+  btns.innerHTML = `
+    ${edp.etapa > 1 ? `<button type="button" class="action-btn" style="background:var(--c-orange);" onclick="retrocederEdp()">← Retroceder</button>` : ''}
+    <button type="submit" class="action-btn" style="background:var(--c-blue);">Guardar</button>
+    ${edp.etapa < 4 ? `<button type="button" class="action-btn" style="background:var(--c-green);" onclick="avanzarEdp()">Avanzar →</button>` : ''}
+  `;
+  
   document.getElementById('edp-modal-backdrop').style.display = 'block';
+  calcularMatrizEdp();
+}
+
+function renderEdpAdicionales() {
+  const container = document.getElementById('edp-adicionales-container');
+  container.innerHTML = '';
+  currentEdpAdicionales.forEach((ad, i) => {
+    const div = document.createElement('div');
+    div.style.display = 'flex';
+    div.style.gap = '10px';
+    div.innerHTML = `
+      <select class="edp-ad-tipo" onchange="updateAdicional(${i}, 'tipo', this.value)" style="padding:6px; border:1px solid var(--border); border-radius:6px; font-size:12px;">
+        <option value="Cargo" ${ad.tipo === 'Cargo' ? 'selected' : ''}>Cargo (+)</option>
+        <option value="Descuento" ${ad.tipo === 'Descuento' ? 'selected' : ''}>Descuento (-)</option>
+      </select>
+      <input type="text" class="edp-ad-concepto" value="${ad.concepto||''}" placeholder="Descripción" oninput="updateAdicional(${i}, 'concepto', this.value)" style="flex:1; padding:6px; border:1px solid var(--border); border-radius:6px; font-size:12px;">
+      <input type="number" class="edp-ad-monto" value="${ad.monto||''}" placeholder="Monto $" oninput="updateAdicional(${i}, 'monto', this.value)" style="width:120px; padding:6px; border:1px solid var(--border); border-radius:6px; font-size:12px;">
+      <button type="button" onclick="removeEdpAdicional(${i})" style="background:var(--c-red); color:white; border:none; border-radius:6px; width:30px; cursor:pointer;">X</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function addEdpAdicionalRow() {
+  currentEdpAdicionales.push({ tipo: 'Cargo', concepto: '', monto: 0 });
+  renderEdpAdicionales();
+  calcularMatrizEdp();
+}
+
+function updateAdicional(idx, field, value) {
+  if (field === 'monto') currentEdpAdicionales[idx][field] = parseFloat(value) || 0;
+  else currentEdpAdicionales[idx][field] = value;
+  calcularMatrizEdp();
+}
+
+function removeEdpAdicional(idx) {
+  currentEdpAdicionales.splice(idx, 1);
+  renderEdpAdicionales();
+  calcularMatrizEdp();
+}
+
+function calcularMatrizEdp() {
+  let subtotalNeto = 0;
+  const uf = parseFloat(document.getElementById('edp-uf-cierre').value) || 0;
+  
+  currentContratoEquipos.forEach(eq => {
+    const inputDias = document.querySelector(`.edp-input-dias[data-eq="${eq.id}"]`);
+    if (!inputDias) return;
+    const dias = parseInt(inputDias.value) || 0;
+    const hExtras = parseFloat(document.querySelector(`.edp-input-hextras[data-eq="${eq.id}"]`).value) || 0;
+    
+    let totalEq = 0;
+    if (eq.tipoCobro === 'fijo') {
+      const tarifaDiaria = eq.moneda === 'UF' ? (eq.valorFijo * uf / 30) : (eq.valorFijo / 30);
+      totalEq = tarifaDiaria * dias;
+    } else {
+      const hm = eq.horasMinimas || 0;
+      const tarifaDiaria = eq.moneda === 'UF' ? (hm * eq.tarifaHora * uf / 30) : (hm * eq.tarifaHora / 30);
+      const tarifaExtra = eq.moneda === 'UF' ? ((eq.valorHoraExtra || eq.tarifaHora) * uf) : (eq.valorHoraExtra || eq.tarifaHora);
+      totalEq = (tarifaDiaria * dias) + (hExtras * tarifaExtra);
+    }
+    
+    document.querySelector(`.edp-row-subtotal[data-eq="${eq.id}"]`).textContent = `$${Math.round(totalEq).toLocaleString('es-CL')}`;
+    subtotalNeto += totalEq;
+  });
+  
+  currentEdpAdicionales.forEach(ad => {
+    if (ad.tipo === 'Cargo') subtotalNeto += (ad.monto || 0);
+    else subtotalNeto -= (ad.monto || 0);
+  });
+  
+  const iva = subtotalNeto * 0.19;
+  const total = subtotalNeto + iva;
+  
+  document.getElementById('edp-resumen-subtotal').textContent = `$${Math.round(subtotalNeto).toLocaleString('es-CL')}`;
+  document.getElementById('edp-resumen-iva').textContent = `$${Math.round(iva).toLocaleString('es-CL')}`;
+  document.getElementById('edp-resumen-total').textContent = `$${Math.round(total).toLocaleString('es-CL')}`;
+  
+  return { subtotal: subtotalNeto, iva, total };
 }
 
 function closeEdpModal() {
@@ -471,21 +603,52 @@ function closeEdpModal() {
 }
 
 async function submitEdpForm(e) {
-  e.preventDefault();
+  if (e) e.preventDefault();
+  await saveEdpData(false);
+}
+
+async function avanzarEdp() {
+  await saveEdpData(true);
+}
+
+async function saveEdpData(avanzar = false) {
   const id     = document.getElementById('edp-edit-id').value;
   const etapa  = parseInt(document.getElementById('edp-etapa-actual').value);
-  const newEtapa = Math.min(etapa + 1, 4);
-  const payload  = {
-    etapa:         newEtapa,
-    montoEdp:      document.getElementById('edp-monto').value || null,
-    observaciones: document.getElementById('edp-obs').value.trim()
+  
+  const calculo = calcularMatrizEdp();
+  const detalles = [];
+  currentContratoEquipos.forEach(eq => {
+    const inputDias = document.querySelector(`.edp-input-dias[data-eq="${eq.id}"]`);
+    if (!inputDias) return;
+    detalles.push({
+      contratoEquipoId: eq.id,
+      diasTrabajados: parseInt(inputDias.value) || 0,
+      horometroCierre: parseFloat(document.querySelector(`.edp-input-horometro[data-eq="${eq.id}"]`).value) || null,
+      horasExtras: parseFloat(document.querySelector(`.edp-input-hextras[data-eq="${eq.id}"]`).value) || null
+    });
+  });
+
+  const payload = {
+    mesConsumo: document.getElementById('edp-mes-consumo').value,
+    valorUfCierre: parseFloat(document.getElementById('edp-uf-cierre').value) || null,
+    observaciones: document.getElementById('edp-obs').value.trim(),
+    subtotal: calculo.subtotal,
+    iva: calculo.iva,
+    total: calculo.total,
+    detalles,
+    adicionales: currentEdpAdicionales
   };
-  // Set timestamp for stage transition
-  const ahora = new Date().toISOString();
-  if (etapa === 1) payload.horometroRecibido = ahora;
-  if (etapa === 2) payload.edpEnviado = ahora;
-  if (etapa === 3) payload.negociacionInicio = ahora;
-  if (etapa === 4) payload.facturado = ahora;
+
+  if (avanzar) {
+    const newEtapa = Math.min(etapa + 1, 4);
+    payload.etapa = newEtapa;
+    const ahora = new Date().toISOString();
+    if (etapa === 1) payload.horometroRecibido = ahora;
+    if (etapa === 2) payload.edpEnviado = ahora;
+    if (etapa === 3) payload.negociacionInicio = ahora;
+    if (etapa === 4) payload.facturado = ahora;
+  }
+
   try {
     await fetch(`/arriendo/edps/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     closeEdpModal();
