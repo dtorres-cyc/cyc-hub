@@ -185,6 +185,7 @@ model ContratoEquipo {
   updatedAt        DateTime  @updatedAt
 
   danosMermas      DanosMerma[]
+  edpDetalles      EDPDetalleEquipo[]
 }
 
 
@@ -193,13 +194,20 @@ model EDP {
   contratoId      Int
   contrato        Contrato  @relation(fields: [contratoId], references: [id])
 
-  mes             Int       // 1-12
-  anio            Int
-  periodo         String    // "Mayo 2026"
+  mes             Int?      // 1-12 (legacy)
+  anio            Int?      // (legacy)
+  periodo         String?   // "Mayo 2026" (legacy)
+  
+  mesConsumo      String    @default("") // "2024-04"
+  estado          String    @default("Solicitud") // Solicitud, Enviado, Negociación, Cerrado, Facturado
+  valorUfCierre   Float?
 
-  // Etapas: 1=Pedir horómetros | 2=Enviar EDP | 3=Negociación | 4=EDP Facturado
+  subtotal        Float     @default(0)
+  iva             Float     @default(0)
+  total           Float     @default(0)
+
+  // Etapas de control
   etapa           Int       @default(1)
-
   horometroSolicitado DateTime?
   horometroRecibido   DateTime?
   edpEnviado          DateTime?
@@ -208,6 +216,38 @@ model EDP {
 
   montoEdp        Float?
   observaciones   String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  detalles        EDPDetalleEquipo[]
+  adicionales     EDPAdicional[]
+}
+
+model EDPDetalleEquipo {
+  id                 Int       @id @default(autoincrement())
+  edpId              Int
+  edp                EDP       @relation(fields: [edpId], references: [id])
+  contratoEquipoId   Int
+  contratoEquipo     ContratoEquipo @relation(fields: [contratoEquipoId], references: [id])
+
+  diasTrabajados     Int?
+  horometroCierre    Float?
+  horasExtras        Float?
+  montoGenerado      Float     @default(0)
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model EDPAdicional {
+  id              Int       @id @default(autoincrement())
+  edpId           Int
+  edp             EDP       @relation(fields: [edpId], references: [id])
+
+  tipo            String    // "Cargo" | "Descuento"
+  concepto        String
+  monto           Float
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
