@@ -33,6 +33,7 @@ async function loadArriendo() {
     globalDanos     = danos;
     renderContratosKPIs();
     renderContratosList();
+    renderGanttChart();
     renderEdpsKanban();
     renderDanosKPIs();
     renderDanosKanban();
@@ -68,6 +69,134 @@ function renderContratosList() {
     return;
   }
   container.innerHTML = globalContratos.map(c => renderContratoCard(c)).join('');
+}
+
+function switchContratosView(mode) {
+  if (mode === 'list') {
+    document.getElementById('btn-view-list').classList.add('active');
+    document.getElementById('btn-view-list').style.background = 'var(--c-blue)';
+    document.getElementById('btn-view-list').style.color = 'white';
+    
+    document.getElementById('btn-view-gantt').classList.remove('active');
+    document.getElementById('btn-view-gantt').style.background = 'transparent';
+    document.getElementById('btn-view-gantt').style.color = 'var(--text-muted)';
+    
+    document.getElementById('view-contratos-list').style.display = 'block';
+    document.getElementById('view-contratos-gantt').style.display = 'none';
+  } else {
+    document.getElementById('btn-view-gantt').classList.add('active');
+    document.getElementById('btn-view-gantt').style.background = 'var(--c-blue)';
+    document.getElementById('btn-view-gantt').style.color = 'white';
+    
+    document.getElementById('btn-view-list').classList.remove('active');
+    document.getElementById('btn-view-list').style.background = 'transparent';
+    document.getElementById('btn-view-list').style.color = 'var(--text-muted)';
+    
+    document.getElementById('view-contratos-list').style.display = 'none';
+    document.getElementById('view-contratos-gantt').style.display = 'block';
+    
+    renderGanttChart();
+  }
+}
+
+function renderGanttChart() {
+  const container = document.getElementById('gantt-container');
+  if (!globalContratos.length) {
+    container.innerHTML = '<p style="color:var(--text-muted);font-size:12px;text-align:center;">No hay contratos activos para mostrar.</p>';
+    return;
+  }
+  
+  const hoy = new Date();
+  hoy.setHours(0,0,0,0);
+  const msPorDia = 1000 * 60 * 60 * 24;
+  const diasGantt = 30;
+  
+  let headersHtml = '';
+  for (let i = 0; i < diasGantt; i++) {
+    const d = new Date(hoy.getTime() + i * msPorDia);
+    const dayName = d.toLocaleDateString('es-CL', { weekday: 'short' }).charAt(0).toUpperCase();
+    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+    headersHtml += `
+      <div style="flex:1; text-align:center; min-width:30px; border-right:1px solid var(--border); background:${isWeekend ? 'var(--bg-body)' : 'transparent'}; padding:4px 0;">
+        <div style="font-size:9px; color:var(--text-muted);">${dayName}</div>
+        <div style="font-size:11px; font-weight:700; color:var(--text-main);">${d.getDate()}</div>
+      </div>
+    `;
+  }
+  
+  let rowsHtml = '';
+  
+  globalContratos.forEach(c => {
+    if (!c.contratoEquipos || !c.contratoEquipos.length) return;
+    
+    c.contratoEquipos.forEach(eq => {
+      if (!eq.activo && eq.fechaBaja) {
+        const dBaja = new Date(eq.fechaBaja);
+        dBaja.setHours(0,0,0,0);
+        if (dBaja < hoy) return; // Ya fue dado de baja y su fecha pasó
+      }
+      
+      const fInicio = new Date(eq.fechaEntrega || c.fechaInicio);
+      fInicio.setHours(0,0,0,0);
+      
+      let fTermino = eq.fechaBaja ? new Date(eq.fechaBaja) : new Date(c.fechaTermino);
+      fTermino.setHours(0,0,0,0);
+      
+      let startOffset = Math.round((fInicio - hoy) / msPorDia);
+      let endOffset = Math.round((fTermino - hoy) / msPorDia);
+      
+      if (endOffset < 0) return; 
+      if (startOffset >= diasGantt) return; 
+      
+      const realStart = Math.max(0, startOffset);
+      const realEnd = Math.min(diasGantt - 1, endOffset);
+      
+      let colorClass = 'var(--c-green)';
+      const diasRestantes = Math.ceil((fTermino - hoy) / msPorDia);
+      if (!eq.activo || diasRestantes < 0) colorClass = 'var(--c-red)';
+      else if (diasRestantes <= 15) colorClass = 'var(--c-orange)';
+      
+      rowsHtml += `
+        <div style="display:flex; border-bottom:1px solid var(--border); min-width:1060px;">
+          <div style="width:160px; padding:10px; font-size:11px; border-right:1px solid var(--border); background:var(--bg-card); flex-shrink:0;">
+            <div style="font-weight:700; color:var(--text-main);">${eq.equipoId}</div>
+            <div style="color:var(--text-muted); font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">🏢 ${c.cliente}</div>
+          </div>
+          <div style="flex:1; display:flex; position:relative; background:var(--bg-body);">
+            <!-- Background grid -->
+            <div style="position:absolute; inset:0; display:flex;">
+               ${Array.from({length: diasGantt}).map((_, i) => {
+                 const d = new Date(hoy.getTime() + i * msPorDia);
+                 const isW = d.getDay() === 0 || d.getDay() === 6;
+                 return `<div style="flex:1; border-right:1px dashed var(--border); background:${isW ? 'rgba(0,0,0,0.02)' : 'transparent'};"></div>`;
+               }).join('')}
+            </div>
+            
+            <!-- Barra -->
+            <div style="position:absolute; top:8px; bottom:8px; left:calc(100% / ${diasGantt} * ${realStart}); width:calc(100% / ${diasGantt} * ${realEnd - realStart + 1}); background:${colorClass}; border-radius:4px; opacity:0.9; display:flex; align-items:center; padding:0 8px; box-shadow:0 2px 4px rgba(0,0,0,0.1); overflow:hidden;" title="${eq.equipoId} - Vence: ${fTermino.toLocaleDateString('es-CL')}">
+              <span style="color:white; font-size:10px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${eq.tipoCobro === 'fijo' ? eq.valorFijo + (eq.moneda==='UF'?' UF/m':'/m') : 'x Hora'}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+  });
+  
+  if (!rowsHtml) rowsHtml = '<p style="padding:20px; text-align:center; color:var(--text-muted); font-size:12px;">No hay equipos en terreno para las fechas seleccionadas.</p>';
+
+  container.innerHTML = `
+    <div style="display:flex; border-bottom:2px solid var(--border); background:var(--bg-card); min-width:1060px;">
+      <div style="width:160px; padding:10px; font-size:10px; font-weight:800; color:var(--text-muted); border-right:1px solid var(--border); flex-shrink:0; display:flex; align-items:center;">
+        EQUIPO / CLIENTE
+      </div>
+      <div style="flex:1; display:flex;">
+        ${headersHtml}
+      </div>
+    </div>
+    <div style="max-height:400px; overflow-y:auto; overflow-x:hidden;">
+      ${rowsHtml}
+    </div>
+  `;
 }
 
 function renderContratoCard(c) {

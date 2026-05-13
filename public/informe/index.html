@@ -249,11 +249,36 @@
           </div>
         </div>
 
+        <!-- Controles de Vista -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h2 class="section-title" style="margin:0;" id="contratos-view-title">📋 Vista por Contrato</h2>
+          <div style="display:flex; background:var(--bg-card); border-radius:8px; border:1px solid var(--border); overflow:hidden;">
+            <button class="view-toggle-btn active" id="btn-view-list" onclick="switchContratosView('list')" style="padding:8px 16px; border:none; background:var(--c-blue); color:white; font-size:12px; cursor:pointer; font-weight:600; outline:none;">Lista Detallada</button>
+            <button class="view-toggle-btn" id="btn-view-gantt" onclick="switchContratosView('gantt')" style="padding:8px 16px; border:none; background:transparent; color:var(--text-muted); font-size:12px; cursor:pointer; font-weight:600; outline:none;">Carta Gantt Flota</button>
+          </div>
+        </div>
+
         <!-- Lista de Contratos -->
-        <div class="section-block">
-          <h2 class="section-title">📋 Vista por Contrato</h2>
+        <div class="section-block" id="view-contratos-list" style="padding-top:0;">
           <div id="contratos-list" style="display:flex; flex-direction:column; gap:16px;">
             <p style="color:var(--text-muted); font-size:13px;">Cargando contratos...</p>
+          </div>
+        </div>
+
+        <!-- Carta Gantt de Arriendos -->
+        <div class="section-block" id="view-contratos-gantt" style="display:none; padding-top:0;">
+          <div style="background:var(--bg-card); border-radius:12px; border:1px solid var(--border); overflow:hidden;">
+            <div style="padding:16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+              <h3 style="margin:0; font-size:14px; color:var(--text-main);">Ocupación Mensual (Próximos 30 días)</h3>
+              <div style="display:flex; gap:12px; font-size:11px; color:var(--text-muted);">
+                <div style="display:flex; align-items:center; gap:4px;"><div style="width:12px;height:12px;background:var(--c-green);border-radius:3px;"></div> Activo</div>
+                <div style="display:flex; align-items:center; gap:4px;"><div style="width:12px;height:12px;background:var(--c-orange);border-radius:3px;"></div> Termina pronto</div>
+                <div style="display:flex; align-items:center; gap:4px;"><div style="width:12px;height:12px;background:var(--c-red);border-radius:3px;"></div> Vencido / Inactivo</div>
+              </div>
+            </div>
+            <div id="gantt-container" style="overflow-x:auto; padding:20px; min-height:300px; position:relative;">
+              <!-- Renderizado dinámico de la grilla y barras de tiempo -->
+            </div>
           </div>
         </div>
 
