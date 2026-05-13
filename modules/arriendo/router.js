@@ -353,11 +353,12 @@ router.post('/danos', async (req, res) => {
 // PUT avanzar etapa / actualizar datos de daños
 router.put('/danos/:id', async (req, res) => {
   try {
-    const { etapa, montoDano, observaciones, pdfLink, recepcionFecha, levantamientoFecha,
+    const { etapa, montoDano, montoFacturado, observaciones, pdfLink, recepcionFecha, levantamientoFecha,
             informeEnviado, negociacionInicio, facturadoFecha, pagadoFecha, activo } = req.body;
     const data = {};
     if (etapa !== undefined) data.etapa = parseInt(etapa);
     if (montoDano !== undefined) data.montoDano = parseFloat(montoDano);
+    if (montoFacturado !== undefined) data.montoFacturado = parseFloat(montoFacturado);
     if (observaciones !== undefined) data.observaciones = observaciones;
     if (pdfLink !== undefined) data.pdfLink = pdfLink;
     if (activo !== undefined) data.activo = !!activo;

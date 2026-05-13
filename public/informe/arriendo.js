@@ -533,17 +533,17 @@ async function generarEDPsMes() {
 // ═══════════════════════════════════════════════════════════
 
 function renderDanosKPIs() {
-  let activos = 0, negociacion = 0, facturado = 0, pagado = 0;
+  let activos = 0, porFacturar = 0, facturado = 0, pagado = 0;
   globalDanos.forEach(d => {
     activos++;
-    if (d.etapa === 4) negociacion++;
-    if (d.etapa === 5) facturado++;
-    if (d.etapa === 6) pagado++;
+    if (d.etapa < 5 && d.montoDano) porFacturar += d.montoDano;
+    if (d.etapa >= 5 && d.montoFacturado) facturado += d.montoFacturado;
+    if (d.etapa === 6 && d.montoFacturado) pagado += d.montoFacturado;
   });
   document.getElementById('dan-kpi-activos').textContent     = activos;
-  document.getElementById('dan-kpi-negociacion').textContent = negociacion;
-  document.getElementById('dan-kpi-facturado').textContent   = facturado;
-  document.getElementById('dan-kpi-pagado').textContent      = pagado;
+  document.getElementById('dan-kpi-por-facturar').textContent = `$${porFacturar.toLocaleString('es-CL')}`;
+  document.getElementById('dan-kpi-facturado').textContent   = `$${facturado.toLocaleString('es-CL')}`;
+  document.getElementById('dan-kpi-pagado').textContent      = `$${pagado.toLocaleString('es-CL')}`;
 }
 
 function renderDanosKanban() {
@@ -568,7 +568,8 @@ function renderDanosKanban() {
           </div>
           ${d.equipoDesc ? `<div class="dano-cliente">${d.equipoDesc}</div>` : ''}
           ${d.cliente ? `<div class="dano-cliente">🏢 ${d.cliente}</div>` : ''}
-          ${d.montoDano ? `<div class="dano-monto">$${d.montoDano.toLocaleString('es-CL')}</div>` : ''}
+          ${d.montoDano ? `<div class="dano-monto" style="font-size:11px;color:var(--text-muted);margin-top:4px;">Inicial: <span style="color:var(--text-main);font-weight:700;">$${d.montoDano.toLocaleString('es-CL')}</span></div>` : ''}
+          ${d.montoFacturado ? `<div class="dano-monto" style="font-size:11px;color:var(--c-green);">Facturado: <span style="font-weight:700;">$${d.montoFacturado.toLocaleString('es-CL')}</span></div>` : ''}
           <div class="dano-fecha">${new Date(d.createdAt).toLocaleDateString('es-CL')}</div>
         </div>`).join('') || `<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;pointer-events:none;">Sin casos</div>`}
       </div>
@@ -616,6 +617,7 @@ function openDanoModal(dano = null) {
   document.getElementById('dan-etapa-actual').value = dano?.etapa || 1;
   document.getElementById('dan-cliente').value    = dano?.cliente || '';
   document.getElementById('dan-monto').value      = dano?.montoDano || '';
+  document.getElementById('dan-monto-facturado').value = dano?.montoFacturado || '';
   document.getElementById('dan-obs').value        = dano?.observaciones || '';
   document.getElementById('dan-pdf').value        = dano?.pdfLink || '';
   document.getElementById('dano-modal-title').textContent = esEdicion ? `🔧 ${dano.equipoId}` : '🔧 Registrar Daño / Merma';
@@ -689,6 +691,7 @@ async function submitDanoForm(e) {
     equipoDesc:    document.getElementById('dan-equipo-desc').value.trim(),
     cliente:       document.getElementById('dan-cliente').value.trim(),
     montoDano:     document.getElementById('dan-monto').value || null,
+    montoFacturado:document.getElementById('dan-monto-facturado').value || null,
     observaciones: document.getElementById('dan-obs').value.trim(),
     pdfLink:       document.getElementById('dan-pdf').value.trim() || null
   };
