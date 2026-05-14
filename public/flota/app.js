@@ -730,10 +730,6 @@ async function deleteEquipo(id) {
         await loadEquipos();
     } catch (err) { toast(`Error: ${err.message}`, 'error'); }
 }
-td>
-        </tr>
-    `).join('');
-}
 
 async function saveNewEquipo() {
     const tipo = document.getElementById('ne-tipo').value.trim();
