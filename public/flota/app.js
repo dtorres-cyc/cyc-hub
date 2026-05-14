@@ -29,13 +29,6 @@ async function loadEquipos() {
         // Intentar primero desde BD local
         let res  = await fetch('api/equipos/db');
         let data = await res.json();
-
-        // Si la BD está vacía, usar Notion
-        if (!data.ok || !data.equipos?.length) {
-            res  = await fetch('api/equipos');
-            data = await res.json();
-        }
-
         if (!data.ok) throw new Error(data.error);
 
         allEquipos      = data.equipos;
@@ -726,7 +719,7 @@ async function saveInlineField(input) {
     }
 }
 
-// ── Subida de foto ────────────────────────�
+// ── Subida de foto ────────────────────────�
 // ── Eliminar equipo ─────────────────────────────────────────────────
 async function deleteEquipo(id) {
     if (!confirm('¿Eliminar este equipo? Esta acción no se puede deshacer.')) return;
@@ -821,3 +814,70 @@ async function importFromNotion() {
     btn.textContent = '⬇ Importar desde Notion';
 }
 
+
+
+function downloadPlantillaCSV() {
+    const header = "Tipo Maquinaria,N° Interno,Marca,Modelo,Año,Horómetro,Tarifa,Detalle\n";
+    const example = "Excavadora 20T,EX-01,Caterpillar,320GC,2022,1200,UF 200/mes,Balde roca\n";
+    const blob = new Blob([header + example], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "plantilla_equipos.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function handleEquipoCSV(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const text = e.target.result;
+        const rows = parseCSV(text);
+        if (rows.length === 0) {
+            toast("CSV vacío o sin formato", "error");
+            return;
+        }
+
+        try {
+            const res = await fetch('api/equipos/import-csv', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rows })
+            });
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error);
+
+            toast(`CSV Importado: ${data.creados} creados, ${data.actualizados} actualizados, ${data.errores} omitidos`, 'success');
+            await loadAdminEquipos();
+            await loadEquipos();
+        } catch(err) {
+            toast('Error subiendo CSV: ' + err.message, 'error');
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = ''; // Reset input
+}
+
+function parseCSV(str) {
+    const lines = str.split(/\r\n|\n/);
+    if (!lines.length) return [];
+    
+    // Split header ignoring quotes inside commas if needed, but simple split is ok for this
+    const headers = lines[0].split(',').map(h => h.trim());
+    const result = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const currentline = lines[i].split(',');
+        const obj = {};
+        for (let j = 0; j < headers.length; j++) {
+            obj[headers[j]] = currentline[j] ? currentline[j].trim() : '';
+        }
+        result.push(obj);
+    }
+    return result;
+}
