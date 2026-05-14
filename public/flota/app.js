@@ -665,6 +665,7 @@ function buildEquipoRow(e) {
     return `
     <tr id="eq-row-${e.id}" style="border-bottom:1px solid #f1f5f9;background:${e.activo ? 'white' : '#fff7f7'};" onmouseover="this.style.background='${e.activo ? '#f8fafc' : '#fff0f0'}'" onmouseout="this.style.background='${e.activo ? 'white' : '#fff7f7'}'">
         <td style="padding:6px 4px;text-align:center;">
+            <input type="checkbox" class="admin-eq-cb" value="${e.id}" onchange="toggleMassDeleteBtn()" style="margin-bottom:8px;accent-color:#2563eb;cursor:pointer;"><br>
             <label title="Subir foto" style="cursor:pointer;">
                 ${fotoHtml}
                 <input type="file" accept="image/*" style="display:none;" onchange="uploadEquipoFoto(${e.id}, this)">
@@ -862,18 +863,66 @@ function parseCSV(str) {
     const lines = str.split(/\r\n|\n/);
     if (!lines.length) return [];
     
-    // Split header ignoring quotes inside commas if needed, but simple split is ok for this
-    const headers = lines[0].split(',').map(h => h.trim());
+    // Detect delimiter
+    const delimiter = lines[0].includes(';') ? ';' : ',';
+    
+    // Normalize headers (lowercase, remove accents if any)
+    const headersRaw = lines[0].split(delimiter).map(h => h.trim());
+    const headers = headersRaw.map(h => h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
     const result = [];
     
     for (let i = 1; i < lines.length; i++) {
         if (!lines[i].trim()) continue;
-        const currentline = lines[i].split(',');
+        // Split handling simple quotes if needed, but standard split for now
+        const currentline = lines[i].split(delimiter);
         const obj = {};
         for (let j = 0; j < headers.length; j++) {
-            obj[headers[j]] = currentline[j] ? currentline[j].trim() : '';
+            const key = headers[j];
+            const val = currentline[j] ? currentline[j].trim() : '';
+            obj[headersRaw[j]] = val; // Mantener original también por si acaso
+            
+            // Mapeo flexible
+            if (key.includes('tipo')) obj.tipoMaquinaria = val;
+            if (key.includes('marca')) obj.marca = val;
+            if (key.includes('modelo')) obj.modelo = val;
+            if (key.includes('ano') || key.includes('anio')) obj.anio = val;
+            if (key.includes('horometro')) obj.horometro = val;
+            if (key.includes('tarifa')) obj.tarifa = val;
+            if (key.includes('detalle')) obj.detalle = val;
+            if (key.includes('interno') || key.includes('n') && key.includes('int')) obj.numeroInterno = val;
+            if (key.includes('imagen')) obj.imagenUrl = val;
         }
         result.push(obj);
     }
     return result;
+}
+
+
+function toggleAllAdminEquipos(checked) {
+    document.querySelectorAll('.admin-eq-cb').forEach(cb => cb.checked = checked);
+    toggleMassDeleteBtn();
+}
+
+function toggleMassDeleteBtn() {
+    const checked = document.querySelectorAll('.admin-eq-cb:checked').length;
+    document.getElementById('btn-mass-delete').style.display = checked > 0 ? 'inline-block' : 'none';
+}
+
+async function deleteSelectedEquipos() {
+    const cbs = document.querySelectorAll('.admin-eq-cb:checked');
+    if (!cbs.length) return;
+    if (!confirm(`¿Eliminar ${cbs.length} equipos? Esta acción no se puede deshacer.`)) return;
+    
+    let eliminados = 0;
+    try {
+        for (const cb of cbs) {
+            await fetch(`api/equipos/db/${cb.value}`, { method: 'DELETE' });
+            eliminados++;
+        }
+        toast(`${eliminados} equipos eliminados`, 'success');
+        document.getElementById('selectAllAdmin').checked = false;
+        toggleMassDeleteBtn();
+        await loadAdminEquipos();
+        await loadEquipos();
+    } catch (err) { toast(`Error al eliminar: ${err.message}`, 'error'); }
 }

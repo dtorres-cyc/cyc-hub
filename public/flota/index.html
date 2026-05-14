@@ -265,6 +265,7 @@ Quería saber si requieren cotizar algún tipo de maquinaria para estos días. T
                     <input type="file" id="csv-equipos-input" accept=".csv" style="display:none;" onchange="handleEquipoCSV(event)">
                 </label>
                 <button onclick="downloadPlantillaCSV()" style="padding:8px 14px; background:#e2e8f0; color:#334155; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:12px; font-family:inherit;">↓ Plantilla CSV</button>
+                <button onclick="deleteSelectedEquipos()" id="btn-mass-delete" style="display:none; padding:8px 14px; background:#ef4444; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:12px; font-family:inherit;">🗑️ Eliminar Seleccionados</button>
                 <button onclick="importFromNotion(this)" style="padding:8px 14px; background:#f59e0b; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:12px; font-family:inherit;">⬇ Importar Notion</button>
                 <span id="admin-filter-count" style="margin-left:auto; font-size:12px; color:#64748b; font-weight:600;"></span>
             </div>
@@ -293,7 +294,7 @@ Quería saber si requieren cotizar algún tipo de maquinaria para estos días. T
                 <table id="admin-equipos-tbl" style="width:100%; border-collapse:collapse; font-size:12.5px; min-width:900px;">
                     <thead>
                         <tr style="background:#1e293b; color:white; position:sticky; top:0; z-index:10;">
-                            <th style="padding:10px 8px; text-align:left; width:36px;"></th>
+                            <th style="padding:10px 8px; text-align:left; width:36px;"><input type="checkbox" id="selectAllAdmin" onchange="toggleAllAdminEquipos(this.checked)" style="accent-color:#2563eb;cursor:pointer;"></th>
                             <th style="padding:10px 8px; text-align:left; min-width:140px;">Tipo Maquinaria</th>
                             <th style="padding:10px 8px; text-align:left; width:80px;">N° Interno</th>
                             <th style="padding:10px 8px; text-align:left; width:90px;">Marca</th>
