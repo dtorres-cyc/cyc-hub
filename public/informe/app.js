@@ -59,22 +59,39 @@ function safeLower(val) {
 function populateFilters(equipos) {
     const tipos = [...new Set(equipos.map(e => e.tipo).filter(t => t))].sort();
     const selectTipo = document.getElementById('filter-tipo');
-    tipos.forEach(t => {
-        const option = document.createElement('option');
-        option.value = t.toLowerCase();
-        option.textContent = t;
-        selectTipo.appendChild(option);
+    
+    // Generar options
+    selectTipo.innerHTML = tipos.map(t => `<option value="${t.toLowerCase()}">${t}</option>`).join('');
+    
+    // Inicializar TomSelect
+    if (selectTipo.tomselect) {
+        selectTipo.tomselect.destroy();
+    }
+    
+    new TomSelect(selectTipo, {
+        plugins: ['remove_button'],
+        maxOptions: 50,
+        placeholder: 'Todos los Tipos',
+        onChange: function() {
+            // Optional: autotrigger applyFilters or keep it attached to the button
+        }
     });
 }
 
 function applyFilters() {
     const filterId = safeLower(document.getElementById('filter-id').value);
-    const filterTipo = document.getElementById('filter-tipo').value;
+    
+    const selectTipo = document.getElementById('filter-tipo');
+    const filterTipos = selectTipo.tomselect ? selectTipo.tomselect.getValue() : [];
+    
     const filterProp = document.getElementById('filter-propietario').value;
 
     const filtered = globalEquipos.filter(e => {
         const matchId = !filterId || safeLower(e.id).includes(filterId) || safeLower(e.patente).includes(filterId);
-        const matchTipo = !filterTipo || safeLower(e.tipo) === filterTipo;
+        
+        const tipoEq = safeLower(e.tipo);
+        const matchTipo = filterTipos.length === 0 || filterTipos.includes(tipoEq);
+        
         const esCyc = safeLower(e.propietario).includes('cyc');
         const matchProp = !filterProp || (filterProp === 'cyc' ? esCyc : true);
         return matchId && matchTipo && matchProp;
