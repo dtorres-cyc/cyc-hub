@@ -548,7 +548,7 @@ function filterTable() {
                 // Si getValue() devuelve un string en vez de array, lo convertimos a array
                 const valArray = Array.isArray(selectedValues) ? selectedValues : (typeof selectedValues === 'string' ? selectedValues.split(',') : [selectedValues]);
                 
-                const cellText = row.cells[index] ? row.cells[index].innerText.trim().toLowerCase() : '';
+                const cellText = row.cells[index] ? row.cells[index].textContent.trim().toLowerCase() : '';
                 const matches = valArray.some(val => cellText.includes(String(val).toLowerCase().trim()));
                 if (!matches) {
                     show = false;
