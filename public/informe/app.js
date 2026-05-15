@@ -82,7 +82,8 @@ function applyFilters() {
     const filterId = safeLower(document.getElementById('filter-id').value);
     
     const selectTipo = document.getElementById('filter-tipo');
-    const filterTipos = selectTipo.tomselect ? selectTipo.tomselect.getValue() : [];
+    let filterTipos = selectTipo.tomselect ? selectTipo.tomselect.getValue() : [];
+    if (typeof filterTipos === 'string') filterTipos = filterTipos.split(',');
     
     const filterProp = document.getElementById('filter-propietario').value;
 
@@ -544,8 +545,11 @@ function filterTable() {
         let show = true;
         filters.forEach((selectedValues, index) => {
             if (selectedValues && selectedValues.length > 0) {
-                const cellText = row.cells[index] ? row.cells[index].innerText.trim() : '';
-                const matches = selectedValues.some(val => cellText.includes(val));
+                // Si getValue() devuelve un string en vez de array, lo convertimos a array
+                const valArray = Array.isArray(selectedValues) ? selectedValues : (typeof selectedValues === 'string' ? selectedValues.split(',') : [selectedValues]);
+                
+                const cellText = row.cells[index] ? row.cells[index].innerText.trim().toLowerCase() : '';
+                const matches = valArray.some(val => cellText.includes(String(val).toLowerCase().trim()));
                 if (!matches) {
                     show = false;
                 }
