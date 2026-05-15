@@ -12,6 +12,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 </head>
 <body>
   
@@ -191,18 +193,18 @@
                   <th style="padding: 12px 8px; cursor:pointer;" onclick="sortTable(9)">Rev. Téc. ↕</th>
                   <th style="padding: 12px 8px; cursor:pointer;" onclick="sortTable(10)">Gases ↕</th>
                 </tr>
-                <tr style="background-color: var(--bg-card); border-bottom: 2px solid var(--border);">
-                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px; background:var(--bg-main); color:var(--text-main); border:1px solid var(--border);"></th>
-                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px; background:var(--bg-main); color:var(--text-main); border:1px solid var(--border);"></th>
-                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px; background:var(--bg-main); color:var(--text-main); border:1px solid var(--border);"></th>
-                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px; background:var(--bg-main); color:var(--text-main); border:1px solid var(--border);"></th>
-                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px; background:var(--bg-main); color:var(--text-main); border:1px solid var(--border);"></th>
-                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px; background:var(--bg-main); color:var(--text-main); border:1px solid var(--border);"></th>
-                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px; background:var(--bg-main); color:var(--text-main); border:1px solid var(--border);"></th>
-                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px; background:var(--bg-main); color:var(--text-main); border:1px solid var(--border);"></th>
-                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px; background:var(--bg-main); color:var(--text-main); border:1px solid var(--border);"></th>
-                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px; background:var(--bg-main); color:var(--text-main); border:1px solid var(--border);"></th>
-                  <th style="padding: 4px;"><input type="text" class="col-filter" onkeyup="filterTable()" placeholder="Filtrar..." style="width:100%; padding:4px; font-size:11px; background:var(--bg-main); color:var(--text-main); border:1px solid var(--border);"></th>
+                <tr style="background-color: var(--bg-card); border-bottom: 2px solid var(--border);" id="filter-row">
+                  <th style="padding: 4px;"><select multiple class="col-filter-multi" data-col="0" placeholder="Filtrar..."></select></th>
+                  <th style="padding: 4px;"><select multiple class="col-filter-multi" data-col="1" placeholder="Filtrar..."></select></th>
+                  <th style="padding: 4px;"><select multiple class="col-filter-multi" data-col="2" placeholder="Filtrar..."></select></th>
+                  <th style="padding: 4px;"><select multiple class="col-filter-multi" data-col="3" placeholder="Filtrar..."></select></th>
+                  <th style="padding: 4px;"><select multiple class="col-filter-multi" data-col="4" placeholder="Filtrar..."></select></th>
+                  <th style="padding: 4px;"><select multiple class="col-filter-multi" data-col="5" placeholder="Filtrar..."></select></th>
+                  <th style="padding: 4px;"><select multiple class="col-filter-multi" data-col="6" placeholder="Filtrar..."></select></th>
+                  <th style="padding: 4px;"><select multiple class="col-filter-multi" data-col="7" placeholder="Filtrar..."></select></th>
+                  <th style="padding: 4px;"><select multiple class="col-filter-multi" data-col="8" placeholder="Filtrar..."></select></th>
+                  <th style="padding: 4px;"><select multiple class="col-filter-multi" data-col="9" placeholder="Filtrar..."></select></th>
+                  <th style="padding: 4px;"><select multiple class="col-filter-multi" data-col="10" placeholder="Filtrar..."></select></th>
                 </tr>
               </thead>
               <tbody id="table-equipos-body">
@@ -224,6 +226,7 @@
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h2 class="section-title" style="margin:0;">📄 Gestión de Contratos de Arriendo</h2>
             <div style="display:flex; gap:10px;">
+              <button class="action-btn" id="btn-bulk-delete-contratos" style="display:none; background:var(--c-red); color:white;" onclick="bulkDeleteContratos()">🗑️ Borrar Seleccionados</button>
               <button class="action-btn" style="background:#7c3aed;" onclick="generarEDPsMes()">✨ Generar EDPs del Mes</button>
               <button class="action-btn" onclick="openContratoModal()">+ Nuevo Contrato</button>
             </div>
@@ -246,6 +249,14 @@
               <span class="kpi-label">EDPs Pendientes</span>
               <span class="kpi-value" id="arr-kpi-edps-pendientes">--</span>
             </div>
+          </div>
+        </div>
+
+        <!-- Vista EDPs Kanban Global -->
+        <div class="section-block">
+          <h2 class="section-title">📅 EDPs por Etapa (Todos los Contratos)</h2>
+          <div id="edps-kanban" style="display:flex; gap:16px; overflow-x:auto; padding-bottom:16px; min-height:300px;">
+            <!-- Generado por JS -->
           </div>
         </div>
 
@@ -279,14 +290,6 @@
             <div id="gantt-container" style="overflow-x:auto; padding:20px; min-height:300px; position:relative;">
               <!-- Renderizado dinámico de la grilla y barras de tiempo -->
             </div>
-          </div>
-        </div>
-
-        <!-- Vista EDPs Kanban Global -->
-        <div class="section-block">
-          <h2 class="section-title">📅 EDPs por Etapa (Todos los Contratos)</h2>
-          <div id="edps-kanban" style="display:flex; gap:16px; overflow-x:auto; padding-bottom:16px; min-height:300px;">
-            <!-- Generado por JS -->
           </div>
         </div>
 
@@ -705,8 +708,9 @@
 </body>
 
 <!-- ═══ MODAL: NUEVO CONTRATO ═══ -->
-<div id="contrato-modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:3000; backdrop-filter:blur(4px);" onclick="closeContratoModal()">
-  <div onclick="event.stopPropagation()" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-card); border-radius:16px; padding:32px; width:96%; max-width:800px; max-height:92vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+<div id="contrato-modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:3000; backdrop-filter:blur(4px);">
+  <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-card); border-radius:16px; padding:32px; width:96%; max-width:800px; max-height:92vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <button type="button" onclick="closeContratoModal()" style="position:absolute; top:20px; right:20px; background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:20px;">✖</button>
     <h2 id="contrato-modal-title" style="margin-bottom:24px; color:var(--c-primary); font-size:20px;">Nuevo Contrato</h2>
     <form id="form-contrato" onsubmit="submitContratoForm(event)">
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
@@ -772,8 +776,9 @@
 </div>
 
 <!-- ═══ MODAL: DETALLE/EDP DE CONTRATO (MATRIZ DE COBROS) ═══ -->
-<div id="edp-modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:3000; backdrop-filter:blur(4px);" onclick="closeEdpModal()">
-  <div onclick="event.stopPropagation()" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-card); border-radius:16px; padding:32px; width:94%; max-width:900px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+<div id="edp-modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:3000; backdrop-filter:blur(4px);">
+  <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-card); border-radius:16px; padding:32px; width:94%; max-width:900px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <button type="button" onclick="closeEdpModal()" style="position:absolute; top:20px; right:20px; background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:20px;">✖</button>
     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
       <div>
         <h2 id="edp-modal-title" style="margin-bottom:8px; color:var(--c-primary); font-size:20px;">Calculadora de Cobros (EDP)</h2>
@@ -863,8 +868,9 @@
 </div>
 
 <!-- ═══ MODAL: NUEVO CASO DAÑOS ═══ -->
-<div id="dano-modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:3000; backdrop-filter:blur(4px);" onclick="closeDanoModal()">
-  <div onclick="event.stopPropagation()" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-card); border-radius:16px; padding:32px; width:94%; max-width:540px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+<div id="dano-modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:3000; backdrop-filter:blur(4px);">
+  <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-card); border-radius:16px; padding:32px; width:94%; max-width:540px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <button type="button" onclick="closeDanoModal()" style="position:absolute; top:20px; right:20px; background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:20px;">✖</button>
     <h2 id="dano-modal-title" style="margin-bottom:24px; color:var(--c-red); font-size:20px;">🔧 Registrar Daño / Merma</h2>
 
     <!-- Stepper de etapas -->

@@ -265,8 +265,9 @@ function renderContratoCard(c) {
     ? `<span class="alerta-vencimiento">⚠ Vence en ${diasRestantes} días</span>` : '';
 
   return `
-  <div class="contrato-card">
-    <div class="contrato-card-header">
+  <div class="contrato-card" style="position:relative;">
+    <input type="checkbox" class="contrato-cb" value="${c.id}" onchange="toggleContratoBulkBtn()" style="position:absolute; top:16px; right:16px; width:18px; height:18px; cursor:pointer; z-index:10;" />
+    <div class="contrato-card-header" style="padding-right: 40px;">
       <div>
         <div class="contrato-card-title">${c.numeroContrato} ${alertaHtml}</div>
         <div class="contrato-card-cliente">🏢 ${c.cliente}</div>
@@ -300,6 +301,30 @@ function renderContratoCard(c) {
     </div>
   </div>`;
 }
+
+function toggleContratoBulkBtn() {
+  const anyChecked = Array.from(document.querySelectorAll('.contrato-cb')).some(cb => cb.checked);
+  const btn = document.getElementById('btn-bulk-delete-contratos');
+  if (btn) btn.style.display = anyChecked ? 'inline-block' : 'none';
+}
+
+async function bulkDeleteContratos() {
+  const selected = Array.from(document.querySelectorAll('.contrato-cb:checked')).map(cb => cb.value);
+  if (!selected.length) return;
+  if (!confirm(`¿Estás seguro de que deseas borrar ${selected.length} contrato(s)? Esta acción no se puede deshacer y eliminará sus EDPs y Daños asociados.`)) return;
+
+  try {
+    for (const id of selected) {
+      await fetch(`/arriendo/contratos/${id}`, { method: 'DELETE' });
+    }
+    await loadArriendo();
+    toggleContratoBulkBtn(); // Ocultar botón tras recargar
+  } catch(e) {
+    console.error('Error en bulk delete:', e);
+    alert('Ocurrió un error al borrar los contratos.');
+  }
+}
+
 
 // ─── Kanban EDPs Global ───────────────────────────────────────────────────────
 

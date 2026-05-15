@@ -473,19 +473,63 @@ function renderTabla(equipos) {
         `;
         tbody.appendChild(tr);
     });
+    
+    initFilters(equipos);
+}
+
+function initFilters(equipos) {
+    const selects = document.querySelectorAll('.col-filter-multi');
+    const colsData = [
+        equipos.map(e => e.id || e.patente).filter(Boolean),
+        equipos.map(e => e.tipo).filter(Boolean),
+        equipos.map(e => e.ubicacion).filter(Boolean),
+        equipos.map(e => e.arrendado).filter(Boolean),
+        equipos.map(e => e.cliente).filter(Boolean),
+        equipos.map(e => e.propietario).filter(Boolean),
+        equipos.map(e => e.horometro).filter(Boolean),
+        equipos.map(e => e.venc_permiso).filter(Boolean),
+        equipos.map(e => e.venc_soap).filter(Boolean),
+        equipos.map(e => e.venc_rev).filter(Boolean),
+        equipos.map(e => e.venc_gases).filter(Boolean)
+    ];
+
+    selects.forEach((select, i) => {
+        // Guardar valores previos si existen
+        const prevValues = select.tomselect ? select.tomselect.getValue() : [];
+        
+        const uniqueValues = [...new Set(colsData[i])].sort();
+        
+        if (select.tomselect) {
+            select.tomselect.destroy();
+        }
+        
+        select.innerHTML = uniqueValues.map(v => `<option value="${v}">${v}</option>`).join('');
+        
+        new TomSelect(select, {
+            plugins: ['remove_button'],
+            maxOptions: 50,
+            items: prevValues, // Restaurar selecciones
+            placeholder: 'Filtrar...',
+            onChange: function() {
+                filterTable();
+            }
+        });
+    });
 }
 
 function filterTable() {
-    const inputs = document.querySelectorAll('.col-filter');
+    const selects = document.querySelectorAll('.col-filter-multi');
     const rows = document.querySelectorAll('#table-equipos-body tr');
+    
+    const filters = Array.from(selects).map(sel => sel.tomselect ? sel.tomselect.getValue() : []);
     
     rows.forEach(row => {
         let show = true;
-        inputs.forEach((input, index) => {
-            const text = input.value.toLowerCase().trim();
-            if (text) {
-                const cellText = row.cells[index] ? row.cells[index].textContent.toLowerCase() : '';
-                if (!cellText.includes(text)) {
+        filters.forEach((selectedValues, index) => {
+            if (selectedValues && selectedValues.length > 0) {
+                const cellText = row.cells[index] ? row.cells[index].innerText.trim() : '';
+                const matches = selectedValues.some(val => cellText.includes(val));
+                if (!matches) {
                     show = false;
                 }
             }
