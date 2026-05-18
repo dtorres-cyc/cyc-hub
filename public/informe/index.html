@@ -226,6 +226,8 @@
             <h2 class="section-title" style="margin:0;">📄 Gestión de Contratos de Arriendo</h2>
             <div style="display:flex; gap:10px;">
               <button class="action-btn" id="btn-bulk-delete-contratos" style="display:none; background:var(--c-red); color:white;" onclick="bulkDeleteContratos()">🗑️ Borrar Seleccionados</button>
+              <button class="action-btn" style="background:#dc2626;" onclick="confirmarBorrarTodo()">🗑️ Borrar Todo</button>
+              <button class="action-btn" style="background:#16a34a;" onclick="document.getElementById('import-contratos-panel').style.display = document.getElementById('import-contratos-panel').style.display === 'none' ? 'block' : 'none'">📂 Importar Planilla</button>
               <button class="action-btn" style="background:#7c3aed;" onclick="generarEDPsMes()">✨ Generar EDPs del Mes</button>
               <button class="action-btn" onclick="openContratoModal()">+ Nuevo Contrato</button>
             </div>
@@ -248,6 +250,25 @@
               <span class="kpi-label">EDPs Pendientes</span>
               <span class="kpi-value" id="arr-kpi-edps-pendientes">--</span>
             </div>
+          </div>
+        </div>
+
+        <!-- Panel Importar Planilla -->
+        <div id="import-contratos-panel" style="display:none; margin-bottom:20px;">
+          <div class="section-block" style="border:2px dashed #16a34a; background:rgba(22,163,74,0.05);">
+            <h3 style="color:#4ade80; margin:0 0 12px 0; font-size:14px; font-weight:700;">📂 Importar planilla de contratos</h3>
+            <p style="color:var(--text-muted); font-size:12px; margin-bottom:12px;">
+              Sube un archivo CSV o Excel. Columnas: <strong>N°Contrato, Cliente, Fecha de inicio, Fecha de término, N°Equipo interno, Fecha de entrega, Horómetro, Moneda, Tipo de cobro, Valor fijo, Tarifa / Hora, Horas mínimas, Valor hora extra, OC, Contrato firmado, Actas de entrega</strong>.
+              Un contrato puede tener varias filas (una por equipo). Se agrupan por N°Contrato.
+            </p>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <label style="cursor:pointer; background:#16a34a; color:white; padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600;" for="import-file-input">
+                📁 Seleccionar archivo
+              </label>
+              <input type="file" id="import-file-input" accept=".csv,.xlsx,.xls" style="display:none;" onchange="importarPlanillaContratos(this)">
+              <span id="import-file-name" style="color:var(--text-muted); font-size:12px;">Ningún archivo seleccionado</span>
+            </div>
+            <div id="import-result" style="margin-top:14px; display:none;"></div>
           </div>
         </div>
 

@@ -1059,3 +1059,72 @@ async function eliminarDano(id) {
   closeDanoModal();
   await loadArriendo();
 }
+
+// ─── IMPORTAR PLANILLA DE CONTRATOS ──────────────────────────────────────────
+
+async function importarPlanillaContratos(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  document.getElementById('import-file-name').textContent = file.name;
+  const resultBox = document.getElementById('import-result');
+  resultBox.style.display = 'block';
+  resultBox.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">⏳ Procesando planilla…</p>';
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  try {
+    const res  = await fetch('/arriendo/contratos/import', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (!res.ok) {
+      resultBox.innerHTML = `<p style="color:#f87171;font-size:13px;">❌ Error: ${data.error}</p>`;
+      return;
+    }
+
+    let html = '';
+    if (data.created > 0) {
+      html += `<p style="color:#4ade80;font-size:13px;font-weight:700;">✅ ${data.created} contrato${data.created !== 1 ? 's' : ''} creado${data.created !== 1 ? 's' : ''}</p>`;
+      html += data.createdNames.map(n => `<p style="color:#d1fae5;font-size:12px;margin:2px 0;">· ${n}</p>`).join('');
+    }
+    if (data.updated > 0) {
+      html += `<p style="color:#60a5fa;font-size:13px;font-weight:700;margin-top:8px;">🔄 ${data.updated} contrato${data.updated !== 1 ? 's' : ''} actualizado${data.updated !== 1 ? 's' : ''}</p>`;
+      html += data.updatedNames.map(n => `<p style="color:#bfdbfe;font-size:12px;margin:2px 0;">· ${n}</p>`).join('');
+    }
+    if (data.errors && data.errors.length > 0) {
+      html += `<p style="color:#f87171;font-size:13px;font-weight:700;margin-top:8px;">⚠️ ${data.errors.length} error${data.errors.length !== 1 ? 'es' : ''}</p>`;
+      html += data.errors.map(e => `<p style="color:#fca5a5;font-size:12px;margin:2px 0;">· ${e}</p>`).join('');
+    }
+    if (data.created === 0 && data.updated === 0 && (!data.errors || data.errors.length === 0)) {
+      html = '<p style="color:var(--text-muted);font-size:13px;">No se encontraron contratos para importar.</p>';
+    }
+
+    resultBox.innerHTML = html;
+
+    // Reload contratos list
+    if (data.created > 0 || data.updated > 0) {
+      await loadArriendo();
+      // Reset input for next import
+      input.value = '';
+    }
+  } catch (e) {
+    resultBox.innerHTML = `<p style="color:#f87171;font-size:13px;">❌ Error de red: ${e.message}</p>`;
+  }
+}
+
+// ─── BORRAR TODOS LOS CONTRATOS ──────────────────────────────────────────────
+
+async function confirmarBorrarTodo() {
+  if (!confirm('⚠️ ¿Estás seguro de que quieres eliminar TODOS los contratos, equipos y EDPs? Esta acción no se puede deshacer.')) return;
+  if (!confirm('Segunda confirmación: ¿Borrar absolutamente todo?')) return;
+
+  const res  = await fetch('/arriendo/contratos/all', { method: 'DELETE' });
+  const data = await res.json();
+  if (data.ok) {
+    alert('✅ Todos los contratos han sido eliminados.');
+    await loadArriendo();
+  } else {
+    alert('❌ Error al borrar: ' + data.error);
+  }
+}

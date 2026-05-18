@@ -1,8 +1,11 @@
 // modules/arriendo/router.js — Gestión de Arriendo, EDPs y Daños/Mermas
-const express = require('express');
-const router  = express.Router();
+const express  = require('express');
+const router   = express.Router();
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma   = new PrismaClient();
+const multer   = require('multer');
+const XLSX     = require('xlsx');
+const upload   = multer({ storage: multer.memoryStorage() });
 
 // ─── CONTRATOS ────────────────────────────────────────────────────────────────
 
@@ -413,7 +416,136 @@ router.delete('/danos/:id', async (req, res) => {
   }
 });
 
-// Exponer función para uso interno (cron)
+// ─── IMPORTAR PLANILLA DE CONTRATOS ──────────────────────────────────────────
+
+router.post('/contratos/import', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Archivo requerido' });
+
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheet    = workbook.Sheets[workbook.SheetNames[0]];
+    const rows     = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+    if (!rows.length) return res.json({ created: 0, updated: 0, errors: ['Planilla vacía'] });
+
+    // Helper: parse date (Excel serial or string)
+    function parseDate(val) {
+      if (!val) return null;
+      if (typeof val === 'number') {
+        // Excel serial date
+        const d = XLSX.SSF.parse_date_code(val);
+        return new Date(d.y, d.m - 1, d.d);
+      }
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function num(val) { const n = parseFloat(val); return isNaN(n) ? null : n; }
+    function bool(val) { return String(val).trim() === '1' || val === true; }
+    function str(val) { return String(val ?? '').trim(); }
+
+    // Group rows by N°Contrato
+    const groups = new Map();
+    for (const row of rows) {
+      const nc = str(row['N°Contrato'] || row['NContrato'] || row['Numero Contrato'] || row['numeroContrato'] || '');
+      if (!nc) continue;
+      if (!groups.has(nc)) groups.set(nc, []);
+      groups.get(nc).push(row);
+    }
+
+    let created = 0, updated = 0;
+    const errors = [];
+    const createdNames = [], updatedNames = [];
+
+    for (const [numeroContrato, filas] of groups) {
+      const primera = filas[0];
+      try {
+        const contratoData = {
+          numeroContrato,
+          cliente:       str(primera['Cliente'] || primera['cliente'] || ''),
+          fechaInicio:   parseDate(primera['Fecha de inicio'] || primera['FechaInicio'] || primera['fechaInicio']),
+          fechaTermino:  parseDate(primera['Fecha de término'] || primera['Fecha de termino'] || primera['fechaTermino']),
+          docOC:         bool(primera['OC']),
+          docContrato:   bool(primera['Contrato firmado'] || primera['Contrato']),
+          docActaEntrega:bool(primera['Actas de entrega'] || primera['Acta de entrega']),
+          activo:        true,
+        };
+
+        if (!contratoData.fechaInicio) {
+          errors.push(`Contrato ${numeroContrato}: fecha de inicio inválida`);
+          continue;
+        }
+        if (!contratoData.fechaTermino) {
+          errors.push(`Contrato ${numeroContrato}: fecha de término inválida`);
+          continue;
+        }
+
+        // Upsert contrato by numeroContrato
+        const existing = await prisma.contrato.findFirst({ where: { numeroContrato } });
+
+        let contratoId;
+        if (existing) {
+          await prisma.contrato.update({ where: { id: existing.id }, data: contratoData });
+          // Remove old equipos to re-sync
+          await prisma.contratoEquipo.deleteMany({ where: { contratoId: existing.id } });
+          contratoId = existing.id;
+          updated++;
+          updatedNames.push(`${numeroContrato} — ${contratoData.cliente}`);
+        } else {
+          const nuevo = await prisma.contrato.create({ data: contratoData });
+          contratoId = nuevo.id;
+          created++;
+          createdNames.push(`${numeroContrato} — ${contratoData.cliente}`);
+        }
+
+        // Insert equipos for this contrato
+        for (const fila of filas) {
+          const equipoId = str(fila['N°Equipo interno'] || fila['NEquipo'] || fila['equipoId'] || '');
+          if (!equipoId) continue;
+
+          await prisma.contratoEquipo.create({
+            data: {
+              contratoId,
+              equipoId,
+              fechaEntrega:     parseDate(fila['Fecha de entrega'] || fila['fechaEntrega']),
+              horometroEntrega: num(fila['Horómetro'] || fila['Horometro'] || fila['horometro']),
+              moneda:           str(fila['Moneda'] || 'CLP') || 'CLP',
+              tipoCobro:        str(fila['Tipo de cobro'] || fila['tipoCobro'] || 'fijo') || 'fijo',
+              valorFijo:        num(fila['Valor fijo'] || fila['valorFijo']),
+              tarifaHora:       num(fila['Tarifa / Hora'] || fila['Tarifa/Hora'] || fila['tarifaHora']),
+              horasMinimas:     num(fila['Horas mínimas'] || fila['Horas minimas'] || fila['horasMinimas']),
+              valorHoraExtra:   num(fila['Valor hora extra'] || fila['valorHoraExtra']),
+            },
+          });
+        }
+      } catch (e) {
+        errors.push(`Error en contrato ${numeroContrato}: ${e.message}`);
+      }
+    }
+
+    res.json({ created, updated, errors, createdNames, updatedNames });
+  } catch (e) {
+    console.error('Import error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── BORRAR TODOS LOS CONTRATOS ──────────────────────────────────────────────
+
+router.delete('/contratos/all', async (req, res) => {
+  try {
+    await prisma.eDPDetalleEquipo.deleteMany({});
+    await prisma.eDP.deleteMany({});
+    await prisma.danosMerma.deleteMany({});
+    await prisma.contratoEquipo.deleteMany({});
+    await prisma.contrato.deleteMany({});
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Exponer función para uso interno (cron)
 router.generarEDPsMes = async () => {
   const now = new Date();
   const mes = now.getMonth() + 1;
