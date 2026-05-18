@@ -618,12 +618,12 @@ function openEdpModal(edp) {
   document.getElementById('edp-modal-title').textContent = `EDP: ${edp.periodo || edp.mesConsumo}`;
   document.getElementById('edp-modal-sub').textContent   = contrato ? `${contrato.cliente} · ${contrato.numeroContrato}` : '';
   
-  // Stepper
+  // Stepper clickeable — clic en cualquier etapa la selecciona directamente
   const stepper = document.getElementById('edp-stepper');
   stepper.innerHTML = EDP_ETAPAS.map((et, i) => {
     const n = i + 1;
     let cls = n < edp.etapa ? 'done' : n === edp.etapa ? 'active' : '';
-    return `<div class="step-item ${cls}" title="${et.label}">${et.icon}<br><span style="font-size:9px;">${et.label.split('.')[1]?.trim()}</span></div>`;
+    return `<div class="step-item ${cls}" title="${et.label}" style="cursor:pointer;" onclick="moverEdpEtapa(${edp.id}, ${n})">${et.icon}<br><span style="font-size:9px;">${et.label.split('.')[1]?.trim()}</span></div>`;
   }).join('');
   
   // Render Equipos
@@ -665,6 +665,7 @@ function openEdpModal(edp) {
   
   const btns = document.getElementById('edp-form-btns');
   btns.innerHTML = `
+    <button type="button" class="action-btn" style="background:var(--c-red);margin-right:auto;" onclick="eliminarEdp(${edp.id})">🗑️ Eliminar</button>
     ${edp.etapa > 1 ? `<button type="button" class="action-btn" style="background:var(--c-orange);" onclick="retrocederEdp()">← Retroceder</button>` : ''}
     <button type="submit" class="action-btn" style="background:var(--c-blue);">Guardar</button>
     ${edp.etapa < 4 ? `<button type="button" class="action-btn" style="background:var(--c-green);" onclick="avanzarEdp()">Avanzar →</button>` : ''}
@@ -819,17 +820,64 @@ async function retrocederEdp() {
   await loadArriendo();
 }
 
-async function crearEdpManual(contratoId) {
+function crearEdpManual(contratoId) {
   const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const hoy   = new Date();
-  const mes   = hoy.getMonth() + 1;
-  const anio  = hoy.getFullYear();
-  const periodo = `${meses[mes-1]} ${anio}`;
-  if (!confirm(`¿Crear EDP para ${periodo}?`)) return;
-  try {
-    await fetch('/arriendo/edps', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contratoId, mes, anio, periodo }) });
-    await loadArriendo();
-  } catch(err) { console.error(err); }
+
+  // Build month options
+  let opcionesMeses = '';
+  for (let m = 1; m <= 12; m++) {
+    const sel = m === hoy.getMonth() + 1 ? 'selected' : '';
+    opcionesMeses += `<option value="${m}" ${sel}>${meses[m-1]}</option>`;
+  }
+
+  // Build year options (current year ± 2)
+  let opcionesAnios = '';
+  for (let y = hoy.getFullYear() - 1; y <= hoy.getFullYear() + 1; y++) {
+    const sel = y === hoy.getFullYear() ? 'selected' : '';
+    opcionesAnios += `<option value="${y}" ${sel}>${y}</option>`;
+  }
+
+  // Mini modal
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:5000;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:28px 32px;min-width:320px;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+      <h3 style="margin:0 0 18px 0;font-size:16px;color:var(--text-main);">Nuevo EDP — Seleccionar período</h3>
+      <div style="display:flex;gap:10px;margin-bottom:20px;">
+        <div style="flex:1;">
+          <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Mes</label>
+          <select id="edp-nuevo-mes" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg-dark);color:var(--text-main);font-size:14px;">
+            ${opcionesMeses}
+          </select>
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Año</label>
+          <select id="edp-nuevo-anio" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg-dark);color:var(--text-main);font-size:14px;">
+            ${opcionesAnios}
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="this.closest('div[style]').parentElement.remove()" style="padding:8px 18px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text-muted);cursor:pointer;font-size:13px;">Cancelar</button>
+        <button id="edp-nuevo-confirm" style="padding:8px 18px;border:none;border-radius:8px;background:var(--c-blue);color:white;cursor:pointer;font-size:13px;font-weight:700;">Crear EDP</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById('edp-nuevo-confirm').onclick = async () => {
+    const mes   = parseInt(document.getElementById('edp-nuevo-mes').value);
+    const anio  = parseInt(document.getElementById('edp-nuevo-anio').value);
+    const periodo = `${meses[mes-1]} ${anio}`;
+    overlay.remove();
+    try {
+      await fetch('/arriendo/edps', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contratoId, mes, anio, periodo }) });
+      await loadArriendo();
+    } catch(err) { console.error(err); }
+  };
+
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
 }
 
 async function generarEDPsMes() {
@@ -1127,4 +1175,43 @@ async function confirmarBorrarTodo() {
   } else {
     alert('❌ Error al borrar: ' + data.error);
   }
+}
+
+// ─── MOVER EDP A CUALQUIER ETAPA ─────────────────────────────────────────────
+
+async function moverEdpEtapa(edpId, nuevaEtapa) {
+  try {
+    await fetch(`/arriendo/edps/${edpId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ etapa: nuevaEtapa }),
+    });
+    // Actualizar stepper visualmente sin cerrar el modal
+    document.querySelectorAll('#edp-stepper .step-item').forEach((el, i) => {
+      const n = i + 1;
+      el.className = 'step-item' + (n < nuevaEtapa ? ' done' : n === nuevaEtapa ? ' active' : '');
+    });
+    document.getElementById('edp-etapa-actual').value = nuevaEtapa;
+    // Actualizar botones avanzar/retroceder
+    const edpId_ = parseInt(document.getElementById('edp-edit-id').value);
+    const btns = document.getElementById('edp-form-btns');
+    btns.innerHTML = `
+      <button type="button" class="action-btn" style="background:var(--c-red);margin-right:auto;" onclick="eliminarEdp(${edpId_})">🗑️ Eliminar</button>
+      ${nuevaEtapa > 1 ? `<button type="button" class="action-btn" style="background:var(--c-orange);" onclick="retrocederEdp()">← Retroceder</button>` : ''}
+      <button type="submit" class="action-btn" style="background:var(--c-blue);">Guardar</button>
+      ${nuevaEtapa < 4 ? `<button type="button" class="action-btn" style="background:var(--c-green);" onclick="avanzarEdp()">Avanzar →</button>` : ''}
+    `;
+    await loadArriendo();
+  } catch (err) { console.error('Error moviendo EDP:', err); }
+}
+
+// ─── ELIMINAR EDP ─────────────────────────────────────────────────────────────
+
+async function eliminarEdp(edpId) {
+  if (!confirm('¿Eliminar este EDP? Esta acción no se puede deshacer.')) return;
+  try {
+    await fetch(`/arriendo/edps/${edpId}`, { method: 'DELETE' });
+    document.getElementById('edp-modal-backdrop').style.display = 'none';
+    await loadArriendo();
+  } catch (err) { console.error('Error eliminando EDP:', err); }
 }
