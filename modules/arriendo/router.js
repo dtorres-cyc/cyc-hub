@@ -142,7 +142,24 @@ router.put('/contratos/:id', async (req, res) => {
   }
 });
 
-// DELETE contrato
+// DELETE todos los contratos (debe ir ANTES de /:id para no ser capturado como id="all")
+router.delete('/contratos/all', async (req, res) => {
+  try {
+    // Borrar en orden por foreign keys
+    await prisma.eDPDetalleEquipo.deleteMany({});
+    await prisma.eDPAdicional.deleteMany({});
+    await prisma.eDP.deleteMany({});
+    await prisma.danosMerma.deleteMany({});
+    await prisma.contratoEquipo.deleteMany({});
+    await prisma.contrato.deleteMany({});
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Error borrando todo:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// DELETE contrato individual
 router.delete('/contratos/:id', async (req, res) => {
   try {
     await prisma.contratoEquipo.deleteMany({ where: { contratoId: parseInt(req.params.id) } });
@@ -526,21 +543,6 @@ router.post('/contratos/import', upload.single('file'), async (req, res) => {
     res.json({ created, updated, errors, createdNames, updatedNames });
   } catch (e) {
     console.error('Import error:', e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ─── BORRAR TODOS LOS CONTRATOS ──────────────────────────────────────────────
-
-router.delete('/contratos/all', async (req, res) => {
-  try {
-    await prisma.eDPDetalleEquipo.deleteMany({});
-    await prisma.eDP.deleteMany({});
-    await prisma.danosMerma.deleteMany({});
-    await prisma.contratoEquipo.deleteMany({});
-    await prisma.contrato.deleteMany({});
-    res.json({ ok: true });
-  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
