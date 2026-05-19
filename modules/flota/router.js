@@ -11,6 +11,9 @@ const prisma = new PrismaClient();
 const { fetchEquipos, fetchContactos } = require('./notion');
 const { getTransporter, buildEmailHtml } = require('./email');
 const { fetchContactosCRM } = require('./crm-contacts');
+const { syncEquiposFromSheets } = require('./sheetsSync');
+
+const APP_URL = process.env.APP_URL || 'https://cyc-hub-production.up.railway.app';
 
 // Helper: convierte registro DB al formato que usa el frontend de flota
 function dbEquipoToFlota(e) {
@@ -22,12 +25,17 @@ function dbEquipoToFlota(e) {
   const detalle   = e.detalle   || '';
 
   const especificacionesHtml = [
-    marca     ? `<strong>Marca:</strong> ${marca}`           : '',
-    modelo    ? `<strong>Modelo:</strong> ${modelo}`         : '',
-    anio      ? `<strong>Año:</strong> ${anio}`              : '',
+    marca     ? `<strong>Marca:</strong> ${marca}`             : '',
+    modelo    ? `<strong>Modelo:</strong> ${modelo}`           : '',
+    anio      ? `<strong>Año:</strong> ${anio}`                : '',
     horometro ? `<strong>Horómetro:</strong> ${horometro} hrs` : '',
-    detalle   ? `<strong>Detalle:</strong> ${detalle}`       : '',
+    detalle   ? `<strong>Detalle:</strong> ${detalle}`         : '',
   ].filter(Boolean).join('<br>');
+
+  // Absolute URL for images (email clients need full URL)
+  const imagenUrl = e.imagenUrl
+    ? (e.imagenUrl.startsWith('http') ? e.imagenUrl : `${APP_URL}${e.imagenUrl}`)
+    : null;
 
   return {
     id:               String(e.id),
@@ -36,9 +44,12 @@ function dbEquipoToFlota(e) {
     año:              anio,
     horometro,
     detalle,
-    tarifa:           e.tarifa      || '',
-    imagenUrl:        e.imagenUrl   || null,
-    numeroInterno:    e.numeroInterno || '',
+    tarifa:           e.tarifa        || '',
+    imagenUrl,
+    imagenUrlRelativa: e.imagenUrl    || null,  // keep relative for <img src> in admin
+    numeroInterno:    e.numeroInterno  || '',
+    esExterno:        e.esExterno      || false,
+    propietario:      e.propietario    || null,
     especificacionesHtml,
     textoWpp: [tipoMaquinaria, marca, modelo, anio ? `(${anio})` : ''].filter(Boolean).join(' '),
   };
@@ -72,6 +83,17 @@ router.get('/api/equipos', async (req, res) => {
     const equipos = await fetchEquipos();
     res.json({ ok: true, equipos });
   } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /flota/api/sync — sincronizar equipos desde Google Sheets
+router.post('/api/sync', async (req, res) => {
+  try {
+    const result = await syncEquiposFromSheets();
+    res.json(result);
+  } catch (err) {
+    console.error('Error en sync Sheets:', err);
     res.status(500).json({ ok: false, error: err.message });
   }
 });

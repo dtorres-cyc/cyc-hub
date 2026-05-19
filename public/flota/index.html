@@ -27,6 +27,7 @@
         </div>
 
         <div class="header-actions">
+            <button class="btn btn-ghost btn-sm" id="syncBadge" onclick="syncAndLoad()" title="Sincronizar desde Google Sheets">↻ Sincronizar</button>
             <a href="admin.html" class="btn btn-primary" title="Gestionar inventario de equipos">⚙ Gestionar Equipos</a>
             <button class="btn btn-ghost btn-sm" onclick="toggleHistorial()">Historial</button>
         </div>
@@ -42,6 +43,11 @@
             
             <div class="toolbar-controls">
                 <!-- Filters -->
+                <select class="ctrl-select" id="filterFuente" onchange="applyFilters()">
+                    <option value="">Todos (CYC + Externos)</option>
+                    <option value="cyc">Solo CYC</option>
+                    <option value="externos">Solo Externos</option>
+                </select>
                 <select class="ctrl-select" id="filterTipo" onchange="applyFilters()">
                     <option value="">Todos los Tipos</option>
                 </select>
@@ -249,7 +255,59 @@ Quería saber si requieren cotizar algún tipo de maquinaria para estos días. T
 
     <div class="toast-area" id="toastArea"></div>
 
-    <script src="app.js?v=2"></script>
+    <!-- MODAL: FOTO POR EQUIPO -->
+    <div class="overlay hidden" id="fotoModalOverlay" onclick="closeFotoModal()">
+        <div class="modal" onclick="event.stopPropagation()" style="max-width:420px;">
+            <div class="modal-header">
+                <h2 class="modal-title">📷 Foto — <span id="fotoModalTitle"></span></h2>
+                <button class="modal-close" onclick="closeFotoModal()">✕</button>
+            </div>
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
+                <div id="fotoModalPreview" style="min-height:80px;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border-radius:8px;padding:12px;"></div>
+                <div>
+                    <label style="display:block;font-size:13px;color:var(--text-secondary);margin-bottom:6px;">Seleccionar nueva foto:</label>
+                    <input type="file" id="fotoModalInput" accept="image/*" capture="environment"
+                           style="font-size:13px;color:var(--text);width:100%;">
+                </div>
+                <p id="fotoModalStatus" style="font-size:12px;color:var(--text-muted);min-height:16px;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeFotoModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="submitFotoModal()">Subir foto</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Badge Externo */
+        .eq-card.eq-externo { border-color: #4338ca44; }
+        .eq-card.eq-externo.selected { border-color: #6366f1; }
+        tr.tr-externo { background: rgba(67,56,202,0.06); }
+
+        /* Botón foto en card */
+        .btn-foto-card {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.45);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 3px 7px;
+            font-size: 14px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.15s;
+            z-index: 2;
+        }
+        .eq-card { position: relative; }
+        .eq-card:hover .btn-foto-card { opacity: 1; }
+
+        /* Tabla: col extra foto */
+        .data-table thead tr th:nth-child(2) { width: 80px; }
+    </style>
+
+    <script src="app.js?v=5"></script>
 </body>
 </html>
 

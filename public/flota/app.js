@@ -9,12 +9,51 @@ let currentView  = 'grid'; // 'grid' | 'table'
 let currentStep  = 1;
 let isSending    = false;
 let previewDebounce = null;
+let isSyncing    = false;
 
 // ── Init ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-    loadEquipos();
+    syncAndLoad();
     loadHistorial();
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// SYNC DESDE GOOGLE SHEETS
+// ═══════════════════════════════════════════════════════════════════
+
+async function syncAndLoad() {
+    if (isSyncing) return;
+    isSyncing = true;
+
+    // Mostrar estado de carga
+    const loadingEl = document.getElementById('loadingState');
+    const loadingText = loadingEl?.querySelector('.state-text');
+    if (loadingText) loadingText.textContent = 'Sincronizando desde Google Sheets…';
+    show('loadingState');
+    hide('equipmentGrid');
+    hide('equipmentTableWrap');
+
+    try {
+        // Sincronizar primero
+        const syncRes = await fetch('api/sync', { method: 'POST' });
+        const syncData = await syncRes.json();
+        if (syncData.ok) {
+            const badge = document.getElementById('syncBadge');
+            if (badge) {
+                badge.textContent = `↻ Actualizado (${syncData.creados || 0} nuevos, ${syncData.actualizados || 0} actualizados)`;
+                badge.style.color = '#10b981';
+                setTimeout(() => { badge.textContent = '↻ Sincronizar'; badge.style.color = ''; }, 4000);
+            }
+        }
+    } catch (err) {
+        console.warn('Sync de Sheets falló, usando datos locales:', err.message);
+    } finally {
+        isSyncing = false;
+    }
+
+    // Cargar equipos desde DB (ya sincronizada)
+    await loadEquipos();
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // STEP 1 — EQUIPO SELECTION
@@ -26,9 +65,8 @@ async function loadEquipos() {
     hide('equipmentTableWrap');
 
     try {
-        // Intentar primero desde BD local
-        let res  = await fetch('api/equipos/db');
-        let data = await res.json();
+        const res  = await fetch('api/equipos/db');
+        const data = await res.json();
         if (!data.ok) throw new Error(data.error);
 
         allEquipos      = data.equipos;
@@ -42,11 +80,10 @@ async function loadEquipos() {
     }
 }
 
-
 // ── Filtros ───────────────────────────────────────────────────────
 function buildFilterOptions() {
-    const tipos   = [...new Set(allEquipos.map(e => e.tipoMaquinaria).filter(Boolean))].sort();
-    const marcas  = [...new Set(allEquipos.map(e => e.marca).filter(Boolean))].sort();
+    const tipos  = [...new Set(allEquipos.map(e => e.tipoMaquinaria).filter(Boolean))].sort();
+    const marcas = [...new Set(allEquipos.map(e => e.marca).filter(Boolean))].sort();
 
     const tipoSel = document.getElementById('filterTipo');
     tipoSel.innerHTML = '<option value="">Todos los Tipos</option>';
@@ -58,19 +95,22 @@ function buildFilterOptions() {
 }
 
 function applyFilters() {
-    const tipo  = document.getElementById('filterTipo').value;
-    const marca = document.getElementById('filterMarca').value;
-    const sort  = document.getElementById('sortEquipos').value;
+    const tipo    = document.getElementById('filterTipo').value;
+    const marca   = document.getElementById('filterMarca').value;
+    const sort    = document.getElementById('sortEquipos').value;
+    const fuente  = document.getElementById('filterFuente')?.value || '';
 
     filteredEquipos = allEquipos.filter(e => {
         if (tipo  && e.tipoMaquinaria !== tipo)  return false;
         if (marca && e.marca           !== marca) return false;
+        if (fuente === 'cyc'      &&  e.esExterno) return false;
+        if (fuente === 'externos' && !e.esExterno) return false;
         return true;
     });
 
     if (sort === 'tipo_az')  filteredEquipos.sort((a,b) => a.tipoMaquinaria.localeCompare(b.tipoMaquinaria, 'es'));
     if (sort === 'tipo_za')  filteredEquipos.sort((a,b) => b.tipoMaquinaria.localeCompare(a.tipoMaquinaria, 'es'));
-    if (sort === 'marca_az') filteredEquipos.sort((a,b) => a.marca.localeCompare(b.marca, 'es'));
+    if (sort === 'marca_az') filteredEquipos.sort((a,b) => (a.marca||'').localeCompare(b.marca||'', 'es'));
 
     renderEquipos();
 }
@@ -110,18 +150,24 @@ function renderGrid() {
     filteredEquipos.forEach(eq => {
         const sel  = selectedEquipoIds.has(eq.id);
         const card = document.createElement('div');
-        card.className = `eq-card ${sel ? 'selected' : ''}`;
+        card.className = `eq-card ${sel ? 'selected' : ''} ${eq.esExterno ? 'eq-externo' : ''}`;
         card.dataset.id = eq.id;
-        card.onclick = () => toggleEquipo(eq.id);
+        card.onclick = (e) => {
+            // Don't toggle if clicking photo button
+            if (e.target.closest('.btn-foto-card')) return;
+            toggleEquipo(eq.id);
+        };
 
-        const imgHtml = eq.imagenUrl
-            ? `<img src="${eq.imagenUrl}" alt="foto" loading="lazy">`
+        const imgHtml = eq.imagenUrlRelativa
+            ? `<img src="${eq.imagenUrlRelativa}" alt="foto" loading="lazy">`
             : getEquipmentIcon(eq.tipoMaquinaria);
 
         const numInternoHtml = eq.numeroInterno
             ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">N° ${eq.numeroInterno}</div>` : '';
 
-        // Tarifa box: solo cuando (está seleccionado) Y (toggle activo)
+        const externoBadge = eq.esExterno
+            ? `<div style="display:inline-block;margin-bottom:4px;padding:2px 7px;background:#312e81;color:#a5b4fc;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:0.5px;">EXTERNO</div>` : '';
+
         const tarifaHtml = (sel && tarifaOn)
             ? buildTarifaBoxHtml(eq.id, equipoTarifas[eq.id] || {})
             : '';
@@ -129,12 +175,14 @@ function renderGrid() {
         card.innerHTML = `
             <div class="eq-checkbox">${sel ? '✓' : ''}</div>
             <div class="eq-img-box">${imgHtml}</div>
+            ${externoBadge}
             <div class="eq-type">${eq.tipoMaquinaria || '—'}</div>
             ${numInternoHtml}
             <div class="eq-subtitle">${[eq.marca, eq.modelo].filter(Boolean).join(' · ') || '—'}</div>
             ${eq.tarifa ? `<div class="eq-price">💰 ${eq.tarifa}</div>` : ''}
             ${eq.horometro ? `<div style="font-size:12px;color:var(--text-muted);">⏱ ${eq.horometro} hrs · ${eq.año||'—'}</div>` : ''}
             ${tarifaHtml}
+            <button class="btn-foto-card" onclick="openFotoModal('${eq.id}', '${(eq.tipoMaquinaria||'').replace(/'/g,"\\'")}', '${eq.imagenUrlRelativa||''}')" title="Subir o cambiar foto">📷</button>
         `;
         grid.appendChild(card);
     });
@@ -146,26 +194,37 @@ function renderTable() {
     tbody.innerHTML = '';
 
     if (!filteredEquipos.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px;">Sin resultados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:30px;">Sin resultados.</td></tr>';
         return;
     }
 
     filteredEquipos.forEach(eq => {
         const sel = selectedEquipoIds.has(eq.id);
         const tr  = document.createElement('tr');
-        tr.className = sel ? 'selected' : '';
+        tr.className = `${sel ? 'selected' : ''} ${eq.esExterno ? 'tr-externo' : ''}`;
         tr.dataset.id = eq.id;
-        tr.onclick = () => toggleEquipo(eq.id);
+        tr.onclick = (e) => {
+            if (e.target.closest('.btn-foto-card')) return;
+            toggleEquipo(eq.id);
+        };
 
-        const imgCell = eq.imagenUrl
-            ? `<img src="${eq.imagenUrl}" class="table-img" loading="lazy">`
+        const imgCell = eq.imagenUrlRelativa
+            ? `<img src="${eq.imagenUrlRelativa}" class="table-img" loading="lazy">`
             : `<span style="font-size:24px;">${getEquipmentIcon(eq.tipoMaquinaria)}</span>`;
+
+        const externoBadge = eq.esExterno
+            ? `<span style="margin-left:6px;padding:1px 6px;background:#312e81;color:#a5b4fc;border-radius:8px;font-size:10px;font-weight:700;">EXT</span>` : '';
 
         tr.innerHTML = `
             <td><input type="checkbox" class="td-checkbox" ${sel ? 'checked' : ''} onclick="event.stopPropagation(); toggleEquipo('${eq.id}')"></td>
-            <td>${imgCell}</td>
             <td>
-                <div style="font-weight:600;color:var(--text);margin-bottom:3px;">${eq.tipoMaquinaria||'—'}</div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    ${imgCell}
+                    <button class="btn-foto-card" onclick="event.stopPropagation(); openFotoModal('${eq.id}', '${(eq.tipoMaquinaria||'').replace(/'/g,"\\'")}', '${eq.imagenUrlRelativa||''}')" title="Subir foto" style="font-size:14px;padding:2px 6px;">📷</button>
+                </div>
+            </td>
+            <td>
+                <div style="font-weight:600;color:var(--text);margin-bottom:3px;">${eq.tipoMaquinaria||'—'}${externoBadge}</div>
                 <div style="font-size:11px;color:var(--text-muted);">${eq.detalle||''}</div>
             </td>
             <td style="color:var(--text-secondary);">${eq.numeroInterno || '—'}</td>
@@ -186,18 +245,12 @@ function toggleEquipo(id) {
         selectedEquipoIds.add(id);
         if (!equipoTarifas[id]) equipoTarifas[id] = { horas: '180', tarifaUF: '' };
     }
-    // Re-render completo: más simple y 100% confiable
     renderEquipos();
     updateStep1UI();
 }
 
-// Activa/Desactiva el toggle de tarifa → re-renderiza
-function onTarifaToggle() {
-    renderEquipos();
-}
+function onTarifaToggle() { renderEquipos(); }
 
-
-// Genera el HTML de los inputs de tarifa para una card
 function buildTarifaBoxHtml(id, datos = {}) {
     const horas     = datos.horas     || '180';
     const tarifaUF  = datos.tarifaUF  || '';
@@ -220,7 +273,6 @@ function buildTarifaBoxHtml(id, datos = {}) {
     </div>`;
 }
 
-// Actualiza el total calculado y guarda en el mapa
 function updateTarifa(id) {
     const horas    = document.getElementById(`horas-${id}`)?.value || '';
     const tarifaUF = document.getElementById(`uf-${id}`)?.value    || '';
@@ -236,16 +288,63 @@ function selectAll() {
     filteredEquipos.forEach(e => selectedEquipoIds.add(e.id));
     renderEquipos();
 }
-
 function deselectAll() {
     selectedEquipoIds.clear();
     renderEquipos();
 }
-
 function updateStep1UI() {
     const count = selectedEquipoIds.size;
     document.getElementById('selectedCount').textContent = count;
     document.getElementById('btnNext').disabled = count === 0;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FOTO MODAL (sube/reemplaza foto de un equipo desde el Fleet Sender)
+// ═══════════════════════════════════════════════════════════════════
+
+let fotoModalEquipoId = null;
+
+function openFotoModal(id, nombre, currentUrl) {
+    fotoModalEquipoId = id;
+    document.getElementById('fotoModalTitle').textContent = nombre || 'Equipo';
+    const preview = document.getElementById('fotoModalPreview');
+    preview.innerHTML = currentUrl
+        ? `<img src="${currentUrl}" style="max-width:100%;max-height:160px;border-radius:8px;object-fit:contain;">`
+        : '<span style="color:var(--text-muted);font-size:13px;">Sin foto actual</span>';
+    document.getElementById('fotoModalInput').value = '';
+    document.getElementById('fotoModalStatus').textContent = '';
+    show('fotoModalOverlay');
+}
+
+function closeFotoModal() { hide('fotoModalOverlay'); }
+
+async function submitFotoModal() {
+    const input = document.getElementById('fotoModalInput');
+    if (!input.files || !input.files[0]) {
+        document.getElementById('fotoModalStatus').textContent = 'Selecciona una imagen primero.';
+        return;
+    }
+    const fd = new FormData();
+    fd.append('foto', input.files[0]);
+
+    document.getElementById('fotoModalStatus').textContent = 'Subiendo…';
+    try {
+        const res  = await fetch(`api/equipos/db/${fotoModalEquipoId}/foto`, { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+
+        // Update local data
+        const eq = allEquipos.find(e => e.id === fotoModalEquipoId);
+        if (eq) {
+            eq.imagenUrlRelativa = data.imagenUrl;
+            eq.imagenUrl = data.imagenUrl; // will be made absolute by server on next load
+        }
+        renderEquipos();
+        toast('Foto actualizada ✓', 'success');
+        closeFotoModal();
+    } catch (err) {
+        document.getElementById('fotoModalStatus').textContent = `Error: ${err.message}`;
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -260,11 +359,8 @@ async function goToStep2() {
     document.getElementById('step-nav-1').classList.remove('active');
     document.getElementById('step-nav-2').classList.add('active');
     currentStep = 2;
-    
-    // Cargar contactos si aún no están
+
     if (allContactos.length === 0) await loadContactos();
-    
-    // Disparar vista previa automática
     schedulePreview();
 }
 
@@ -280,7 +376,6 @@ function goToStep1() {
 
 // ── Contactos ─────────────────────────────────────────────────────
 async function refreshContactos() {
-    // Reset estado y UI antes de recargar
     allContactos = [];
     selectedContactoIds.clear();
     const searchEl = document.getElementById('contactSearch');
@@ -292,7 +387,7 @@ async function refreshContactos() {
     await loadContactos();
 
     if (btn) { btn.textContent = '↻'; btn.disabled = false; }
-    toast('Lista de contactos actualizada desde Notion', 'success');
+    toast('Lista de contactos actualizada', 'success');
 }
 
 async function loadContactos() {
@@ -302,9 +397,8 @@ async function loadContactos() {
         const res  = await fetch(`api/contactos?type=${type}`);
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
-        
+
         allContactos = data.contactos;
-        // Todos seleccionados por defecto
         allContactos.forEach(c => selectedContactoIds.add(c.id));
         renderContactosList();
         updateContactCount();
@@ -324,8 +418,7 @@ function renderContactosList(filter = '') {
     const visible = q
         ? allContactos.filter(c =>
             (c.nombre  || '').toLowerCase().includes(q) ||
-            (c.empresa || '').toLowerCase().includes(q)
-          )
+            (c.empresa || '').toLowerCase().includes(q))
         : allContactos;
 
     if (!visible.length) {
@@ -422,18 +515,12 @@ async function refreshPreview() {
     }
 }
 
-// Escuchar cambios en el paso 2 para actualizar preview
 document.addEventListener('change', (e) => {
-    if (currentStep === 2 && (e.target.id === 'confPhotos')) {
-        schedulePreview();
-    }
+    if (currentStep === 2 && e.target.id === 'confPhotos') schedulePreview();
 });
 document.addEventListener('input', (e) => {
-    if (currentStep === 2 && (e.target.id === 'confMessage' || e.target.id === 'confSubject')) {
-        schedulePreview();
-    }
+    if (currentStep === 2 && (e.target.id === 'confMessage' || e.target.id === 'confSubject')) schedulePreview();
 });
-
 
 // ═══════════════════════════════════════════════════════════════════
 // ENVÍO DE CAMPAÑA
@@ -461,7 +548,7 @@ async function sendCampaign(mode) {
     show('progressOverlay');
 
     const log = (msg, type = '') => {
-        const d  = document.createElement('div');
+        const d = document.createElement('div');
         d.className = type ? `log-${type}` : '';
         d.textContent = msg;
         const el = document.getElementById('progressLog');
@@ -482,6 +569,8 @@ async function sendCampaign(mode) {
             customTarifas: equipoTarifas,
         };
 
+        log(`Enviando ${body.equipoIds.length} equipo(s) seleccionado(s)…`);
+
         const res    = await fetch('api/send-campaign', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -496,7 +585,9 @@ async function sendCampaign(mode) {
             const { done, value } = await reader.read();
             if (done) break;
             buffer += decoder.decode(value, { stream: true });
-            buffer.split('\n').forEach(line => {
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // keep incomplete line
+            lines.forEach(line => {
                 if (!line.startsWith('data: ')) return;
                 try {
                     const evt = JSON.parse(line.slice(6));
@@ -524,7 +615,6 @@ async function sendCampaign(mode) {
                     }
                 } catch {}
             });
-            buffer = buffer.split('\n').pop();
         }
     } catch (err) {
         log(`Error de conexión: ${err.message}`, 'err');
@@ -595,4 +685,3 @@ function toast(msg, type = 'info') {
     document.getElementById('toastArea').appendChild(el);
     setTimeout(() => el.remove(), 5000);
 }
-
