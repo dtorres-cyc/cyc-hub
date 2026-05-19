@@ -98,6 +98,16 @@ router.post('/api/sync', async (req, res) => {
   }
 });
 
+// DELETE /flota/api/equipos/db/all — borrar TODOS los equipos de la BD
+router.delete('/api/equipos/db/all', async (req, res) => {
+  try {
+    const { count } = await prisma.flotaEquipo.deleteMany({});
+    res.json({ ok: true, eliminados: count });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 router.get('/api/contactos', async (req, res) => {
   try {
     const type = req.query.type || 'Normal';

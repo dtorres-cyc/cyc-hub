@@ -87,7 +87,7 @@ async function syncEquiposFromSheets() {
 
   // Actualizar o crear equipos leídos desde Google Sheets
   for (const item of allParsed) {
-    const existing = await prisma.flotaEquipo.findUnique({
+    const existing = await prisma.flotaEquipo.findFirst({
       where: { numeroInterno: item.numeroInterno }
     });
 
