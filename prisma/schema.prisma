@@ -124,7 +124,9 @@ model FlotaEquipo {
   detalle         String?
   tarifa          String?
   imagenUrl       String?
-  numeroInterno   String?
+  numeroInterno   String?  @unique
+  propietario     String?
+  esExterno       Boolean  @default(false)
   activo          Boolean  @default(true)
   notionId        String?  @unique  // Para evitar duplicados en importación
   createdAt       DateTime @default(now())

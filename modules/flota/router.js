@@ -48,7 +48,8 @@ function dbEquipoToFlota(e) {
     imagenUrl,
     imagenUrlRelativa: e.imagenUrl    || null,  // keep relative for <img src> in admin
     numeroInterno:    e.numeroInterno  || '',
-    esExterno:        e.esExterno      || false,
+    // esExterno may not exist in old production schema — fall back to notionId sentinel
+    esExterno:        e.esExterno      || (e.notionId?.startsWith('EXT:') ?? false) || false,
     propietario:      e.propietario    || null,
     especificacionesHtml,
     textoWpp: [tipoMaquinaria, marca, modelo, anio ? `(${anio})` : ''].filter(Boolean).join(' '),

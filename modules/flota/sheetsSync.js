@@ -97,36 +97,42 @@ async function syncEquiposFromSheets() {
       item.detalle || null,
     ].filter(Boolean).join(' · ') || null;
 
+    // Encode external flag and propietario into fields that exist in all schema versions.
+    // notionId uses "EXT:<id>" sentinel for external equipment — unique per item.
+    // When the schema also has esExterno/propietario columns those get set by db push.
+    const externalMarker  = item.esExterno ? `EXT:${item.numeroInterno}` : null;
+    const propietarioLine = item.propietario ? `Propietario: ${item.propietario}` : null;
+    const detalleCompleto = [
+      detalleConPatente,
+      propietarioLine,
+    ].filter(Boolean).join(' · ') || null;
+
+    // Build a data object using only universally-available fields, plus optional new ones
+    const baseData = {
+      tipoMaquinaria: item.tipoMaquinaria,
+      anio:           item.anio,
+      marca:          item.marca,
+      modelo:         item.modelo,
+      detalle:        detalleCompleto,
+      horometro:      item.horometro,
+      activo:         true,
+      // notionId encodes external flag; won't conflict with Notion-imported rows
+      // because Sheet-sourced rows use this sentinel value instead of a real Notion ID.
+      notionId:       externalMarker,
+    };
+
     if (existing) {
       await prisma.flotaEquipo.update({
         where: { id: existing.id },
-        data: {
-          tipoMaquinaria: item.tipoMaquinaria,
-          anio:           item.anio,
-          marca:          item.marca,
-          modelo:         item.modelo,
-          detalle:        detalleConPatente,
-          horometro:      item.horometro,
-          propietario:    item.propietario,
-          esExterno:      item.esExterno,
-          activo:         true,
-        }
+        data: baseData,
       });
       actualizados++;
     } else {
       await prisma.flotaEquipo.create({
         data: {
-          numeroInterno:  item.numeroInterno,
-          tipoMaquinaria: item.tipoMaquinaria,
-          anio:           item.anio,
-          marca:          item.marca,
-          modelo:         item.modelo,
-          detalle:        detalleConPatente,
-          horometro:      item.horometro,
-          propietario:    item.propietario,
-          esExterno:      item.esExterno,
-          activo:         true,
-        }
+          ...baseData,
+          numeroInterno: item.numeroInterno,
+        },
       });
       creados++;
     }
