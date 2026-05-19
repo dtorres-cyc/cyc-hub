@@ -1496,7 +1496,7 @@ function checkSelection() {
 }
 
 async function bulkDelete() {
-    const viewId = crmCurrentTab === 'companies' ? 'view-companies' : 'view-contacts';
+    const viewId = crmCurrentTab === 'companies' ? 'view-companies' : (crmCurrentTab === 'bbdd' ? 'view-bbdd' : 'view-contacts');
     const view = document.getElementById(viewId);
     const checkboxes = view.querySelectorAll('.cb-row:checked');
     if (checkboxes.length === 0) return;
