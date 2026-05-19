@@ -374,6 +374,7 @@
           <div class="crm-tabs">
             <div class="crm-tab active" onclick="switchCrmTab('opportunities')">Oportunidades</div>
             <div class="crm-tab" onclick="switchCrmTab('contacts')">Contactos</div>
+            <div class="crm-tab" onclick="switchCrmTab('bbdd')">BBDD Masiva</div>
             <div class="crm-tab" onclick="switchCrmTab('companies')">Empresas</div>
           </div>
 
@@ -411,6 +412,37 @@
                   </tr>
                 </thead>
                 <tbody id="table-contacts"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- VISTA: BBDD MASIVA -->
+          <div id="view-bbdd" style="display: none;">
+            <!-- Controles de filtro -->
+            <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; align-items:center;">
+              <input type="text" id="filter-bbdd" placeholder="🔍 Buscar por nombre, email o empresa..." oninput="renderBBDD()" style="flex:1; min-width:200px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:13px; background:var(--bg-card); color:var(--text-main);">
+              <select id="sort-bbdd" onchange="renderBBDD()" style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:13px; background:var(--bg-card); color:var(--text-main); cursor:pointer;">
+                <option value="name_az">Nombre A→Z</option>
+                <option value="name_za">Nombre Z→A</option>
+                <option value="company">Por Empresa</option>
+              </select>
+              <button onclick="exportBBDDCSV()" style="padding:8px 14px; background:var(--c-green); color:white; border:none; border-radius:8px; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;">↓ Exportar CSV</button>
+            </div>
+            <div class="table-container">
+              <table class="data-table" style="width:100%; text-align:left;">
+                <thead>
+                  <tr style="background:var(--c-gray);">
+                    <th style="padding:10px; width:40px;"><input type="checkbox" onclick="toggleAllCheckboxes(this)"></th>
+                    <th style="padding:10px;">Nombre Completo</th>
+                    <th style="padding:10px;">Nombre</th>
+                    <th style="padding:10px;">Apellido</th>
+                    <th style="padding:10px;">Cargo</th>
+                    <th style="padding:10px;">Teléfono</th>
+                    <th style="padding:10px;">Correo</th>
+                    <th style="padding:10px;">Empresa</th>
+                  </tr>
+                </thead>
+                <tbody id="table-bbdd"></tbody>
               </table>
             </div>
           </div>

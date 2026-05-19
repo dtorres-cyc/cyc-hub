@@ -5,9 +5,14 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-async function fetchContactosCRM() {
+async function fetchContactosCRM(type = 'Normal') {
+    const whereClause = { email: { not: null } };
+    if (type !== 'Todos') {
+        whereClause.type = type;
+    }
+
     const contacts = await prisma.contact.findMany({
-        where: { email: { not: null } },
+        where: whereClause,
         include: { company: true },
         orderBy: { firstName: 'asc' }
     });

@@ -39,6 +39,7 @@ model Contact {
   company        Company?  @relation(fields: [companyId], references: [id])
 
   opportunities  Opportunity[]
+  type           String    @default("Normal") // Normal, Masiva
 }
 
 model Opportunity {

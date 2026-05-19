@@ -6,9 +6,43 @@ const router   = express.Router();
 const path     = require('path');
 const fs       = require('fs');
 
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 const { fetchEquipos, fetchContactos } = require('./notion');
 const { getTransporter, buildEmailHtml } = require('./email');
 const { fetchContactosCRM } = require('./crm-contacts');
+
+// Helper: convierte registro DB al formato que usa el frontend de flota
+function dbEquipoToFlota(e) {
+  const tipoMaquinaria = e.tipoMaquinaria;
+  const marca  = e.marca  || '';
+  const modelo = e.modelo || '';
+  const anio   = e.anio   || '';
+  const horometro = e.horometro || '';
+  const detalle   = e.detalle   || '';
+
+  const especificacionesHtml = [
+    marca     ? `<strong>Marca:</strong> ${marca}`           : '',
+    modelo    ? `<strong>Modelo:</strong> ${modelo}`         : '',
+    anio      ? `<strong>Año:</strong> ${anio}`              : '',
+    horometro ? `<strong>Horómetro:</strong> ${horometro} hrs` : '',
+    detalle   ? `<strong>Detalle:</strong> ${detalle}`       : '',
+  ].filter(Boolean).join('<br>');
+
+  return {
+    id:               String(e.id),
+    tipoMaquinaria,
+    marca, modelo,
+    año:              anio,
+    horometro,
+    detalle,
+    tarifa:           e.tarifa      || '',
+    imagenUrl:        e.imagenUrl   || null,
+    numeroInterno:    e.numeroInterno || '',
+    especificacionesHtml,
+    textoWpp: [tipoMaquinaria, marca, modelo, anio ? `(${anio})` : ''].filter(Boolean).join(' '),
+  };
+}
 
 // ── Servir frontend de flota ──────────────────────────────────────────────────
 router.use(express.static(path.join(__dirname, '..', '..', 'public', 'flota')));
@@ -44,15 +78,17 @@ router.get('/api/equipos', async (req, res) => {
 
 router.get('/api/contactos', async (req, res) => {
   try {
+    const type = req.query.type || 'Normal';
+    
     // Intentar traer desde el CRM primero
-    let contactos = await fetchContactosCRM();
+    let contactos = await fetchContactosCRM(type);
 
-    // Fallback a Notion si la BD del CRM está vacía
-    if (!contactos.length) {
+    // Fallback a Notion si la BD del CRM está vacía y estamos buscando Normales (o todos)
+    if (!contactos.length && (type === 'Normal' || type === 'Todos')) {
       console.log('   ⚠️  CRM vacío, usando Notion como fallback para contactos...');
       contactos = await fetchContactos();
     } else {
-      console.log(`   ✅ Contactos desde CRM: ${contactos.length}`);
+      console.log(`   ✅ Contactos desde CRM (${type}): ${contactos.length}`);
     }
 
     res.json({ ok: true, contactos, source: contactos.length ? 'crm' : 'notion' });
@@ -71,7 +107,8 @@ router.get('/api/contactos', async (req, res) => {
 router.post('/api/preview', async (req, res) => {
   try {
     const { equipoIds, includePhotos, messageText, showTarifa, customTarifas } = req.body;
-    const todosLosEquipos = await fetchEquipos();
+    const dbEquipos = await prisma.flotaEquipo.findMany({ where: { activo: true } });
+    const todosLosEquipos = dbEquipos.map(dbEquipoToFlota);
     const equipos = todosLosEquipos.filter(e => equipoIds.includes(e.id));
     const html = buildEmailHtml('Diego Torres', 'CYC (Vista Previa)', equipos, includePhotos, messageText, showTarifa, customTarifas || {});
     res.json({ ok: true, html });
@@ -100,11 +137,18 @@ router.post('/api/send-campaign', async (req, res) => {
   const emit = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
   try {
-    emit({ type: 'status', msg: 'Cargando datos desde Notion...' });
-    const [todosLosEquipos, todosLosContactos] = await Promise.all([
-      fetchEquipos(),
-      fetchContactos(),
+    emit({ type: 'status', msg: 'Cargando datos...' });
+    
+    // Aquí tenemos que saber qué tipo de contactos cargó el usuario. 
+    // Como el frontend manda los IDs de los contactos seleccionados,
+    // podemos traer todos los contactos de CRM (Masiva y Normales) 
+    // y dejar que el filtro por ID haga el resto.
+    const [dbEquipos, todosLosContactos] = await Promise.all([
+      prisma.flotaEquipo.findMany({ where: { activo: true } }),
+      fetchContactosCRM('Todos').catch(() => fetchContactos())
     ]);
+    
+    const todosLosEquipos = dbEquipos.map(dbEquipoToFlota);
     const equipos = todosLosEquipos.filter(e => equipoIds.includes(e.id));
 
     // ── MODO TEST ───────────────────────────────────────────────────────────
@@ -168,8 +212,6 @@ router.post('/api/send-campaign', async (req, res) => {
 // ═══════════════════════════════════════════════════════
 //  CRUD EQUIPOS — Base de Datos Local (reemplaza Notion)
 // ═══════════════════════════════════════════════════════
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
 const multer = require('multer');
 
 // Almacenamiento de fotos de equipos
@@ -192,39 +234,6 @@ const uploadFoto = multer({
     else cb(new Error('Solo se permiten imágenes'));
   }
 });
-
-
-// Helper: convierte registro DB al formato que usa el frontend de flota
-function dbEquipoToFlota(e) {
-  const tipoMaquinaria = e.tipoMaquinaria;
-  const marca  = e.marca  || '';
-  const modelo = e.modelo || '';
-  const anio   = e.anio   || '';
-  const horometro = e.horometro || '';
-  const detalle   = e.detalle   || '';
-
-  const especificacionesHtml = [
-    marca     ? `<strong>Marca:</strong> ${marca}`           : '',
-    modelo    ? `<strong>Modelo:</strong> ${modelo}`         : '',
-    anio      ? `<strong>Año:</strong> ${anio}`              : '',
-    horometro ? `<strong>Horómetro:</strong> ${horometro} hrs` : '',
-    detalle   ? `<strong>Detalle:</strong> ${detalle}`       : '',
-  ].filter(Boolean).join('<br>');
-
-  return {
-    id:               String(e.id),
-    tipoMaquinaria,
-    marca, modelo,
-    año:              anio,
-    horometro,
-    detalle,
-    tarifa:           e.tarifa      || '',
-    imagenUrl:        e.imagenUrl   || null,
-    numeroInterno:    e.numeroInterno || '',
-    especificacionesHtml,
-    textoWpp: [tipoMaquinaria, marca, modelo, anio ? `(${anio})` : ''].filter(Boolean).join(' '),
-  };
-}
 
 // GET /flota/api/equipos/db — lista todos los equipos de la BD
 router.get('/api/equipos/db', async (req, res) => {

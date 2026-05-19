@@ -915,9 +915,9 @@ function switchCrmTab(tab) {
     document.querySelectorAll('.crm-tab').forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
     
-    // UI Views
     document.getElementById('view-opportunities').style.display = 'none';
     document.getElementById('view-contacts').style.display = 'none';
+    document.getElementById('view-bbdd').style.display = 'none';
     document.getElementById('view-companies').style.display = 'none';
     
     document.getElementById(`view-${tab}`).style.display = 'block';
@@ -1036,7 +1036,50 @@ function renderContacts() {
     const q = (document.getElementById('filter-contacts')?.value || '').toLowerCase();
     const sort = document.getElementById('sort-contacts')?.value || 'name_az';
 
-    let list = [...globalContacts];
+    let list = globalContacts.filter(c => c.type === 'Normal' || !c.type);
+    // Filtrar
+    if (q) {
+        list = list.filter(c => {
+            const name = `${c.firstName} ${c.lastName || ''}`.toLowerCase();
+            return name.includes(q) || (c.email || '').toLowerCase().includes(q) || (c.company?.name || '').toLowerCase().includes(q) || (c.role || '').toLowerCase().includes(q);
+        });
+    }
+    // Ordenar
+    if (sort === 'name_az') list.sort((a,b) => `${a.firstName}${a.lastName||''}`.localeCompare(`${b.firstName}${b.lastName||''}`, 'es'));
+    else if (sort === 'name_za') list.sort((a,b) => `${b.firstName}${b.lastName||''}`.localeCompare(`${a.firstName}${a.lastName||''}`, 'es'));
+    else if (sort === 'company') list.sort((a,b) => (a.company?.name||'').localeCompare(b.company?.name||'', 'es'));
+
+    tbody.innerHTML = '';
+    if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-muted);">Sin resultados para "${q}"</td></tr>`;
+        return;
+    }
+    list.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--border)';
+        tr.onclick = () => openCrmModal(c);
+        tr.innerHTML = `
+            <td style="padding:10px;"><input type="checkbox" class="cb-row" value="${c.id}" onclick="event.stopPropagation(); checkSelection();"></td>
+            <td style="padding:10px;"><strong>${c.firstName} ${c.lastName || ''}</strong></td>
+            <td style="padding:10px;">${c.firstName || '-'}</td>
+            <td style="padding:10px;">${c.lastName || '-'}</td>
+            <td style="padding:10px;">${c.role || '-'}</td>
+            <td style="padding:10px;">${c.phone || '-'}</td>
+            <td style="padding:10px;">${c.email || '-'}</td>
+            <td style="padding:10px;">${c.company ? c.company.name : '-'}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderBBDD() {
+    const tbody = document.getElementById('table-bbdd');
+    if(!tbody) return;
+
+    const q = (document.getElementById('filter-bbdd')?.value || '').toLowerCase();
+    const sort = document.getElementById('sort-bbdd')?.value || 'name_az';
+
+    let list = globalContacts.filter(c => c.type === 'Masiva');
     // Filtrar
     if (q) {
         list = list.filter(c => {
@@ -1114,12 +1157,22 @@ function renderCompanies() {
 
 function exportContactsCSV() {
     const rows = [['Nombre','Apellido','Nombre Completo','Cargo','Telefono','Email','Empresa','Status']];
-    globalContacts.forEach(c => rows.push([
+    globalContacts.filter(c => c.type === 'Normal' || !c.type).forEach(c => rows.push([
         c.firstName, c.lastName||'', `${c.firstName} ${c.lastName||''}`,
         c.role||'', c.phone||'', c.email||'',
         c.company?.name||'', c.status||''
     ]));
     downloadCSV('contactos_crm.csv', rows);
+}
+
+function exportBBDDCSV() {
+    const rows = [['Nombre','Apellido','Nombre Completo','Cargo','Telefono','Email','Empresa','Status']];
+    globalContacts.filter(c => c.type === 'Masiva').forEach(c => rows.push([
+        c.firstName, c.lastName||'', `${c.firstName} ${c.lastName||''}`,
+        c.role||'', c.phone||'', c.email||'',
+        c.company?.name||'', c.status||''
+    ]));
+    downloadCSV('bbdd_masiva_crm.csv', rows);
 }
 
 function exportCompaniesCSV() {
@@ -1363,8 +1416,9 @@ function handleCSVUpload(event) {
         let endpoint = '';
         if (crmCurrentTab === 'companies') endpoint = '/crm/api/companies/bulk';
         else if (crmCurrentTab === 'contacts') endpoint = '/crm/api/contacts/bulk';
+        else if (crmCurrentTab === 'bbdd') endpoint = '/crm/api/contacts/bulk?type=Masiva';
         else {
-            alert("La carga masiva solo está disponible para Empresas o Contactos.");
+            alert("La carga masiva solo está disponible para Empresas, Contactos o BBDD Masiva.");
             // Reset input
             event.target.value = '';
             return;
@@ -1399,7 +1453,7 @@ function handleCSVUpload(event) {
 }
 
 function toggleAllCheckboxes(source) {
-    const viewId = crmCurrentTab === 'companies' ? 'view-companies' : 'view-contacts';
+    const viewId = crmCurrentTab === 'companies' ? 'view-companies' : (crmCurrentTab === 'bbdd' ? 'view-bbdd' : 'view-contacts');
     const view = document.getElementById(viewId);
     if (!view) return;
     const checkboxes = view.querySelectorAll('.cb-row');
@@ -1427,7 +1481,7 @@ function showCompanyInfoCard(companyId) {
 }
 
 function checkSelection() {
-    const viewId = crmCurrentTab === 'companies' ? 'view-companies' : 'view-contacts';
+    const viewId = crmCurrentTab === 'companies' ? 'view-companies' : (crmCurrentTab === 'bbdd' ? 'view-bbdd' : 'view-contacts');
     const view = document.getElementById(viewId);
     if (!view) return;
     const checkboxes = view.querySelectorAll('.cb-row:checked');

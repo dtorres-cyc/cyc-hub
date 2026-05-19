@@ -106,10 +106,11 @@ router.get('/api/contacts', async (req, res) => {
 // Crear un contacto
 router.post('/api/contacts', async (req, res) => {
     try {
-        const { firstName, lastName, email, phone, role, status, companyId } = req.body;
+        const { firstName, lastName, email, phone, role, status, companyId, type } = req.body;
         const newContact = await prisma.contact.create({
             data: {
                 firstName, lastName, email, phone, role, status,
+                type: type || "Normal",
                 companyId: companyId ? parseInt(companyId) : null
             }
         });
@@ -123,12 +124,14 @@ router.post('/api/contacts', async (req, res) => {
 // Carga masiva de contactos
 router.post('/api/contacts/bulk', async (req, res) => {
     try {
+        const type = req.query.type || 'Normal';
         const contacts = req.body.map(c => ({
             firstName: c.firstName || c.Nombre || 'Sin Nombre',
             lastName: c.lastName || c.Apellido || null,
             role: c.role || c.Cargo || null,
             email: c.email || c.Email || c.Correo || null,
-            phone: c.phone || c.Telefono || c.Teléfono || null
+            phone: c.phone || c.Telefono || c.Teléfono || null,
+            type: type
         }));
         const result = await prisma.contact.createMany({ data: contacts });
         res.json(result);
@@ -142,11 +145,12 @@ router.post('/api/contacts/bulk', async (req, res) => {
 router.put('/api/contacts/:id', async (req, res) => {
     try {
         const id = parseInt(req.params.id);
-        const { firstName, lastName, email, phone, role, status, companyId } = req.body;
+        const { firstName, lastName, email, phone, role, status, companyId, type } = req.body;
         const updatedContact = await prisma.contact.update({
             where: { id },
             data: {
                 firstName, lastName, email, phone, role, status,
+                type: type || undefined,
                 companyId: companyId ? parseInt(companyId) : null
             }
         });

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Equipos - CYC</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-brand">
+            <div class="logo">CYC</div>
+            <div class="brand-info">
+                <span class="brand-name">Gestión de Equipos</span>
+                <span class="brand-badge">Base de Datos Local</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <a href="index.html" class="btn btn-outline">← Volver a Envíos</a>
+        </div>
+    </header>
+
+    <main class="main" style="max-width:1600px; padding-top:100px;">
+        <div style="background:var(--bg-card); border:1px solid rgba(255,255,255,0.1); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; min-height:80vh;">
+            
+            <!-- Toolbar de acciones -->
+            <div style="padding:14px 20px; border-bottom:1px solid #334155; display:flex; gap:10px; flex-wrap:wrap; align-items:center; background:#1e293b; flex-shrink:0;">
+                <button onclick="showNewEquipoForm()" style="padding:8px 16px; background:#2563eb; color:white; border:none; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; font-family:inherit;">+ Nuevo Equipo</button>
+                <label style="padding:8px 16px; background:#6366f1; color:white; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; display:flex; align-items:center; gap:6px;">
+                    📋 Importar CSV
+                    <input type="file" id="csv-equipos-input" accept=".csv" style="display:none;" onchange="handleEquipoCSV(event)">
+                </label>
+                <button onclick="downloadPlantillaCSV()" style="padding:8px 14px; background:#475569; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:12px; font-family:inherit;">↓ Plantilla CSV</button>
+                <button onclick="deleteSelectedEquipos()" id="btn-mass-delete" style="display:none; padding:8px 14px; background:#ef4444; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:12px; font-family:inherit;">🗑️ Eliminar Seleccionados</button>
+                <button onclick="importFromNotion(this)" style="padding:8px 14px; background:#f59e0b; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:12px; font-family:inherit;">⬇ Importar Notion</button>
+                <span id="admin-filter-count" style="margin-left:auto; font-size:12px; color:#94a3b8; font-weight:600;"></span>
+            </div>
+
+            <!-- Formulario nuevo equipo (colapsable) -->
+            <div id="new-equipo-form" style="display:none; padding:16px 20px; background:#0f172a; border-bottom:1px solid #1e293b; flex-shrink:0;">
+                <p style="font-weight:700; margin:0 0 12px; font-size:13px; color:#38bdf8;">➕ Nuevo Equipo</p>
+                <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
+                    <input id="ne-tipo"      placeholder="Tipo Maquinaria *" style="padding:7px 10px; border:1px solid #334155; background:#1e293b; color:white; border-radius:6px; font-size:13px; font-family:inherit;">
+                    <input id="ne-numero"    placeholder="N° Interno"        style="padding:7px 10px; border:1px solid #334155; background:#1e293b; color:white; border-radius:6px; font-size:13px; font-family:inherit;">
+                    <input id="ne-marca"     placeholder="Marca"             style="padding:7px 10px; border:1px solid #334155; background:#1e293b; color:white; border-radius:6px; font-size:13px; font-family:inherit;">
+                    <input id="ne-modelo"    placeholder="Modelo"            style="padding:7px 10px; border:1px solid #334155; background:#1e293b; color:white; border-radius:6px; font-size:13px; font-family:inherit;">
+                    <input id="ne-anio"      placeholder="Año"               style="padding:7px 10px; border:1px solid #334155; background:#1e293b; color:white; border-radius:6px; font-size:13px; font-family:inherit;">
+                    <input id="ne-horometro" placeholder="Horómetro hrs"     style="padding:7px 10px; border:1px solid #334155; background:#1e293b; color:white; border-radius:6px; font-size:13px; font-family:inherit;">
+                    <input id="ne-tarifa"    placeholder="Tarifa 180H"       style="padding:7px 10px; border:1px solid #334155; background:#1e293b; color:white; border-radius:6px; font-size:13px; font-family:inherit;">
+                </div>
+                <textarea id="ne-detalle" placeholder="Detalle / especificaciones..." rows="2" style="width:100%; box-sizing:border-box; padding:7px 10px; border:1px solid #334155; background:#1e293b; color:white; border-radius:6px; font-size:13px; font-family:inherit; margin-bottom:8px; resize:vertical;"></textarea>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="saveNewEquipo()" style="padding:7px 18px; background:#2563eb; color:white; border:none; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; font-family:inherit;">Guardar</button>
+                    <button onclick="document.getElementById('new-equipo-form').style.display='none'" style="padding:7px 14px; background:#334155; color:white; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-family:inherit;">Cancelar</button>
+                </div>
+            </div>
+
+            <!-- Tabla editable de equipos -->
+            <div style="overflow:auto; flex:1; background:white; color:#0f172a;">
+                <table id="admin-equipos-tbl" style="width:100%; border-collapse:collapse; font-size:12.5px; min-width:900px;">
+                    <thead>
+                        <tr style="background:#1e293b; color:white; position:sticky; top:0; z-index:10;">
+                            <th style="padding:10px 8px; text-align:left; width:36px;"><input type="checkbox" id="selectAllAdmin" onchange="toggleAllAdminEquipos(this.checked)" style="accent-color:#2563eb;cursor:pointer;"></th>
+                            <th style="padding:10px 8px; text-align:left; min-width:140px;">Tipo Maquinaria</th>
+                            <th style="padding:10px 8px; text-align:left; width:80px;">N° Interno</th>
+                            <th style="padding:10px 8px; text-align:left; width:90px;">Marca</th>
+                            <th style="padding:10px 8px; text-align:left; width:100px;">Modelo</th>
+                            <th style="padding:10px 8px; text-align:left; width:60px;">Año</th>
+                            <th style="padding:10px 8px; text-align:left; width:90px;">Horómetro</th>
+                            <th style="padding:10px 8px; text-align:left; width:90px;">Tarifa 180H</th>
+                            <th style="padding:10px 8px; text-align:left; min-width:120px;">Detalle</th>
+                            <th style="padding:10px 8px; text-align:center; width:70px;">Foto</th>
+                            <th style="padding:10px 8px; text-align:center; width:70px;">Activo</th>
+                            <th style="padding:10px 8px; text-align:center; width:60px;">✕</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-equipos-table"></tbody>
+                </table>
+                <p id="admin-equipos-empty" style="text-align:center; padding:40px; color:#94a3b8; display:none; font-size:14px;">
+                    Sin equipos en la base de datos.<br>
+                    <span style="font-size:12px;">Importa desde Notion, sube un CSV o agrega equipos manualmente.</span>
+                </p>
+            </div>
+
+            <!-- Footer con botón guardar cambios (para ediciones inline pendientes) -->
+            <div style="padding:12px 20px; border-top:1px solid #1e293b; display:flex; align-items:center; gap:12px; background:#0f172a; flex-shrink:0;">
+                <span id="admin-pending-badge" style="font-size:12px; color:#ef4444; font-weight:600; display:none;">⚠ Hay cambios sin guardar</span>
+                <span style="flex:1;"></span>
+                <span style="font-size:12px; color:#64748b;">Los cambios en las celdas se guardan automáticamente al quitar el foco.</span>
+            </div>
+        </div>
+    </main>
+
+    <div class="toast-area" id="toastArea"></div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
