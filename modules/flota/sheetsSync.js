@@ -138,21 +138,20 @@ async function syncEquiposFromSheets() {
     }
   }
 
-  // Ocultar equipos de la base de datos que ya no están en las hojas de Sheets
-  // (solo desactivamos los que tienen un numeroInterno asignado y no están en el set)
-  const dbEquipos = await prisma.flotaEquipo.findMany({ where: { activo: true } });
-  for (const eq of dbEquipos) {
-    if (eq.numeroInterno && !allInternalIds.has(eq.numeroInterno)) {
-      await prisma.flotaEquipo.update({
-        where: { id: eq.id },
-        data: { activo: false }
-      });
-      inactivos++;
+  // Borrar equipos que ya no están en los sheets:
+  // - equipos sin numeroInterno (importados desde Notion, ya no se usan)
+  // - equipos cuyo numeroInterno no aparece en ninguna hoja del sheet
+  const { count: eliminados } = await prisma.flotaEquipo.deleteMany({
+    where: {
+      OR: [
+        { numeroInterno: null },
+        { numeroInterno: { notIn: [...allInternalIds] } },
+      ]
     }
-  }
+  });
 
-  console.log(`✅ Sincronización finalizada. Creados: ${creados}, Actualizados: ${actualizados}, Desactivados: ${inactivos}`);
-  return { ok: true, creados, actualizados, inactivos };
+  console.log(`✅ Sincronización finalizada. Creados: ${creados}, Actualizados: ${actualizados}, Eliminados: ${eliminados}`);
+  return { ok: true, creados, actualizados, eliminados };
 }
 
 module.exports = {
