@@ -1,33 +1,45 @@
 // modules/flota/email.js — Lógica de email y construcción de HTML para el módulo flota
-// Extraído y refactorizado desde server.js (Envío de flota disponible)
 
-const nodemailer = require('nodemailer');
-const fs         = require('fs');
-const path       = require('path');
+const { google }         = require('googleapis');
+const { buildOAuth2Client } = require('../cotizador/google');
+const fs   = require('fs');
+const path = require('path');
 
 const PLANTILLA_PATH = path.join(__dirname, 'plantillas', 'email_table.html');
 
-// ── Transporter dinámico ──────────────────────────────────────────────────────
-function getTransporter(senderEmail) {
-  // Comparar trimmeando por si Railway agrega espacios/newlines al valor
-  const user2 = (process.env.GMAIL_USER_2 || '').trim();
-  const useSecond = user2 && senderEmail && senderEmail.trim() === user2;
+// ── Envío vía Gmail API (HTTPS — sin SMTP) ────────────────────────────────────
+// Usa el mismo OAuth2 que el resto de la app (Google Sheets, Drive).
+// El campo From se puede sobreescribir a cualquier alias verificado en la cuenta.
+async function sendEmail({ from, fromName, to, subject, html }) {
+  const auth  = buildOAuth2Client();
+  const gmail = google.gmail({ version: 'v1', auth });
 
-  const user = useSecond ? user2 : (process.env.GMAIL_USER || '').trim();
-  const pass = useSecond
-    ? (process.env.GMAIL_APP_PASSWORD_2 || '').trim()
-    : (process.env.GMAIL_APP_PASSWORD   || '').trim();
+  const fromHeader = fromName ? `"${fromName}" <${from}>` : from;
 
-  console.log(`[email] transporter → user=${user} useSecond=${useSecond}`);
+  const boundary = `boundary_flota_${Date.now()}`;
+  const rawMsg = [
+    `To: ${to}`,
+    `From: ${fromHeader}`,
+    `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    Buffer.from(html).toString('base64'),
+    '',
+    `--${boundary}--`,
+  ].join('\r\n');
 
-  return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,          // STARTTLS en 587
-    auth: { user, pass },
-    connectionTimeout: 15000,
-    greetingTimeout:   10000,
-    socketTimeout:     20000,
+  const encoded = Buffer.from(rawMsg)
+    .toString('base64')
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  await gmail.users.messages.send({
+    userId: 'me',
+    requestBody: { raw: encoded },
   });
 }
 
@@ -121,4 +133,4 @@ function buildEmailHtml(nombre, empresa, equipos, includePhotos, messageText, sh
   return html;
 }
 
-module.exports = { getTransporter, buildEmailHtml };
+module.exports = { sendEmail, buildEmailHtml };

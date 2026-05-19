@@ -9,7 +9,7 @@ const fs       = require('fs');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { fetchEquipos, fetchContactos } = require('./notion');
-const { getTransporter, buildEmailHtml } = require('./email');
+const { sendEmail, buildEmailHtml } = require('./email');
 const { fetchContactosCRM } = require('./crm-contacts');
 const { syncEquiposFromSheets } = require('./sheetsSync');
 
@@ -167,22 +167,17 @@ router.post('/api/send-campaign', async (req, res) => {
   const { equipoIds, contactoIds, includePhotos, subjectText, messageText,
           mode, senderEmail, showTarifa, customTarifas } = req.body;
 
-  const transporter = getTransporter(senderEmail);
-  const fromAddr    = senderEmail || process.env.GMAIL_USER;
-  const fromHeader  = `"Diego Torres" <${fromAddr}>`;
+  const fromAddr = senderEmail || process.env.GMAIL_USER || 'dtorres@tcyc.cl';
+  const fromName = fromAddr.includes('contacto') ? 'Transportes CYC' : 'Diego Torres';
 
   try {
     emit({ type: 'status', msg: 'Cargando datos...' });
-    
-    // Aquí tenemos que saber qué tipo de contactos cargó el usuario. 
-    // Como el frontend manda los IDs de los contactos seleccionados,
-    // podemos traer todos los contactos de CRM (Masiva y Normales) 
-    // y dejar que el filtro por ID haga el resto.
+
     const [dbEquipos, todosLosContactos] = await Promise.all([
       prisma.flotaEquipo.findMany({ where: { activo: true } }),
       fetchContactosCRM('Todos').catch(() => fetchContactos())
     ]);
-    
+
     const todosLosEquipos = dbEquipos.map(dbEquipoToFlota);
     const equipos = todosLosEquipos.filter(e => equipoIds.includes(e.id));
 
@@ -192,13 +187,12 @@ router.post('/api/send-campaign', async (req, res) => {
       const html = buildEmailHtml('Diego Torres', 'CYC (Prueba)', equipos, includePhotos, messageText, showTarifa, customTarifas || {});
 
       emit({ type: 'status', msg: `Enviando a ${fromAddr}...` });
-      const sendWithTimeout = (mailOpts, ms = 25000) => Promise.race([
-        transporter.sendMail(mailOpts),
-        new Promise((_, rej) => setTimeout(() => rej(new Error(`Timeout ${ms/1000}s — sin respuesta de smtp.gmail.com`)), ms))
-      ]);
-      await sendWithTimeout({
-        from: fromHeader, to: fromAddr,
-        subject: `[PRUEBA] ${subjectText}`, html,
+      await sendEmail({
+        from: fromAddr,
+        fromName,
+        to: fromAddr,
+        subject: `[PRUEBA] ${subjectText}`,
+        html,
       });
 
       saveHistorial({ id: Date.now(), fecha: new Date().toISOString(), modo: 'TEST', equipos: equipos.map(e => e.tipoMaquinaria), enviados: 1, saltados: 0 });
@@ -222,14 +216,13 @@ router.post('/api/send-campaign', async (req, res) => {
       const html = buildEmailHtml(contacto.nombre, contacto.empresa, equipos, includePhotos, personalMsg, showTarifa, customTarifas || {});
 
       try {
-        await Promise.race([
-          transporter.sendMail({
-            from: fromHeader, to: contacto.correo,
-            subject: subjectText.replace(/{{EMPRESA}}/g, contacto.empresa || ''),
-            html,
-          }),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout 25s smtp.gmail.com')), 25000))
-        ]);
+        await sendEmail({
+          from: fromAddr,
+          fromName,
+          to: contacto.correo,
+          subject: subjectText.replace(/{{EMPRESA}}/g, contacto.empresa || ''),
+          html,
+        });
         enviados++;
       } catch (err) {
         saltados++;
