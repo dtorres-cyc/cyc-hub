@@ -52,15 +52,20 @@ function buildEquipoRow(e) {
         ? `<img src="${e.imagenUrl}" style="width:38px;height:38px;object-fit:cover;border-radius:6px;display:block;margin:0 auto;">`
         : `<div style="width:38px;height:38px;background:#f1f5f9;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto;">📷</div>`;
 
-    const inp = (field, val, placeholder='') =>
+    const inp = (field, val, placeholder='', readonly=false) =>
         `<input data-id="${e.id}" data-field="${field}"
             value="${(val||'').replace(/"/g,'&quot;')}"
             placeholder="${placeholder}"
-            onblur="saveInlineField(this)"
+            onblur="${readonly ? '' : 'saveInlineField(this)'}"
             onkeydown="if(event.key==='Enter'){this.blur();}"
-            style="width:100%;padding:4px 6px;border:1px solid transparent;border-radius:4px;font-size:12px;font-family:inherit;background:transparent;color:#1e293b;box-sizing:border-box;"
-            onfocus="this.style.border='1px solid #2563eb';this.style.background='white';"
+            ${readonly ? 'readonly' : ''}
+            style="width:100%;padding:4px 6px;border:1px solid transparent;border-radius:4px;font-size:12px;font-family:inherit;background:transparent;color:${readonly ? '#64748b' : '#1e293b'};box-sizing:border-box;"
+            onfocus="${readonly ? '' : "this.style.border='1px solid #2563eb';this.style.background='white';"}"
         >`;
+
+    const badge = e.esExterno 
+        ? `<div style="font-size:9px; background:#f59e0b; color:white; border-radius:4px; padding:2px 4px; display:inline-block; margin-top:2px;">EXTERNO</div>`
+        : '';
 
     return `
     <tr id="eq-row-${e.id}" style="border-bottom:1px solid #f1f5f9;background:${e.activo ? 'white' : '#fff7f7'};" onmouseover="this.style.background='${e.activo ? '#f8fafc' : '#fff0f0'}'" onmouseout="this.style.background='${e.activo ? 'white' : '#fff7f7'}'">
@@ -71,14 +76,17 @@ function buildEquipoRow(e) {
                 <input type="file" accept="image/*" style="display:none;" onchange="uploadEquipoFoto(${e.id}, this)">
             </label>
         </td>
-        <td style="padding:4px 6px;">${inp('tipoMaquinaria', e.tipoMaquinaria, 'Tipo *')}</td>
-        <td style="padding:4px 6px;">${inp('numeroInterno', e.numeroInterno, 'N°')}</td>
-        <td style="padding:4px 6px;">${inp('marca', e.marca, 'Marca')}</td>
-        <td style="padding:4px 6px;">${inp('modelo', e.modelo, 'Modelo')}</td>
-        <td style="padding:4px 6px;">${inp('anio', e.anio, 'Año')}</td>
-        <td style="padding:4px 6px;">${inp('horometro', e.horometro, 'Hrs')}</td>
-        <td style="padding:4px 6px;">${inp('tarifa', e.tarifa, 'Tarifa')}</td>
-        <td style="padding:4px 6px;">${inp('detalle', e.detalle, 'Detalle...')}</td>
+        <td style="padding:4px 6px;">
+            ${inp('tipoMaquinaria', e.tipoMaquinaria, 'Tipo *', true)}
+            ${badge}
+        </td>
+        <td style="padding:4px 6px;">${inp('numeroInterno', e.numeroInterno, 'N°', true)}</td>
+        <td style="padding:4px 6px;">${inp('marca', e.marca, 'Marca', true)}</td>
+        <td style="padding:4px 6px;">${inp('modelo', e.modelo, 'Modelo', true)}</td>
+        <td style="padding:4px 6px;">${inp('anio', e.anio, 'Año', true)}</td>
+        <td style="padding:4px 6px;">${inp('horometro', e.horometro, 'Hrs', true)}</td>
+        <td style="padding:4px 6px;">${inp('tarifa', e.tarifa, 'Tarifa', false)}</td>
+        <td style="padding:4px 6px;">${inp('detalle', e.detalle, 'Detalle...', true)}</td>
         <td style="padding:4px;text-align:center;">
             <label style="cursor:pointer;font-size:11px;color:#6366f1;display:block;text-align:center;">
                 📷
@@ -217,6 +225,25 @@ async function importFromNotion(btn) {
         await loadAdminEquipos();
     } catch (err) {
         toast(`Error al importar: ${err.message}`, 'error');
+    } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }
+}
+
+async function syncFromSheets(btn) {
+    if (!confirm('¿Sincronizar con Google Sheets?\nEsto actualizará el inventario leyendo "Detalle Estatus" y "Equipos Externos". Las fotos locales y tarifas se conservarán.')) return;
+    const oldText = btn.innerText;
+    btn.innerText = '⏳ Sincronizando...';
+    btn.disabled = true;
+    try {
+        const res = await fetch('api/equipos/sync', { method: 'POST' });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        toast(`✅ Sincronización exitosa.<br>Creados: ${data.creados}<br>Actualizados: ${data.actualizados}<br>Desactivados: ${data.inactivos}`, 'success');
+        await loadAdminEquipos();
+    } catch (err) {
+        toast(`Error de sincronización: ${err.message}`, 'error');
     } finally {
         btn.innerText = oldText;
         btn.disabled = false;

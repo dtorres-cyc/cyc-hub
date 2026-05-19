@@ -109,6 +109,15 @@ router.delete('/api/equipos/db/all', async (req, res) => {
   }
 });
 
+router.post('/api/equipos/sync', async (req, res) => {
+  try {
+    const result = await syncEquiposFromSheets();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 router.get('/api/contactos', async (req, res) => {
   try {
     const type = req.query.type || 'Normal';
