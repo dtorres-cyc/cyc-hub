@@ -155,19 +155,21 @@ router.get('/api/historial', (req, res) => {
 });
 
 router.post('/api/send-campaign', async (req, res) => {
+  // Establecer SSE lo primero — así el fetch del cliente no queda colgado
+  // si algo falla más adelante antes de que enviemos el primer evento.
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const emit = (data) => { res.write(`data: ${JSON.stringify(data)}\n\n`); };
+
   const { equipoIds, contactoIds, includePhotos, subjectText, messageText,
           mode, senderEmail, showTarifa, customTarifas } = req.body;
 
   const transporter = getTransporter(senderEmail);
   const fromAddr    = senderEmail || process.env.GMAIL_USER;
   const fromHeader  = `"Diego Torres" <${fromAddr}>`;
-
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const emit = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
   try {
     emit({ type: 'status', msg: 'Cargando datos...' });
@@ -190,7 +192,11 @@ router.post('/api/send-campaign', async (req, res) => {
       const html = buildEmailHtml('Diego Torres', 'CYC (Prueba)', equipos, includePhotos, messageText, showTarifa, customTarifas || {});
 
       emit({ type: 'status', msg: `Enviando a ${fromAddr}...` });
-      await transporter.sendMail({
+      const sendWithTimeout = (mailOpts, ms = 30000) => Promise.race([
+        transporter.sendMail(mailOpts),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout al enviar correo (30s). Verifica las credenciales GMAIL.')), ms))
+      ]);
+      await sendWithTimeout({
         from: fromHeader, to: fromAddr,
         subject: `[PRUEBA] ${subjectText}`, html,
       });
@@ -216,11 +222,14 @@ router.post('/api/send-campaign', async (req, res) => {
       const html = buildEmailHtml(contacto.nombre, contacto.empresa, equipos, includePhotos, personalMsg, showTarifa, customTarifas || {});
 
       try {
-        await transporter.sendMail({
-          from: fromHeader, to: contacto.correo,
-          subject: subjectText.replace(/{{EMPRESA}}/g, contacto.empresa || ''),
-          html,
-        });
+        await Promise.race([
+          transporter.sendMail({
+            from: fromHeader, to: contacto.correo,
+            subject: subjectText.replace(/{{EMPRESA}}/g, contacto.empresa || ''),
+            html,
+          }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout 30s')), 30000))
+        ]);
         enviados++;
       } catch (err) {
         saltados++;
