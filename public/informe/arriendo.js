@@ -33,6 +33,7 @@ async function loadArriendo() {
     globalDanos     = danos;
     renderContratosKPIs();
     renderContratosList();
+    renderClientView();
     renderGanttChart();
     renderEdpsKanban();
     renderDanosKPIs();
@@ -71,32 +72,82 @@ function renderContratosList() {
   container.innerHTML = globalContratos.map(c => renderContratoCard(c)).join('');
 }
 
-function switchContratosView(mode) {
-  if (mode === 'list') {
-    document.getElementById('btn-view-list').classList.add('active');
-    document.getElementById('btn-view-list').style.background = 'var(--c-blue)';
-    document.getElementById('btn-view-list').style.color = 'white';
-    
-    document.getElementById('btn-view-gantt').classList.remove('active');
-    document.getElementById('btn-view-gantt').style.background = 'transparent';
-    document.getElementById('btn-view-gantt').style.color = 'var(--text-muted)';
-    
-    document.getElementById('view-contratos-list').style.display = 'block';
-    document.getElementById('view-contratos-gantt').style.display = 'none';
-  } else {
-    document.getElementById('btn-view-gantt').classList.add('active');
-    document.getElementById('btn-view-gantt').style.background = 'var(--c-blue)';
-    document.getElementById('btn-view-gantt').style.color = 'white';
-    
-    document.getElementById('btn-view-list').classList.remove('active');
-    document.getElementById('btn-view-list').style.background = 'transparent';
-    document.getElementById('btn-view-list').style.color = 'var(--text-muted)';
-    
-    document.getElementById('view-contratos-list').style.display = 'none';
-    document.getElementById('view-contratos-gantt').style.display = 'block';
-    
-    renderGanttChart();
+function renderClientView() {
+  const container = document.getElementById('contratos-client-list');
+  if (!globalContratos.length) {
+    container.innerHTML = `<div class="empty-state"><span class="empty-icon">📋</span>No hay contratos registrados.</div>`;
+    return;
   }
+
+  // Group by client
+  const clients = {};
+  globalContratos.forEach(c => {
+    const name = (c.cliente || 'Sin Cliente').trim();
+    if (!clients[name]) clients[name] = [];
+    clients[name].push(c);
+  });
+
+  // Render accordion for each client
+  const sortedClients = Object.keys(clients).sort((a, b) => a.localeCompare(b));
+  
+  container.innerHTML = sortedClients.map(clientName => {
+    const contratos = clients[clientName];
+    const clientActivos = contratos.filter(c => c.activo).length;
+    const clientEquipos = contratos.reduce((acc, c) => acc + (c.contratoEquipos || []).filter(e => e.activo).length, 0);
+    const badgeColor = clientActivos > 0 ? '#10b981' : '#64748b';
+    
+    return `
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:16px;">
+        <!-- Header del Cliente -->
+        <div style="padding:16px 20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:var(--bg-body); transition:background 0.2s;" 
+             onclick="const body = this.nextElementSibling; body.style.display = body.style.display === 'none' ? 'block' : 'none';">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:40px; height:40px; border-radius:8px; background:${badgeColor}20; color:${badgeColor}; display:flex; align-items:center; justify-content:center; font-size:20px;">
+              🏢
+            </div>
+            <div>
+              <div style="font-size:16px; font-weight:800; color:var(--text-main); margin-bottom:2px;">${clientName}</div>
+              <div style="font-size:12px; color:var(--text-muted);">
+                ${contratos.length} Contrato${contratos.length !== 1 ? 's' : ''} · ${clientEquipos} Equipo${clientEquipos !== 1 ? 's' : ''} activo${clientEquipos !== 1 ? 's' : ''}
+              </div>
+            </div>
+          </div>
+          <div style="color:var(--text-muted); font-size:20px;">▾</div>
+        </div>
+        <!-- Body de los Contratos -->
+        <div style="display:none; padding:16px; border-top:1px solid var(--border); background:var(--bg-body);">
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            ${contratos.map(c => renderContratoCard(c)).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function switchContratosView(mode) {
+  ['list', 'gantt', 'client'].forEach(m => {
+    const btn = document.getElementById(`btn-view-${m}`);
+    if (btn) {
+      btn.classList.remove('active');
+      btn.style.background = 'transparent';
+      btn.style.color = 'var(--text-muted)';
+    }
+    const view = document.getElementById(`view-contratos-${m}`);
+    if (view) view.style.display = 'none';
+  });
+
+  const btn = document.getElementById(`btn-view-${mode}`);
+  if (btn) {
+    btn.classList.add('active');
+    btn.style.background = 'var(--c-blue)';
+    btn.style.color = 'white';
+  }
+  const view = document.getElementById(`view-contratos-${mode}`);
+  if (view) view.style.display = 'block';
+
+  if (mode === 'gantt') renderGanttChart();
+  if (mode === 'client') renderClientView();
 }
 
 function renderGanttChart() {
@@ -309,7 +360,8 @@ function toggleContratoBulkBtn() {
 }
 
 async function bulkDeleteContratos() {
-  const selected = Array.from(document.querySelectorAll('.contrato-cb:checked')).map(cb => cb.value);
+  const selectedIds = Array.from(document.querySelectorAll('.contrato-cb:checked')).map(cb => cb.value);
+  const selected = [...new Set(selectedIds)]; // Deduplicate just in case
   if (!selected.length) return;
   if (!confirm(`¿Estás seguro de que deseas borrar ${selected.length} contrato(s)? Esta acción no se puede deshacer y eliminará sus EDPs y Daños asociados.`)) return;
 

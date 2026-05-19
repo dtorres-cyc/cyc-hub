@@ -288,6 +288,7 @@
           <h2 class="section-title" style="margin:0;" id="contratos-view-title">📋 Vista por Contrato</h2>
           <div style="display:flex; background:var(--bg-card); border-radius:8px; border:1px solid var(--border); overflow:hidden;">
             <button class="view-toggle-btn active" id="btn-view-list" onclick="switchContratosView('list')" style="padding:8px 16px; border:none; background:var(--c-blue); color:white; font-size:12px; cursor:pointer; font-weight:600; outline:none;">Lista Detallada</button>
+            <button class="view-toggle-btn" id="btn-view-client" onclick="switchContratosView('client')" style="padding:8px 16px; border:none; background:transparent; color:var(--text-muted); font-size:12px; cursor:pointer; font-weight:600; outline:none;">Por Cliente</button>
             <button class="view-toggle-btn" id="btn-view-gantt" onclick="switchContratosView('gantt')" style="padding:8px 16px; border:none; background:transparent; color:var(--text-muted); font-size:12px; cursor:pointer; font-weight:600; outline:none;">Carta Gantt Flota</button>
           </div>
         </div>
@@ -296,6 +297,13 @@
         <div class="section-block" id="view-contratos-list" style="padding-top:0;">
           <div id="contratos-list" style="display:flex; flex-direction:column; gap:16px;">
             <p style="color:var(--text-muted); font-size:13px;">Cargando contratos...</p>
+          </div>
+        </div>
+
+        <!-- Vista por Clientes -->
+        <div class="section-block" id="view-contratos-client" style="padding-top:0; display:none;">
+          <div id="contratos-client-list" style="display:flex; flex-direction:column; gap:16px;">
+            <p style="color:var(--text-muted); font-size:13px;">Cargando clientes...</p>
           </div>
         </div>
 
