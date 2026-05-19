@@ -192,9 +192,9 @@ router.post('/api/send-campaign', async (req, res) => {
       const html = buildEmailHtml('Diego Torres', 'CYC (Prueba)', equipos, includePhotos, messageText, showTarifa, customTarifas || {});
 
       emit({ type: 'status', msg: `Enviando a ${fromAddr}...` });
-      const sendWithTimeout = (mailOpts, ms = 30000) => Promise.race([
+      const sendWithTimeout = (mailOpts, ms = 25000) => Promise.race([
         transporter.sendMail(mailOpts),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout al enviar correo (30s). Verifica las credenciales GMAIL.')), ms))
+        new Promise((_, rej) => setTimeout(() => rej(new Error(`Timeout ${ms/1000}s — sin respuesta de smtp.gmail.com`)), ms))
       ]);
       await sendWithTimeout({
         from: fromHeader, to: fromAddr,
@@ -228,7 +228,7 @@ router.post('/api/send-campaign', async (req, res) => {
             subject: subjectText.replace(/{{EMPRESA}}/g, contacto.empresa || ''),
             html,
           }),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout 30s')), 30000))
+          new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout 25s smtp.gmail.com')), 25000))
         ]);
         enviados++;
       } catch (err) {

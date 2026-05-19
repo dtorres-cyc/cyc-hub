@@ -9,13 +9,25 @@ const PLANTILLA_PATH = path.join(__dirname, 'plantillas', 'email_table.html');
 
 // ── Transporter dinámico ──────────────────────────────────────────────────────
 function getTransporter(senderEmail) {
-  const useSecond = senderEmail && senderEmail === process.env.GMAIL_USER_2;
+  // Comparar trimmeando por si Railway agrega espacios/newlines al valor
+  const user2 = (process.env.GMAIL_USER_2 || '').trim();
+  const useSecond = user2 && senderEmail && senderEmail.trim() === user2;
+
+  const user = useSecond ? user2 : (process.env.GMAIL_USER || '').trim();
+  const pass = useSecond
+    ? (process.env.GMAIL_APP_PASSWORD_2 || '').trim()
+    : (process.env.GMAIL_APP_PASSWORD   || '').trim();
+
+  console.log(`[email] transporter → user=${user} useSecond=${useSecond}`);
+
   return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: useSecond ? process.env.GMAIL_USER_2 : process.env.GMAIL_USER,
-      pass: useSecond ? process.env.GMAIL_APP_PASSWORD_2 : process.env.GMAIL_APP_PASSWORD,
-    },
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,          // STARTTLS en 587
+    auth: { user, pass },
+    connectionTimeout: 15000,
+    greetingTimeout:   10000,
+    socketTimeout:     20000,
   });
 }
 
