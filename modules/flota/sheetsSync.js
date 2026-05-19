@@ -7,28 +7,23 @@ const SHEET_ID = '1Ry7QVd8jkzISDymg3CeLyL2iroYD4eO6eXIpjImdAXo';
 async function syncEquiposFromSheets() {
   console.log('🔄 Iniciando sincronización de equipos desde Google Sheets...');
   
-  // Asegurar que la hoja "Equipos Externos" exista (para que no de error si aún no la crea)
-  try {
-    await ensureSheetExists(SHEET_ID, 'Equipos Externos');
-  } catch (err) {
-    console.error('⚠️  No se pudo asegurar la existencia de "Equipos Externos":', err.message);
-  }
-
   let dataNormal = [];
   let dataExternos = [];
 
   try {
-    const rawNormal = await getSheetData(SHEET_ID, "'Estado Arriendo'!A:Z");
+    const rawNormal = await getSheetData(SHEET_ID, "'Detalle Estatus'!A:Z");
     dataNormal = rawNormal || [];
+    console.log(`📋 Detalle Estatus: ${dataNormal.length} filas leídas`);
   } catch (err) {
-    console.error('⚠️ Error leyendo Estado Arriendo:', err.message);
+    console.error('⚠️ Error leyendo Detalle Estatus:', err.message);
   }
 
   try {
-    const rawExternos = await getSheetData(SHEET_ID, "'Equipos Externos'!A:Z");
+    const rawExternos = await getSheetData(SHEET_ID, "'Flota Externa'!A:Z");
     dataExternos = rawExternos || [];
+    console.log(`📋 Flota Externa: ${dataExternos.length} filas leídas`);
   } catch (err) {
-    console.error('⚠️ Error leyendo Equipos Externos:', err.message);
+    console.error('⚠️ Error leyendo Flota Externa:', err.message);
   }
 
   // Helper para procesar filas de una hoja
@@ -40,13 +35,15 @@ async function syncEquiposFromSheets() {
     
     const getIdx = (name) => headers.findIndex(h => h === name.toLowerCase());
     
-    const idxId = getIdx('ID');
-    const idxTipo = getIdx('Tipo Maquina');
-    const idxAnio = getIdx('Año');
-    const idxMarca = getIdx('Marca');
-    const idxModelo = getIdx('Modelo');
-    const idxDetalle = getIdx('Detalle');
-    const idxHorometro = getIdx('Horometro');
+    const idxId          = getIdx('ID');
+    const idxPatente     = getIdx('Patente');
+    const idxProducto    = getIdx('Producto');
+    const idxTipo        = getIdx('Tipo Maquina');
+    const idxAnio        = getIdx('Año');
+    const idxMarca       = getIdx('Marca');
+    const idxModelo      = getIdx('Modelo');
+    const idxDetalle     = getIdx('Detalle');
+    const idxHorometro   = getIdx('Horometro');
     const idxPropietario = getIdx('Propietario');
 
     const result = [];
@@ -56,21 +53,23 @@ async function syncEquiposFromSheets() {
       if (!row || row.length === 0) continue;
       
       const numeroInterno = idxId >= 0 ? row[idxId] : null;
-      if (!numeroInterno || numeroInterno.trim() === '') continue; // Es vital tener ID
+      if (!numeroInterno || numeroInterno.trim() === '') continue; // ID requerido
 
-      const tipoMaquinaria = idxTipo >= 0 ? row[idxTipo] : 'Desconocido';
-      if (!tipoMaquinaria || tipoMaquinaria.trim() === '') continue; // También es requerido
+      const tipoRaw = idxTipo >= 0 && row[idxTipo] ? row[idxTipo].trim() : '';
+      const productoRaw = idxProducto >= 0 && row[idxProducto] ? row[idxProducto].trim() : '';
+      const tipoMaquinaria = tipoRaw || productoRaw || 'Desconocido';
 
       result.push({
-        numeroInterno: numeroInterno.trim(),
-        tipoMaquinaria: tipoMaquinaria.trim(),
-        anio: idxAnio >= 0 && row[idxAnio] ? row[idxAnio].trim() : null,
-        marca: idxMarca >= 0 && row[idxMarca] ? row[idxMarca].trim() : null,
-        modelo: idxModelo >= 0 && row[idxModelo] ? row[idxModelo].trim() : null,
-        detalle: idxDetalle >= 0 && row[idxDetalle] ? row[idxDetalle].trim() : null,
-        horometro: idxHorometro >= 0 && row[idxHorometro] ? row[idxHorometro].trim() : null,
-        propietario: idxPropietario >= 0 && row[idxPropietario] ? row[idxPropietario].trim() : null,
-        esExterno: esExterno
+        numeroInterno:  numeroInterno.trim(),
+        tipoMaquinaria,
+        anio:           idxAnio        >= 0 && row[idxAnio]        ? row[idxAnio].trim()        : null,
+        marca:          idxMarca       >= 0 && row[idxMarca]       ? row[idxMarca].trim()       : null,
+        modelo:         idxModelo      >= 0 && row[idxModelo]      ? row[idxModelo].trim()      : null,
+        detalle:        idxDetalle     >= 0 && row[idxDetalle]     ? row[idxDetalle].trim()     : null,
+        horometro:      idxHorometro   >= 0 && row[idxHorometro]   ? row[idxHorometro].trim()   : null,
+        propietario:    idxPropietario >= 0 && row[idxPropietario] ? row[idxPropietario].trim() : null,
+        patente:        idxPatente     >= 0 && row[idxPatente]     ? row[idxPatente].trim()     : null,
+        esExterno,
       });
     }
     return result;
@@ -92,37 +91,41 @@ async function syncEquiposFromSheets() {
       where: { numeroInterno: item.numeroInterno }
     });
 
+    // Combinar detalle con patente para mostrar más info
+    const detalleConPatente = [
+      item.patente ? `Patente: ${item.patente}` : null,
+      item.detalle || null,
+    ].filter(Boolean).join(' · ') || null;
+
     if (existing) {
-      // Actualizar, respetando campos locales como imagenUrl, tarifa
       await prisma.flotaEquipo.update({
         where: { id: existing.id },
         data: {
           tipoMaquinaria: item.tipoMaquinaria,
-          anio: item.anio,
-          marca: item.marca,
-          modelo: item.modelo,
-          detalle: item.detalle,
-          horometro: item.horometro,
-          propietario: item.propietario,
-          esExterno: item.esExterno,
-          activo: true // Lo volvemos a activar si estaba inactivo y reapareció en el sheet
+          anio:           item.anio,
+          marca:          item.marca,
+          modelo:         item.modelo,
+          detalle:        detalleConPatente,
+          horometro:      item.horometro,
+          propietario:    item.propietario,
+          esExterno:      item.esExterno,
+          activo:         true,
         }
       });
       actualizados++;
     } else {
-      // Crear
       await prisma.flotaEquipo.create({
         data: {
-          numeroInterno: item.numeroInterno,
+          numeroInterno:  item.numeroInterno,
           tipoMaquinaria: item.tipoMaquinaria,
-          anio: item.anio,
-          marca: item.marca,
-          modelo: item.modelo,
-          detalle: item.detalle,
-          horometro: item.horometro,
-          propietario: item.propietario,
-          esExterno: item.esExterno,
-          activo: true
+          anio:           item.anio,
+          marca:          item.marca,
+          modelo:         item.modelo,
+          detalle:        detalleConPatente,
+          horometro:      item.horometro,
+          propietario:    item.propietario,
+          esExterno:      item.esExterno,
+          activo:         true,
         }
       });
       creados++;
