@@ -7,6 +7,8 @@ const multer   = require('multer');
 const XLSX     = require('xlsx');
 const upload   = multer({ storage: multer.memoryStorage() });
 
+const CYC_INSPECCIONES_URL = process.env.CYC_INSPECCIONES_URL || 'https://cyc-inspecciones-production.up.railway.app';
+
 // ─── CONTRATOS ────────────────────────────────────────────────────────────────
 
 // GET todos los contratos con equipos y EDPs
@@ -199,6 +201,19 @@ router.put('/contratos/equipos/:id/baja', async (req, res) => {
         observaciones: `Baja de contrato ${ce.contrato.numeroContrato}${motivoBaja ? ': ' + motivoBaja : ''}`
       }
     });
+
+    // Crear OT de inspección de devolución en cyc-inspecciones (no-blocking)
+    fetch(`${CYC_INSPECCIONES_URL}/api/work-orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        equipmentId: ce.equipoId,
+        contractId:  `${ce.contrato.numeroContrato}_${ce.equipoId}`,
+        title:       `Inspección de devolución – ${ce.equipoTipo || ce.equipoId}`,
+        type:        'INSPECTION_RETURN',
+        description: `Equipo dado de baja del contrato ${ce.contrato.numeroContrato} · Cliente: ${ce.contrato.cliente}${motivoBaja ? ' · Motivo: ' + motivoBaja : ''}`,
+      })
+    }).catch(err => console.error('[cyc-hub] No se pudo crear OT en cyc-inspecciones:', err));
 
     // Si todos los equipos del contrato están dados de baja, cerrar el contrato
     const activos = await prisma.contratoEquipo.count({
