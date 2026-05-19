@@ -18,7 +18,8 @@
             </div>
         </div>
         <div class="header-actions">
-            <a href="index.html" class="btn btn-outline">← Volver a Envíos</a>
+            <a href="/" class="btn btn-ghost btn-sm">← Inicio</a>
+            <a href="index.html" class="btn btn-outline">Fleet Sender</a>
         </div>
     </header>
 
@@ -27,7 +28,7 @@
             
             <!-- Toolbar de acciones -->
             <div style="padding:14px 20px; border-bottom:1px solid #334155; display:flex; gap:10px; flex-wrap:wrap; align-items:center; background:#1e293b; flex-shrink:0;">
-                <button onclick="showNewEquipoForm()" style="padding:8px 16px; background:#2563eb; color:white; border:none; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; font-family:inherit;">+ Nuevo Equipo</button>
+                <button onclick="syncFromSheets(this)" style="padding:8px 16px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; font-family:inherit;">🔄 Sincronizar Google Sheets</button>
                 <label style="padding:8px 16px; background:#6366f1; color:white; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; display:flex; align-items:center; gap:6px;">
                     📋 Importar CSV
                     <input type="file" id="csv-equipos-input" accept=".csv" style="display:none;" onchange="handleEquipoCSV(event)">
