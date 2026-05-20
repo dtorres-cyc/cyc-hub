@@ -285,6 +285,17 @@ router.get('/api/alertas', async (req, res) => {
     }
 });
 
+// Forzar envío manual del informe semanal (para testing desde el dashboard)
+router.post('/api/send-report', async (req, res) => {
+    try {
+        const { sendWeeklyReport } = require('../cron/weeklyReport');
+        await sendWeeklyReport();
+        res.json({ ok: true, msg: 'Informe enviado correctamente.' });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 // Función interna para el cron de emails
 router.getReportDataInternal = async () => {
     const [realFlota, realFacturacion] = await Promise.all([

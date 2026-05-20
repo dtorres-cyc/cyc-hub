@@ -2044,6 +2044,30 @@ function escapeHtml(text) {
 // PANEL DE ALERTAS
 // ═══════════════════════════════════════════════════════════
 
+async function sendWeeklyReportNow() {
+    const btn = document.getElementById('btn-send-report');
+    const original = btn.textContent;
+    btn.textContent = 'Enviando…';
+    btn.disabled = true;
+    try {
+        const res = await fetch('/informe/api/send-report', { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+            btn.textContent = '✓ Enviado';
+            btn.style.background = '#16a34a';
+            setTimeout(() => { btn.textContent = original; btn.disabled = false; btn.style.background = ''; }, 3000);
+        } else {
+            alert('Error al enviar: ' + (data.error || 'desconocido'));
+            btn.textContent = original;
+            btn.disabled = false;
+        }
+    } catch(e) {
+        alert('Error de conexión: ' + e.message);
+        btn.textContent = original;
+        btn.disabled = false;
+    }
+}
+
 async function loadAlertasBadge() {
     try {
         const data = await fetch('/informe/api/alertas').then(r => r.json());

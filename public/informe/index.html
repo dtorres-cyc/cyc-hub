@@ -579,7 +579,10 @@
         <div class="section-block">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
             <h2 class="section-title" style="margin:0;">📑 Informes Comerciales</h2>
-            <button class="action-btn" onclick="openNewReportView()">+ Crear Informe de la Semana</button>
+            <div style="display:flex;gap:10px;">
+              <button id="btn-send-report" class="action-btn" style="background:var(--c-green);border-color:var(--c-green);" onclick="sendWeeklyReportNow()">📧 Enviar Informe Ahora</button>
+              <button class="action-btn" onclick="openNewReportView()">+ Crear Informe de la Semana</button>
+            </div>
           </div>
           <div id="reports-list-view">
             <div class="table-container">
