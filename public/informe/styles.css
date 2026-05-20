@@ -12,6 +12,7 @@
   --c-primary: #2563eb;
   --c-secondary: #1e40af;
   --c-green: #16a34a;
+  --c-success: #22c55e;
   --c-orange: #f97316;
   --c-red: #dc2626;
   --c-gray: #f1f5f9;
@@ -201,6 +202,11 @@ body {
 .card-red .kpi-value { color: var(--c-red); }
 .card-blue .kpi-value { color: var(--c-primary); }
 .card-gray .kpi-value { color: var(--text-main); }
+.kpi-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
 
 /* Charts */
 .charts-row {

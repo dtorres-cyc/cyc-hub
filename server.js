@@ -18,10 +18,11 @@ const arriendoRouter  = require('./modules/arriendo/router');
 // ── Cron Jobs ─────────────────────────────────────────────────────────────────
 require('./modules/cron/weeklyReport');
 require('./modules/cron/monthlyEdp');
+require('./modules/cron/sheetsSync');
 
-// Inicializar base de datos del cotizador
+// Inicializar base de datos del cotizador (async)
 const { initDb } = require('./modules/cotizador/db');
-initDb();
+initDb().catch(err => console.error('Error init cotizador DB:', err));
 
 // ── Portal central ────────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));

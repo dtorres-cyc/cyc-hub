@@ -22,6 +22,7 @@
     <div class="logo">Transportes <span>CYC</span></div>
     <nav class="nav-links">
       <a href="/" class="nav-item">🏠 Portal Hub</a>
+      <a href="#" class="nav-item" onclick="switchTab('tab-alertas', this)" id="nav-alertas">🔔 Alertas <span id="alertas-badge" style="display:none;background:#ef4444;color:#fff;border-radius:999px;padding:1px 7px;font-size:11px;font-weight:700;margin-left:4px;">0</span></a>
       <a href="#" class="nav-item active" onclick="switchTab('tab-flota', this)">🚛 Estado Arriendo</a>
       <a href="#" class="nav-item" onclick="switchTab('tab-arriendo', this)">📄 Gestión Contratos</a>
       <a href="#" class="nav-item" onclick="switchTab('tab-danos', this)">🔧 Daños & Mermas</a>
@@ -686,6 +687,64 @@
                 <button class="action-btn" style="background:var(--c-green);" onclick="saveAndExportReport()">💾 Guardar y Exportar PDF</button>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ PANEL DE ALERTAS ═══════════════════════════════════════════════ -->
+      <section id="tab-alertas" class="tab-content" style="display:none;">
+        <div class="section-block">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 class="section-title" style="margin-bottom:0;">🔔 Panel de Alertas Activas</h2>
+            <button onclick="loadAlertas()" style="padding:8px 16px;background:var(--c-primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">↻ Actualizar</button>
+          </div>
+
+          <!-- KPI resumen -->
+          <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:24px;" id="alertas-kpis">
+            <div class="kpi-card card-dark">
+              <span class="kpi-label">Contratos por vencer</span>
+              <span class="kpi-value" id="al-kpi-contratos" style="color:#f59e0b;">--</span>
+              <span class="kpi-sub">Próximos 30 días</span>
+            </div>
+            <div class="kpi-card card-dark">
+              <span class="kpi-label">EDPs pendientes</span>
+              <span class="kpi-value" id="al-kpi-edps" style="color:#ef4444;">--</span>
+              <span class="kpi-sub">Meses anteriores sin cerrar</span>
+            </div>
+            <div class="kpi-card card-dark">
+              <span class="kpi-label">Daños sin movimiento</span>
+              <span class="kpi-value" id="al-kpi-danos" style="color:#f59e0b;">--</span>
+              <span class="kpi-sub">Más de 15 días inactivos</span>
+            </div>
+            <div class="kpi-card card-dark">
+              <span class="kpi-label">Facturas vencidas</span>
+              <span class="kpi-value" id="al-kpi-facturas" style="color:#ef4444;">--</span>
+              <span class="kpi-sub">Más de 30 días vencidas</span>
+            </div>
+          </div>
+
+          <!-- Contratos por vencer -->
+          <div class="card-dark" style="margin-bottom:20px;padding:20px;border-radius:10px;border:1px solid var(--border);">
+            <h3 style="margin:0 0 14px 0;font-size:15px;font-weight:600;">📅 Contratos que vencen en los próximos 30 días</h3>
+            <div id="al-contratos-list"><p style="color:var(--text-muted);font-size:13px;">Cargando...</p></div>
+          </div>
+
+          <!-- EDPs pendientes -->
+          <div class="card-dark" style="margin-bottom:20px;padding:20px;border-radius:10px;border:1px solid var(--border);">
+            <h3 style="margin:0 0 14px 0;font-size:15px;font-weight:600;">📋 EDPs de meses anteriores sin facturar</h3>
+            <div id="al-edps-list"><p style="color:var(--text-muted);font-size:13px;">Cargando...</p></div>
+          </div>
+
+          <!-- Daños sin movimiento -->
+          <div class="card-dark" style="margin-bottom:20px;padding:20px;border-radius:10px;border:1px solid var(--border);">
+            <h3 style="margin:0 0 14px 0;font-size:15px;font-weight:600;">🔧 Casos de daños/mermas sin movimiento (+15 días)</h3>
+            <div id="al-danos-list"><p style="color:var(--text-muted);font-size:13px;">Cargando...</p></div>
+          </div>
+
+          <!-- Facturas vencidas -->
+          <div class="card-dark" style="padding:20px;border-radius:10px;border:1px solid var(--border);">
+            <h3 style="margin:0 0 14px 0;font-size:15px;font-weight:600;">💳 Facturas vencidas más de 30 días</h3>
+            <div id="al-facturas-list"><p style="color:var(--text-muted);font-size:13px;">Cargando...</p></div>
           </div>
         </div>
       </section>

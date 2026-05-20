@@ -1,129 +1,118 @@
-// modules/cotizador/db.js — SQLite para el cotizador (migrado desde database.py)
-const Database = require('better-sqlite3');
-const path = require('path');
+// modules/cotizador/db.js — Cotizador usando Prisma (unificado con BD principal)
+const { PrismaClient } = require('@prisma/client');
 const { QUOTE_START_NUMBER } = require('../../shared/config');
 
-const DB_PATH = process.env.COTIZADOR_DB_PATH || path.join(__dirname, '..', '..', 'cotizaciones.db');
+const prisma = new PrismaClient();
 
-let _db = null;
-function getDb() {
-  if (!_db) _db = new Database(DB_PATH);
-  return _db;
-}
-
-function initDb() {
-  const db = getDb();
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS cotizaciones (
-      id              INTEGER PRIMARY KEY AUTOINCREMENT,
-      numero          INTEGER UNIQUE NOT NULL,
-      fecha           TEXT NOT NULL,
-      cliente_nombre  TEXT NOT NULL,
-      cliente_rut     TEXT,
-      cliente_empresa TEXT,
-      cliente_email   TEXT,
-      cliente_fono    TEXT,
-      cliente_dir     TEXT,
-      cliente_cargo   TEXT,
-      items_json      TEXT NOT NULL,
-      subtotal        REAL NOT NULL,
-      iva             REAL NOT NULL,
-      total           REAL NOT NULL,
-      validez_dias    INTEGER DEFAULT 30,
-      notas           TEXT,
-      drive_file_id   TEXT,
-      drive_url       TEXT,
-      email_enviado   INTEGER DEFAULT 0,
-      creado_en       TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS productos (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      nombre      TEXT NOT NULL,
-      descripcion TEXT,
-      precio_hora REAL,
-      precio_mes  REAL,
-      activo      INTEGER DEFAULT 1
-    );
-  `);
-
-  // Productos de ejemplo si la tabla está vacía
-  const count = db.prepare('SELECT COUNT(*) as n FROM productos').get().n;
+async function initDb() {
+  // Poblar productos por defecto si la tabla está vacía
+  const count = await prisma.productoCotizador.count();
   if (count === 0) {
-    const ins = db.prepare(
-      'INSERT INTO productos (nombre, descripcion, precio_hora, precio_mes) VALUES (?, ?, ?, ?)'
-    );
-    ins.run('Camión Tolva Mercedes Benz Arocs 4848 22m³ (2021-2022)',
-      'Horas mínimas: 180 hrs/mes. Periodo: 3 meses extendible. Incluye inclinómetro.', null, null);
-    ins.run('Camión Aljibe',
-      'Capacidad según disponibilidad. Consultar especificaciones técnicas.', null, null);
+    await prisma.productoCotizador.createMany({
+      data: [
+        {
+          nombre:      'Camión Tolva Mercedes Benz Arocs 4848 22m³ (2021-2022)',
+          descripcion: 'Horas mínimas: 180 hrs/mes. Periodo: 3 meses extendible. Incluye inclinómetro.',
+        },
+        {
+          nombre:      'Camión Aljibe',
+          descripcion: 'Capacidad según disponibilidad. Consultar especificaciones técnicas.',
+        },
+      ],
+    });
   }
-
-  console.log('📦 Base de datos cotizador lista:', DB_PATH);
+  console.log('📦 Módulo cotizador listo (Prisma)');
 }
 
-function nextQuoteNumber() {
-  const db = getDb();
-  const row = db.prepare('SELECT MAX(numero) as max FROM cotizaciones').get();
-  const last = row.max ?? (QUOTE_START_NUMBER - 1);
-  return last + 1;
+async function nextQuoteNumber() {
+  const last = await prisma.cotizacion.aggregate({ _max: { numero: true } });
+  return (last._max.numero ?? (QUOTE_START_NUMBER - 1)) + 1;
 }
 
-function saveQuote(data) {
-  const db = getDb();
-  const stmt = db.prepare(`
-    INSERT INTO cotizaciones
-      (numero, fecha, cliente_nombre, cliente_rut, cliente_empresa,
-       cliente_email, cliente_fono, cliente_dir, cliente_cargo,
-       items_json, subtotal, iva, total, validez_dias, notas, creado_en)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-  `);
-  const info = stmt.run(
-    data.numero, data.fecha, data.cliente_nombre,
-    data.cliente_rut || '', data.cliente_empresa || '',
-    data.cliente_email || '', data.cliente_fono || '',
-    data.cliente_dir || '', data.cliente_cargo || '',
-    JSON.stringify(data.items),
-    data.subtotal, data.iva, data.total,
-    data.validez_dias ?? 30,
-    data.notas || '',
-    new Date().toISOString()
-  );
-  return info.lastInsertRowid;
+async function saveQuote(data) {
+  const record = await prisma.cotizacion.create({
+    data: {
+      numero:         data.numero,
+      fecha:          data.fecha,
+      clienteNombre:  data.cliente_nombre,
+      clienteRut:     data.cliente_rut     || '',
+      clienteEmpresa: data.cliente_empresa || '',
+      clienteEmail:   data.cliente_email   || '',
+      clienteFono:    data.cliente_fono    || '',
+      clienteDir:     data.cliente_dir     || '',
+      clienteCargo:   data.cliente_cargo   || '',
+      itemsJson:      JSON.stringify(data.items || []),
+      subtotal:       data.subtotal,
+      iva:            data.iva,
+      total:          data.total,
+      validezDias:    data.validez_dias ?? 30,
+      notas:          data.notas || '',
+    },
+  });
+  return record.id;
 }
 
-function updateDriveInfo(rowId, fileId, url) {
-  getDb().prepare(
-    'UPDATE cotizaciones SET drive_file_id=?, drive_url=? WHERE id=?'
-  ).run(fileId, url, rowId);
+async function updateDriveInfo(id, fileId, url) {
+  await prisma.cotizacion.update({
+    where: { id },
+    data: { driveFileId: fileId, driveUrl: url },
+  });
 }
 
-function updateEmailSent(rowId) {
-  getDb().prepare('UPDATE cotizaciones SET email_enviado=1 WHERE id=?').run(rowId);
+async function updateEmailSent(id) {
+  await prisma.cotizacion.update({
+    where: { id },
+    data: { emailEnviado: true },
+  });
 }
 
-function getAllQuotes() {
-  return getDb().prepare('SELECT * FROM cotizaciones ORDER BY numero DESC').all();
+async function getAllQuotes() {
+  const quotes = await prisma.cotizacion.findMany({ orderBy: { numero: 'desc' } });
+  return quotes.map(q => ({
+    ...q,
+    // Alias snake_case para compatibilidad con el frontend existente
+    items_json:      q.itemsJson,
+    cliente_nombre:  q.clienteNombre,
+    cliente_rut:     q.clienteRut,
+    cliente_empresa: q.clienteEmpresa,
+    cliente_email:   q.clienteEmail,
+    cliente_fono:    q.clienteFono,
+    drive_file_id:   q.driveFileId,
+    drive_url:       q.driveUrl,
+    email_enviado:   q.emailEnviado ? 1 : 0,
+    creado_en:       q.createdAt?.toISOString(),
+  }));
 }
 
-function getProducts() {
-  return getDb().prepare('SELECT * FROM productos WHERE activo=1 ORDER BY nombre').all();
+async function getProducts() {
+  return prisma.productoCotizador.findMany({
+    where:   { activo: true },
+    orderBy: { nombre: 'asc' },
+  });
 }
 
-function addProduct(nombre, descripcion = '', precio_hora = null, precio_mes = null) {
-  const info = getDb().prepare(
-    'INSERT INTO productos (nombre, descripcion, precio_hora, precio_mes) VALUES (?,?,?,?)'
-  ).run(nombre, descripcion, precio_hora, precio_mes);
-  return info.lastInsertRowid;
+async function addProduct(nombre, descripcion = '', precioHora = null, precioMes = null) {
+  const p = await prisma.productoCotizador.create({
+    data: { nombre, descripcion, precioHora, precioMes },
+  });
+  return p.id;
 }
 
-function deleteProduct(pid) {
-  getDb().prepare('UPDATE productos SET activo=0 WHERE id=?').run(pid);
+async function deleteProduct(id) {
+  await prisma.productoCotizador.update({
+    where: { id },
+    data:  { activo: false },
+  });
 }
 
 module.exports = {
-  initDb, nextQuoteNumber, saveQuote,
-  updateDriveInfo, updateEmailSent,
-  getAllQuotes, getProducts, addProduct, deleteProduct,
+  initDb,
+  nextQuoteNumber,
+  saveQuote,
+  updateDriveInfo,
+  updateEmailSent,
+  getAllQuotes,
+  getProducts,
+  addProduct,
+  deleteProduct,
 };

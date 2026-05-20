@@ -63,6 +63,7 @@ model Opportunity {
   comments       Comment[]
   attachments    Attachment[]
   quotes         QuoteRecord[]
+  cotizaciones   Cotizacion[]
 }
 
 model WeeklyReport {
@@ -254,6 +255,87 @@ model EDPAdicional {
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+// ─── Sync desde Google Sheets ────────────────────────────────────────────────
+
+model FlotaSyncEquipo {
+  id              Int      @id @default(autoincrement())
+  equipoId        String   @unique
+  patente         String?
+  tipo            String?
+  horometro       String?
+  fechaHorometro  String?
+  ubicacion       String?
+  arrendado       String?
+  cliente         String?
+  propietario     String?
+  operativo       String?
+  vencPermiso     String?
+  vencSoap        String?
+  vencRev         String?
+  vencGases       String?
+  syncedAt        DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model FacturaSyncVenta {
+  id          Int      @id @default(autoincrement())
+  facturaId   String   @unique
+  tipo        String?
+  cliente     String?
+  emision     String?
+  vencimiento String?
+  mesTxt      String?
+  neto        Float    @default(0)
+  saldo       Float    @default(0)
+  estado      String?
+  alerta      String?
+  diasVencida Int      @default(0)
+  mesEmi      Int      @default(0)
+  anioEmi     Int      @default(0)
+  syncedAt    DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─── Cotizador (unificado en Prisma) ─────────────────────────────────────────
+
+model Cotizacion {
+  id              Int       @id @default(autoincrement())
+  numero          Int       @unique
+  fecha           String
+  clienteNombre   String
+  clienteRut      String?
+  clienteEmpresa  String?
+  clienteEmail    String?
+  clienteFono     String?
+  clienteDir      String?
+  clienteCargo    String?
+  itemsJson       String
+  subtotal        Float
+  iva             Float
+  total           Float
+  validezDias     Int       @default(30)
+  notas           String?
+  driveFileId     String?
+  driveUrl        String?
+  emailEnviado    Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  opportunityId   Int?
+  opportunity     Opportunity? @relation(fields: [opportunityId], references: [id])
+}
+
+model ProductoCotizador {
+  id          Int      @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  precioHora  Float?
+  precioMes   Float?
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model DanosMerma {

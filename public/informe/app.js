@@ -38,18 +38,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         fetchReports();
-        // Cargar módulo Arriendo & Daños (definido en arriendo.js)
         if (typeof loadArriendo === 'function') loadArriendo();
+        // Cargar badge de alertas en background
+        loadAlertasBadge();
     } catch (e) {
         console.error('Error fetching data', e);
     }
 });
+
+let _alertasLoaded = false;
 
 function switchTab(tabId, el) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
     document.getElementById(tabId).style.display = 'block';
     document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
     el.classList.add('active');
+    if (tabId === 'tab-alertas' && !_alertasLoaded) loadAlertas();
 }
 
 function safeLower(val) {
@@ -2034,5 +2038,176 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text || '';
     return div.innerHTML;
+}
+
+// ═══════════════════════════════════════════════════════════
+// PANEL DE ALERTAS
+// ═══════════════════════════════════════════════════════════
+
+async function loadAlertasBadge() {
+    try {
+        const data = await fetch('/informe/api/alertas').then(r => r.json());
+        const total = data.resumen?.total || 0;
+        const badge = document.getElementById('alertas-badge');
+        if (badge && total > 0) {
+            badge.textContent = total;
+            badge.style.display = 'inline';
+        }
+    } catch(e) { /* silencioso */ }
+}
+
+async function loadAlertas() {
+    _alertasLoaded = true;
+    setAlertasLoading(true);
+    try {
+        const data = await fetch('/informe/api/alertas').then(r => r.json());
+
+        // KPIs
+        document.getElementById('al-kpi-contratos').textContent = data.resumen.contratosVencen;
+        document.getElementById('al-kpi-edps').textContent      = data.resumen.edpsPendientes;
+        document.getElementById('al-kpi-danos').textContent     = data.resumen.danosSinMovimiento;
+        document.getElementById('al-kpi-facturas').textContent  = data.resumen.facturasVencidas;
+
+        // Badge
+        const badge = document.getElementById('alertas-badge');
+        if (badge && data.resumen.total > 0) {
+            badge.textContent = data.resumen.total;
+            badge.style.display = 'inline';
+        }
+
+        renderAlertaContratos(data.contratosVencen);
+        renderAlertaEdps(data.edpsPendientes);
+        renderAlertaDanos(data.danosSinMovimiento);
+        renderAlertaFacturas(data.facturasVencidas);
+    } catch(e) {
+        console.error('Error cargando alertas:', e);
+        ['al-contratos-list','al-edps-list','al-danos-list','al-facturas-list'].forEach(id => {
+            document.getElementById(id).innerHTML = `<p style="color:#ef4444;font-size:13px;">Error al cargar datos.</p>`;
+        });
+    }
+}
+
+function setAlertasLoading(loading) {
+    ['al-contratos-list','al-edps-list','al-danos-list','al-facturas-list'].forEach(id => {
+        if (loading) document.getElementById(id).innerHTML = `<p style="color:var(--text-muted);font-size:13px;">Cargando...</p>`;
+    });
+}
+
+const ALERTA_TABLE_STYLE = `width:100%;border-collapse:collapse;font-size:12px;color:var(--text-main)`;
+const ALERTA_TH_STYLE   = `padding:8px 10px;background:var(--c-gray);border-bottom:2px solid var(--border);text-align:left;font-weight:600;`;
+const ALERTA_TD_STYLE   = `padding:8px 10px;border-bottom:1px solid var(--border);`;
+
+function emptyState(msg) {
+    return `<p style="color:var(--c-success,#22c55e);font-size:13px;padding:8px 0;">✓ ${msg}</p>`;
+}
+
+function renderAlertaContratos(items) {
+    const el = document.getElementById('al-contratos-list');
+    if (!items.length) { el.innerHTML = emptyState('Sin contratos próximos a vencer.'); return; }
+    el.innerHTML = `
+    <div style="overflow-x:auto">
+    <table style="${ALERTA_TABLE_STYLE}">
+      <thead><tr>
+        <th style="${ALERTA_TH_STYLE}">N° Contrato</th>
+        <th style="${ALERTA_TH_STYLE}">Cliente</th>
+        <th style="${ALERTA_TH_STYLE}">Vencimiento</th>
+        <th style="${ALERTA_TH_STYLE}">Días restantes</th>
+        <th style="${ALERTA_TH_STYLE}">Equipos activos</th>
+      </tr></thead>
+      <tbody>
+        ${items.map(c => {
+            const urgente = c.diasRestantes <= 7;
+            const color   = urgente ? '#ef4444' : '#f59e0b';
+            return `<tr>
+              <td style="${ALERTA_TD_STYLE};font-weight:600">${escapeHtml(c.numeroContrato)}</td>
+              <td style="${ALERTA_TD_STYLE}">${escapeHtml(c.cliente)}</td>
+              <td style="${ALERTA_TD_STYLE}">${new Date(c.fechaTermino).toLocaleDateString('es-CL')}</td>
+              <td style="${ALERTA_TD_STYLE};color:${color};font-weight:700">${c.diasRestantes} días</td>
+              <td style="${ALERTA_TD_STYLE}">${c.equiposActivos}</td>
+            </tr>`;
+        }).join('')}
+      </tbody>
+    </table></div>`;
+}
+
+function renderAlertaEdps(items) {
+    const el = document.getElementById('al-edps-list');
+    if (!items.length) { el.innerHTML = emptyState('Todos los EDPs están al día.'); return; }
+    el.innerHTML = `
+    <div style="overflow-x:auto">
+    <table style="${ALERTA_TABLE_STYLE}">
+      <thead><tr>
+        <th style="${ALERTA_TH_STYLE}">Cliente</th>
+        <th style="${ALERTA_TH_STYLE}">Contrato</th>
+        <th style="${ALERTA_TH_STYLE}">Período</th>
+        <th style="${ALERTA_TH_STYLE}">Estado</th>
+        <th style="${ALERTA_TH_STYLE}">Total</th>
+      </tr></thead>
+      <tbody>
+        ${items.map(e => `<tr>
+          <td style="${ALERTA_TD_STYLE};font-weight:600">${escapeHtml(e.cliente)}</td>
+          <td style="${ALERTA_TD_STYLE}">${escapeHtml(e.contrato)}</td>
+          <td style="${ALERTA_TD_STYLE}">${escapeHtml(e.mesConsumo)}</td>
+          <td style="${ALERTA_TD_STYLE}"><span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-size:11px;">${escapeHtml(e.estado)}</span></td>
+          <td style="${ALERTA_TD_STYLE}">${e.total > 0 ? '$' + e.total.toLocaleString('es-CL') : '—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+}
+
+function renderAlertaDanos(items) {
+    const el = document.getElementById('al-danos-list');
+    if (!items.length) { el.innerHTML = emptyState('Sin casos de daños pendientes.'); return; }
+    const etiquetaEtapa = ['','Recepcionar','Levantamiento','Enviar Informe','Negociación','Facturado'];
+    el.innerHTML = `
+    <div style="overflow-x:auto">
+    <table style="${ALERTA_TABLE_STYLE}">
+      <thead><tr>
+        <th style="${ALERTA_TH_STYLE}">Equipo</th>
+        <th style="${ALERTA_TH_STYLE}">Descripción</th>
+        <th style="${ALERTA_TH_STYLE}">Cliente</th>
+        <th style="${ALERTA_TH_STYLE}">Etapa actual</th>
+        <th style="${ALERTA_TH_STYLE}">Días sin mov.</th>
+        <th style="${ALERTA_TH_STYLE}">Monto</th>
+      </tr></thead>
+      <tbody>
+        ${items.map(d => `<tr>
+          <td style="${ALERTA_TD_STYLE};font-weight:600">${escapeHtml(d.equipoId)}</td>
+          <td style="${ALERTA_TD_STYLE}">${escapeHtml(d.equipoDesc || '—')}</td>
+          <td style="${ALERTA_TD_STYLE}">${escapeHtml(d.cliente || '—')}</td>
+          <td style="${ALERTA_TD_STYLE}">${escapeHtml(etiquetaEtapa[d.etapa] || `Etapa ${d.etapa}`)}</td>
+          <td style="${ALERTA_TD_STYLE};color:#f59e0b;font-weight:700">${d.diasSinMov} días</td>
+          <td style="${ALERTA_TD_STYLE}">${d.montoDano ? '$' + d.montoDano.toLocaleString('es-CL') : '—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+}
+
+function renderAlertaFacturas(items) {
+    const el = document.getElementById('al-facturas-list');
+    if (!items.length) { el.innerHTML = emptyState('Sin facturas vencidas de alto riesgo.'); return; }
+    el.innerHTML = `
+    <div style="overflow-x:auto">
+    <table style="${ALERTA_TABLE_STYLE}">
+      <thead><tr>
+        <th style="${ALERTA_TH_STYLE}">N° Factura</th>
+        <th style="${ALERTA_TH_STYLE}">Cliente</th>
+        <th style="${ALERTA_TH_STYLE}">Vencimiento</th>
+        <th style="${ALERTA_TH_STYLE}">Días vencida</th>
+        <th style="${ALERTA_TH_STYLE}">Saldo pendiente</th>
+      </tr></thead>
+      <tbody>
+        ${items.map(f => {
+            const critica = f.diasVencida > 60;
+            return `<tr>
+              <td style="${ALERTA_TD_STYLE};font-weight:600">${escapeHtml(f.id)}</td>
+              <td style="${ALERTA_TD_STYLE}">${escapeHtml(f.cliente || '—')}</td>
+              <td style="${ALERTA_TD_STYLE}">${escapeHtml(f.vencimiento || '—')}</td>
+              <td style="${ALERTA_TD_STYLE};color:${critica ? '#ef4444' : '#f59e0b'};font-weight:700">${f.diasVencida} días</td>
+              <td style="${ALERTA_TD_STYLE};font-weight:600">$${(f.saldo || f.neto || 0).toLocaleString('es-CL')}</td>
+            </tr>`;
+        }).join('')}
+      </tbody>
+    </table></div>`;
 }
 
