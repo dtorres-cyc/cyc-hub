@@ -206,11 +206,11 @@ router.get('/api/alertas', async (req, res) => {
                 orderBy: { fechaTermino: 'asc' },
             }),
 
-            // 2. EDPs del mes anterior o anteriores que no están facturadas
+            // 2. EDPs pendientes (sin facturar), ordenados por mesConsumo
             prisma.eDP.findMany({
                 where: {
-                    estado: { in: ['Solicitud', 'Enviado', 'Negociación'] },
-                    mesConsumo: { lte: mesAnteriorStr, not: '' },
+                    estado: { notIn: ['Facturado', 'facturado'] },
+                    etapa: { lt: 4 },
                 },
                 include: { contrato: { select: { cliente: true, numeroContrato: true } } },
                 orderBy: { mesConsumo: 'asc' },

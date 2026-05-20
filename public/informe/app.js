@@ -54,6 +54,11 @@ function switchTab(tabId, el) {
     document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
     el.classList.add('active');
     if (tabId === 'tab-alertas' && !_alertasLoaded) loadAlertas();
+    if (tabId === 'tab-facturacion') {
+        setTimeout(() => {
+            [chartFacturacion, chartFacTipo, chartFacCliente].forEach(c => { if (c) c.resize(); });
+        }, 60);
+    }
 }
 
 function safeLower(val) {
@@ -1593,18 +1598,26 @@ function openNewReportView() {
     document.getElementById('pdf-fac-clone').innerHTML = '';
     document.getElementById('pdf-fac-clone').appendChild(facClone);
 
-    // Redibujar Canvas
+    // Convertir charts a imágenes para el PDF (canvas dentro de tab oculto no se puede dibujar)
+    const chartMap = {
+        'chart-arriendo-tipo':   chartTipo,
+        'chart-arriendo-cliente': chartCliente,
+        'chart-facturacion':     chartFacturacion,
+        'chart-fac-tipo':        chartFacTipo,
+        'chart-fac-cliente':     chartFacCliente,
+    };
     setTimeout(() => {
-        ['chart-arriendo-tipo', 'chart-arriendo-cliente', 'chartFacturacion', 'chartFacTipo', 'chartFacCliente'].forEach(chartId => {
-            const orig = document.getElementById(chartId);
-            const clones = document.getElementById('pdf-content').querySelectorAll(`#${chartId}`);
-            clones.forEach(clone => {
-                if (orig && clone) {
-                    clone.getContext('2d').drawImage(orig, 0, 0);
-                }
+        Object.entries(chartMap).forEach(([chartId, chartObj]) => {
+            if (!chartObj) return;
+            const imgUrl = chartObj.toBase64Image();
+            document.getElementById('pdf-content').querySelectorAll(`#${chartId}`).forEach(canvas => {
+                const img = document.createElement('img');
+                img.src = imgUrl;
+                img.style.cssText = canvas.style.cssText + '; width:100%; max-height:300px; object-fit:contain;';
+                canvas.parentNode.replaceChild(img, canvas);
             });
         });
-    }, 500);
+    }, 200);
 
     // Documentos vencidos
     const docsTable = document.getElementById('pdf-docs-table');
@@ -1778,12 +1791,15 @@ function openNewReportView() {
     }
 
     // Reset textareas
-    ['rental', 'billing', 'pipeline'].forEach(k => {
+    ['rental', 'billing', 'pipeline', 'edp', 'danos'].forEach(k => {
         const input = document.getElementById(`input-analysis-${k}`);
         const text = document.getElementById(`text-analysis-${k}`);
         if(input) { input.style.display = 'block'; input.value = ''; }
         if(text) text.style.display = 'none';
     });
+
+    // Auto-generar análisis IA
+    setTimeout(() => generateAIAnalysis(), 800);
 }
 
 function closeReportView() {
@@ -1797,7 +1813,7 @@ function viewPastReport(id) {
 
 async function saveAndExportReport() {
     // 1. Convertir textareas a divs para el PDF
-    ['rental', 'billing', 'pipeline'].forEach(k => {
+    ['rental', 'billing', 'pipeline', 'edp', 'danos'].forEach(k => {
         const input = document.getElementById(`input-analysis-${k}`);
         const text = document.getElementById(`text-analysis-${k}`);
         if (input && text) {
@@ -1893,21 +1909,51 @@ async function generateAIAnalysis() {
             }
         });
 
+        // Datos EDP desde globalContratos
+        const todosEdps = (globalContratos || []).flatMap(c => (c.edps || []).map(e => ({ ...e, _cliente: c.cliente })));
+        const noFactEdps = todosEdps.filter(e => e.etapa < 4 && e.estado !== 'Facturado');
+        const mesActual = new Date(); mesActual.setDate(1);
+        const mesAnt = new Date(mesActual); mesAnt.setMonth(mesAnt.getMonth() - 1);
+        const mesAntStr = `${mesAnt.getFullYear()}-${String(mesAnt.getMonth() + 1).padStart(2, '0')}`;
+        const edpVencidos = noFactEdps.filter(e => e.mesConsumo && e.mesConsumo <= mesAntStr);
+
+        // Datos Daños desde globalDanos
+        const danosActivos = (globalDanos || []).filter(d => d.etapa < 5);
+        const hace15 = new Date(); hace15.setDate(hace15.getDate() - 15);
+        const danosSinMov = danosActivos.filter(d => new Date(d.updatedAt) < hace15);
+        const montoDanos = danosActivos.reduce((s, d) => s + (d.montoDano || 0), 0);
+
         const res = await fetch('/crm/api/reports/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 rentalData: { rented, workshop },
                 billingData: { billed: billedStr, vencidas, porVencer },
-                pipelineData: { total: pipeTotal, won: pipeWon }
+                pipelineData: { total: pipeTotal, won: pipeWon },
+                edpData: {
+                    total: noFactEdps.length,
+                    solicitud: noFactEdps.filter(e => e.estado === 'Solicitud' || e.etapa === 1).length,
+                    enviado:   noFactEdps.filter(e => e.estado === 'Enviado'   || e.etapa === 2).length,
+                    negociacion: noFactEdps.filter(e => e.estado === 'Negociación' || e.etapa === 3).length,
+                    monto: noFactEdps.reduce((s, e) => s + (e.total || e.montoEdp || 0), 0),
+                    vencidos: edpVencidos.length,
+                },
+                danosData: {
+                    activos: danosActivos.length,
+                    montoPorCobrar: montoDanos,
+                    sinMovimiento: danosSinMov.length,
+                }
             })
         });
 
         if (res.ok) {
             const analysis = await res.json();
-            if (analysis.rental) document.getElementById('input-analysis-rental').value = analysis.rental;
-            if (analysis.billing) document.getElementById('input-analysis-billing').value = analysis.billing;
-            if (analysis.pipeline) document.getElementById('input-analysis-pipeline').value = analysis.pipeline;
+            ['rental', 'billing', 'pipeline', 'edp', 'danos'].forEach(k => {
+                if (analysis[k]) {
+                    const el = document.getElementById(`input-analysis-${k}`);
+                    if (el) el.value = analysis[k];
+                }
+            });
         } else {
             const err = await res.json();
             alert("Error IA: " + (err.error || "No se pudo generar"));

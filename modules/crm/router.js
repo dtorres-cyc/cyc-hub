@@ -421,28 +421,41 @@ router.post('/api/reports/analyze', async (req, res) => {
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        const { rentalData, billingData, pipelineData } = req.body;
+        const { rentalData, billingData, pipelineData, edpData, danosData } = req.body;
 
-        const prompt = `Eres el Gerente Comercial de CYC. Realiza un análisis ejecutivo, breve y profesional de máximo 2 párrafos para cada una de las siguientes áreas basándote ÚNICAMENTE en estos datos de la semana:
+        const prompt = `Eres el Gerente Comercial de CYC. Realiza un análisis ejecutivo, breve y profesional (máximo 2 párrafos por sección) basándote ÚNICAMENTE en estos datos de la semana:
 
 1. ESTADO DE ARRIENDO:
 - Equipos arrendados: ${rentalData.rented}
 - Equipos en taller: ${rentalData.workshop}
 
 2. FACTURACIÓN Y COBRANZA:
-- Proyección mensual de facturación: $${rentalData.billed}
-- Top 5 facturas vencidas (monto y cliente): ${JSON.stringify(billingData.vencidas)}
-- Top 5 facturas por vencer (monto y cliente): ${JSON.stringify(billingData.porVencer)}
+- Proyección mensual: $${billingData.billed}
+- Top 5 facturas vencidas: ${JSON.stringify(billingData.vencidas)}
+- Top 5 facturas por vencer: ${JSON.stringify(billingData.porVencer)}
 
 3. PIPELINE CRM Y VENTAS:
 - Valor total del pipeline: $${pipelineData.total}
 - Valor cerrado ganado los últimos 7 días: $${pipelineData.won}
 
-Devuelve tu respuesta EXACTAMENTE en el siguiente formato JSON, sin texto extra, sin markdown de bloques de código:
+4. ESTADO DE EDPs:
+- Total sin facturar: ${edpData?.total || 0}
+- En Solicitud: ${edpData?.solicitud || 0}, Enviados: ${edpData?.enviado || 0}, Negociación: ${edpData?.negociacion || 0}
+- Monto total en proceso: $${edpData?.monto || 0}
+- EDPs de meses anteriores vencidos: ${edpData?.vencidos || 0}
+
+5. DAÑOS Y MERMAS:
+- Casos activos (sin facturar): ${danosData?.activos || 0}
+- Monto total por cobrar: $${danosData?.montoPorCobrar || 0}
+- Casos sin movimiento +15 días: ${danosData?.sinMovimiento || 0}
+
+Devuelve tu respuesta EXACTAMENTE en este formato JSON, sin texto extra ni markdown:
 {
-  "rental": "texto del análisis de arriendo y taller...",
-  "billing": "texto del análisis de facturación y cobranza...",
-  "pipeline": "texto del análisis de ventas y pipeline..."
+  "rental": "análisis de arriendo...",
+  "billing": "análisis de facturación...",
+  "pipeline": "análisis de pipeline...",
+  "edp": "análisis de EDPs...",
+  "danos": "análisis de daños y mermas..."
 }`;
 
         const result = await model.generateContent(prompt);

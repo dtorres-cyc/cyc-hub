@@ -849,6 +849,8 @@ async function saveEdpData(avanzar = false) {
   if (avanzar) {
     const newEtapa = Math.min(etapa + 1, 4);
     payload.etapa = newEtapa;
+    const ETAPA_ESTADO = { 1: 'Solicitud', 2: 'Enviado', 3: 'Negociación', 4: 'Facturado' };
+    payload.estado = ETAPA_ESTADO[newEtapa];
     const ahora = new Date().toISOString();
     if (etapa === 1) payload.horometroRecibido = ahora;
     if (etapa === 2) payload.edpEnviado = ahora;
@@ -867,7 +869,8 @@ async function retrocederEdp() {
   const id    = document.getElementById('edp-edit-id').value;
   const etapa = parseInt(document.getElementById('edp-etapa-actual').value);
   if (etapa <= 1) return;
-  await fetch(`/arriendo/edps/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ etapa: etapa - 1 }) });
+  const ETAPA_ESTADO = { 1: 'Solicitud', 2: 'Enviado', 3: 'Negociación', 4: 'Facturado' };
+  await fetch(`/arriendo/edps/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ etapa: etapa - 1, estado: ETAPA_ESTADO[etapa - 1] }) });
   closeEdpModal();
   await loadArriendo();
 }
