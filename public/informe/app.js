@@ -1567,15 +1567,19 @@ function openNewReportView() {
     // Auto-fill Data
     document.getElementById('pdf-date').textContent = "Fecha: " + new Date().toLocaleDateString('es-CL');
     
-    // Clonar Flota
+    // Clonar Flota — sin tabla de equipos ni controles interactivos
     const flotaClone = document.getElementById('tab-flota').cloneNode(true);
     flotaClone.style.display = 'block';
-    const flotaTable = flotaClone.querySelector('.table-container');
-    if (flotaTable) flotaTable.remove();
-    const flotaHeader = flotaClone.querySelector('.section-title');
-    if (flotaHeader) flotaHeader.remove();
-    const flotaFilter = flotaClone.querySelector('.filter-bar');
-    if (flotaFilter) flotaFilter.remove();
+    // Quitar la sección completa "Listado de Equipos" (tercer section-block)
+    flotaClone.querySelectorAll('.section-block').forEach(block => {
+        if (block.querySelector('[id="table-equipos-body"]') ||
+            block.querySelector('[id^="vencidos"]') ||
+            block.querySelector('[id^="porvencer"]')) {
+            block.remove();
+        }
+    });
+    // Quitar encabezados y filtros interactivos
+    flotaClone.querySelectorAll('.section-title, .filter-bar, button').forEach(el => el.remove());
     document.getElementById('pdf-flota-clone').innerHTML = '';
     document.getElementById('pdf-flota-clone').appendChild(flotaClone);
 
@@ -1658,6 +1662,121 @@ function openNewReportView() {
         });
     }
     
+    // ── Sección 4: EDPs ───────────────────────────────────────────────────────
+    const edpKpisEl  = document.getElementById('pdf-edp-kpis');
+    const edpTableEl = document.getElementById('pdf-edp-table');
+    if (edpKpisEl && edpTableEl) {
+        const todosEdps = (globalContratos || []).flatMap(c => (c.edps || []).map(e => ({
+            ...e, _cliente: c.cliente, _contrato: c.numeroContrato
+        })));
+        const noFacturados = todosEdps.filter(e => e.estado !== 'Facturado');
+        const byEstado = {};
+        noFacturados.forEach(e => { byEstado[e.estado] = (byEstado[e.estado] || 0) + 1; });
+        const totalMonto = noFacturados.reduce((s, e) => s + (e.total || 0), 0);
+
+        const kpiStyle = 'text-align:center;padding:10px 16px;background:#f1f5f9;border-radius:8px;min-width:90px;';
+        edpKpisEl.innerHTML = [
+            ['Total sin facturar', noFacturados.length, '#2563eb'],
+            ['En Solicitud',  byEstado['Solicitud']  || 0, '#7c3aed'],
+            ['Enviados',      byEstado['Enviado']     || 0, '#f59e0b'],
+            ['Negociación',   byEstado['Negociación'] || 0, '#dc2626'],
+            ['Cerrados',      byEstado['Cerrado']     || 0, '#16a34a'],
+        ].map(([lbl, val, col]) =>
+            `<div style="${kpiStyle}">
+               <div style="font-size:22px;font-weight:800;color:${col};">${val}</div>
+               <div style="font-size:11px;color:#64748b;">${lbl}</div>
+             </div>`
+        ).join('') +
+        `<div style="${kpiStyle} background:#fef3c7;">
+           <div style="font-size:16px;font-weight:800;color:#92400e;">$${Math.round(totalMonto).toLocaleString('es-CL')}</div>
+           <div style="font-size:11px;color:#64748b;">Monto total en proceso</div>
+         </div>`;
+
+        if (noFacturados.length === 0) {
+            edpTableEl.innerHTML = '<p style="font-size:12px;color:#16a34a;">✓ Todos los EDPs están facturados.</p>';
+        } else {
+            const ESTADOS_ORDEN = ['Solicitud', 'Enviado', 'Negociación', 'Cerrado'];
+            const rows = ESTADOS_ORDEN.flatMap(estado => {
+                const grupo = noFacturados.filter(e => e.estado === estado);
+                return grupo.map((e, i) => `
+                  <tr style="border-bottom:1px solid #e2e8f0;background:${i % 2 === 0 ? '#fff' : '#f8fafc'};">
+                    ${i === 0 ? `<td rowspan="${grupo.length}" style="padding:7px 8px;font-weight:700;border-right:1px solid #e2e8f0;vertical-align:top;font-size:11px;color:#1e40af;">${estado}</td>` : ''}
+                    <td style="padding:7px 8px;font-size:12px;">${e._cliente || '—'}</td>
+                    <td style="padding:7px 8px;font-size:12px;">${e._contrato || '—'}</td>
+                    <td style="padding:7px 8px;font-size:12px;">${e.mesConsumo || e.periodo || '—'}</td>
+                    <td style="padding:7px 8px;font-size:12px;font-weight:600;">
+                      ${e.total > 0 ? '$' + Math.round(e.total).toLocaleString('es-CL') : '—'}
+                    </td>
+                  </tr>`);
+            });
+            edpTableEl.innerHTML = `
+              <table style="width:100%;border-collapse:collapse;font-size:12px;text-align:left;">
+                <thead><tr style="background:#f1f5f9;border-bottom:2px solid #cbd5e1;">
+                  <th style="padding:7px 8px;">Estado</th>
+                  <th style="padding:7px 8px;">Cliente</th>
+                  <th style="padding:7px 8px;">Contrato</th>
+                  <th style="padding:7px 8px;">Período</th>
+                  <th style="padding:7px 8px;">Total</th>
+                </tr></thead>
+                <tbody>${rows.join('')}</tbody>
+              </table>`;
+        }
+    }
+
+    // ── Sección 5: Daños & Mermas ─────────────────────────────────────────────
+    const danosKpisEl  = document.getElementById('pdf-danos-kpis');
+    const danosTableEl = document.getElementById('pdf-danos-table');
+    if (danosKpisEl && danosTableEl && typeof globalDanos !== 'undefined') {
+        const activos = globalDanos.filter(d => d.activo !== false && d.etapa < 5);
+        const facturados = globalDanos.filter(d => d.etapa === 5);
+        const ETAPA_LBL = ['','Recepcionar','Levantamiento','Enviar Informe','Negociación','Facturado'];
+        const hace15 = new Date(); hace15.setDate(hace15.getDate() - 15);
+        const sinMov = activos.filter(d => new Date(d.updatedAt) < hace15);
+        const totalEstimado = activos.reduce((s, d) => s + (d.montoDano || 0), 0);
+
+        const kpiStyle = 'text-align:center;padding:10px 16px;background:#f1f5f9;border-radius:8px;min-width:90px;';
+        danosKpisEl.innerHTML = [
+            ['Casos activos',    activos.length,    '#7c3aed'],
+            ['Sin movimiento +15d', sinMov.length,  '#f59e0b'],
+            ['Facturados',       facturados.length, '#16a34a'],
+        ].map(([lbl, val, col]) =>
+            `<div style="${kpiStyle}">
+               <div style="font-size:22px;font-weight:800;color:${col};">${val}</div>
+               <div style="font-size:11px;color:#64748b;">${lbl}</div>
+             </div>`
+        ).join('') +
+        (totalEstimado > 0 ? `<div style="${kpiStyle} background:#fce7f3;">
+           <div style="font-size:16px;font-weight:800;color:#9d174d;">$${Math.round(totalEstimado).toLocaleString('es-CL')}</div>
+           <div style="font-size:11px;color:#64748b;">Monto estimado</div>
+         </div>` : '');
+
+        if (activos.length === 0) {
+            danosTableEl.innerHTML = '<p style="font-size:12px;color:#16a34a;">✓ Sin casos de daños activos.</p>';
+        } else {
+            const rows = activos.map((d, i) => `
+              <tr style="border-bottom:1px solid #e2e8f0;background:${i % 2 === 0 ? '#fff' : '#f8fafc'};">
+                <td style="padding:7px 8px;font-weight:700;font-size:12px;">${d.equipoId || '—'}</td>
+                <td style="padding:7px 8px;font-size:12px;">${d.cliente || '—'}</td>
+                <td style="padding:7px 8px;font-size:12px;">${d.equipoDesc || '—'}</td>
+                <td style="padding:7px 8px;font-size:12px;">${ETAPA_LBL[d.etapa] || `Etapa ${d.etapa}`}</td>
+                <td style="padding:7px 8px;font-size:12px;font-weight:600;${sinMov.includes(d) ? 'color:#f59e0b;' : ''}">
+                  ${sinMov.includes(d) ? '⏳ ' : ''}${d.montoDano ? '$' + Math.round(d.montoDano).toLocaleString('es-CL') : '—'}
+                </td>
+              </tr>`);
+            danosTableEl.innerHTML = `
+              <table style="width:100%;border-collapse:collapse;font-size:12px;text-align:left;">
+                <thead><tr style="background:#f1f5f9;border-bottom:2px solid #cbd5e1;">
+                  <th style="padding:7px 8px;">Equipo</th>
+                  <th style="padding:7px 8px;">Cliente</th>
+                  <th style="padding:7px 8px;">Descripción</th>
+                  <th style="padding:7px 8px;">Etapa</th>
+                  <th style="padding:7px 8px;">Monto est.</th>
+                </tr></thead>
+                <tbody>${rows.join('')}</tbody>
+              </table>`;
+        }
+    }
+
     // Reset textareas
     ['rental', 'billing', 'pipeline'].forEach(k => {
         const input = document.getElementById(`input-analysis-${k}`);
