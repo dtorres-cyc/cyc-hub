@@ -728,25 +728,25 @@
 
           <!-- KPI resumen -->
           <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:24px;" id="alertas-kpis">
-            <div class="kpi-card card-dark">
+            <div class="kpi-card card-dark" style="cursor:pointer;transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''" onclick="openAlertaModal('contratos')">
               <span class="kpi-label">Contratos por vencer</span>
               <span class="kpi-value" id="al-kpi-contratos" style="color:#f59e0b;">--</span>
-              <span class="kpi-sub">Próximos 30 días</span>
+              <span class="kpi-sub">Próximos 30 días · Ver detalle →</span>
             </div>
-            <div class="kpi-card card-dark">
+            <div class="kpi-card card-dark" style="cursor:pointer;transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''" onclick="openAlertaModal('edps')">
               <span class="kpi-label">EDPs pendientes</span>
               <span class="kpi-value" id="al-kpi-edps" style="color:#ef4444;">--</span>
-              <span class="kpi-sub">Sin facturar (todas las etapas)</span>
+              <span class="kpi-sub">Sin facturar · Ver detalle →</span>
             </div>
-            <div class="kpi-card card-dark">
+            <div class="kpi-card card-dark" style="cursor:pointer;transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''" onclick="openAlertaModal('danos')">
               <span class="kpi-label">Daños sin movimiento</span>
               <span class="kpi-value" id="al-kpi-danos" style="color:#f59e0b;">--</span>
-              <span class="kpi-sub">Más de 15 días inactivos</span>
+              <span class="kpi-sub">Más de 15 días · Ver detalle →</span>
             </div>
-            <div class="kpi-card card-dark">
+            <div class="kpi-card card-dark" style="cursor:pointer;transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''" onclick="openAlertaModal('facturas')">
               <span class="kpi-label">Facturas vencidas</span>
               <span class="kpi-value" id="al-kpi-facturas" style="color:#ef4444;">--</span>
-              <span class="kpi-sub">Más de 30 días vencidas</span>
+              <span class="kpi-sub">Más de 30 días · Ver detalle →</span>
             </div>
           </div>
 

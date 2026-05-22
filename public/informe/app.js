@@ -2245,11 +2245,14 @@ async function loadAlertasBadge() {
     } catch(e) { /* silencioso */ }
 }
 
+let _alertasData = null;
+
 async function loadAlertas() {
     _alertasLoaded = true;
     setAlertasLoading(true);
     try {
         const data = await fetch('/informe/api/alertas').then(r => r.json());
+        _alertasData = data;
 
         // KPIs
         document.getElementById('al-kpi-contratos').textContent = data.resumen.contratosVencen;
@@ -2288,6 +2291,106 @@ const ALERTA_TD_STYLE   = `padding:8px 10px;border-bottom:1px solid var(--border
 
 function emptyState(msg) {
     return `<p style="color:var(--c-success,#22c55e);font-size:13px;padding:8px 0;">✓ ${msg}</p>`;
+}
+
+function openAlertaModal(tipo) {
+    if (!_alertasData) return;
+    const etiquetaEtapa = ['','Recepcionar','Levantamiento','Enviar Informe','Negociación','Facturado'];
+
+    const configs = {
+        contratos: {
+            titulo: '📅 Contratos que vencen en los próximos 30 días',
+            items:  _alertasData.contratosVencen,
+            empty:  'No hay contratos próximos a vencer.',
+            header: ['N° Contrato','Cliente','Fecha Vencimiento','Días Restantes','Equipos Activos'],
+            row: c => {
+                const color = c.diasRestantes <= 7 ? '#ef4444' : '#f59e0b';
+                return [
+                    `<strong>${escapeHtml(c.numeroContrato)}</strong>`,
+                    escapeHtml(c.cliente),
+                    new Date(c.fechaTermino).toLocaleDateString('es-CL'),
+                    `<span style="color:${color};font-weight:700;">${c.diasRestantes} días</span>`,
+                    `<span style="background:var(--c-gray);padding:2px 8px;border-radius:4px;">${c.equiposActivos} equipo(s)</span>`,
+                ];
+            },
+        },
+        edps: {
+            titulo: '📋 EDPs pendientes sin facturar',
+            items:  _alertasData.edpsPendientes,
+            empty:  'Todos los EDPs están al día.',
+            header: ['Cliente','N° Contrato','Período','Estado','Total'],
+            row: e => {
+                const colorEstado = { Solicitud:'#7c3aed', Enviado:'#f59e0b', Negociación:'#dc2626', Cerrado:'#16a34a' };
+                const color = colorEstado[e.estado] || '#64748b';
+                return [
+                    `<strong>${escapeHtml(e.cliente)}</strong>`,
+                    escapeHtml(e.contrato),
+                    escapeHtml(e.mesConsumo) || '—',
+                    `<span style="background:${color}22;color:${color};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${escapeHtml(e.estado)}</span>`,
+                    e.total > 0 ? `<strong>$${e.total.toLocaleString('es-CL')}</strong>` : '—',
+                ];
+            },
+        },
+        danos: {
+            titulo: '🔧 Daños y mermas sin movimiento (+15 días)',
+            items:  _alertasData.danosSinMovimiento,
+            empty:  'Sin casos de daños pendientes.',
+            header: ['Equipo','Descripción','Cliente','Etapa','Días sin mov.','Monto est.'],
+            row: d => [
+                `<strong>${escapeHtml(d.equipoId)}</strong>`,
+                escapeHtml(d.equipoDesc || '—'),
+                escapeHtml(d.cliente || '—'),
+                escapeHtml(etiquetaEtapa[d.etapa] || `Etapa ${d.etapa}`),
+                `<span style="color:#f59e0b;font-weight:700;">${d.diasSinMov} días</span>`,
+                d.montoDano ? `$${d.montoDano.toLocaleString('es-CL')}` : '—',
+            ],
+        },
+        facturas: {
+            titulo: '💳 Facturas vencidas más de 30 días',
+            items:  _alertasData.facturasVencidas,
+            empty:  'Sin facturas vencidas de alto riesgo.',
+            header: ['N° Factura','Cliente','Vencimiento','Días Vencida','Saldo Pendiente'],
+            row: f => {
+                const color = f.diasVencida > 60 ? '#ef4444' : '#f59e0b';
+                return [
+                    `<strong>${escapeHtml(f.id)}</strong>`,
+                    escapeHtml(f.cliente || '—'),
+                    escapeHtml(f.vencimiento || '—'),
+                    `<span style="color:${color};font-weight:700;">${f.diasVencida} días</span>`,
+                    `<strong style="color:#dc2626;">$${(f.saldo || f.neto || 0).toLocaleString('es-CL')}</strong>`,
+                ];
+            },
+        },
+    };
+
+    const cfg = configs[tipo];
+    if (!cfg) return;
+
+    document.getElementById('kpi-details-title').textContent = cfg.titulo;
+    const content = document.getElementById('kpi-details-content');
+    const TH = `padding:10px 12px;background:var(--c-gray);border-bottom:2px solid var(--border);text-align:left;font-weight:600;font-size:12px;`;
+    const TD = `padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;`;
+
+    if (!cfg.items.length) {
+        content.innerHTML = `<p style="color:var(--c-success,#22c55e);font-size:14px;padding:16px 0;">✓ ${cfg.empty}</p>`;
+    } else {
+        content.innerHTML = `
+        <p style="color:var(--text-muted);font-size:12px;margin-bottom:12px;">${cfg.items.length} registro(s)</p>
+        <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;color:var(--text-main);">
+          <thead><tr>${cfg.header.map(h => `<th style="${TH}">${h}</th>`).join('')}</tr></thead>
+          <tbody>
+            ${cfg.items.map((item, i) => {
+                const cells = cfg.row(item);
+                const bg = i % 2 === 0 ? '' : 'background:rgba(0,0,0,0.03);';
+                return `<tr style="${bg}">${cells.map(c => `<td style="${TD}">${c}</td>`).join('')}</tr>`;
+            }).join('')}
+          </tbody>
+        </table></div>`;
+    }
+
+    document.getElementById('kpi-modal-backdrop').style.display = 'block';
+    document.getElementById('kpi-details-container').style.display = 'block';
 }
 
 function renderAlertaContratos(items) {
