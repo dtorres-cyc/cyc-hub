@@ -666,6 +666,10 @@ function openEdpModal(edp) {
   document.getElementById('edp-uf-cierre').value    = edp.valorUfCierre || '';
   document.getElementById('edp-obs').value          = edp.observaciones || '';
   
+  document.getElementById('edp-monto-inicial').value = edp.montoEdp || '';
+  document.getElementById('edp-monto-facturado').value = edp.montoFacturado || '';
+  document.getElementById('edp-monto-facturado-container').style.display = edp.etapa >= 4 ? 'block' : 'none';
+  
   const contrato = globalContratos.find(c => c.id === edp.contratoId);
   document.getElementById('edp-modal-title').textContent = `EDP: ${edp.periodo || edp.mesConsumo}`;
   document.getElementById('edp-modal-sub').textContent   = contrato ? `${contrato.cliente} · ${contrato.numeroContrato}` : '';
@@ -842,6 +846,8 @@ async function saveEdpData(avanzar = false) {
     subtotal: calculo.subtotal,
     iva: calculo.iva,
     total: calculo.total,
+    montoEdp: parseFloat(document.getElementById('edp-monto-inicial').value) || null,
+    montoFacturado: parseFloat(document.getElementById('edp-monto-facturado').value) || null,
     detalles,
     adicionales: currentEdpAdicionales
   };
@@ -1247,6 +1253,7 @@ async function moverEdpEtapa(edpId, nuevaEtapa) {
       el.className = 'step-item' + (n < nuevaEtapa ? ' done' : n === nuevaEtapa ? ' active' : '');
     });
     document.getElementById('edp-etapa-actual').value = nuevaEtapa;
+    document.getElementById('edp-monto-facturado-container').style.display = nuevaEtapa >= 4 ? 'block' : 'none';
     // Actualizar botones avanzar/retroceder
     const edpId_ = parseInt(document.getElementById('edp-edit-id').value);
     const btns = document.getElementById('edp-form-btns');

@@ -261,7 +261,7 @@ router.get('/edps', async (req, res) => {
 // POST crear EDP manualmente
 router.post('/edps', async (req, res) => {
   try {
-    const { contratoId, mes, anio, periodo, mesConsumo, estado, valorUfCierre, subtotal, iva, total, montoEdp, observaciones, detalles, adicionales } = req.body;
+    const { contratoId, mes, anio, periodo, mesConsumo, estado, valorUfCierre, subtotal, iva, total, montoEdp, montoFacturado, observaciones, detalles, adicionales } = req.body;
     const edp = await prisma.eDP.create({
       data: {
         contratoId: parseInt(contratoId),
@@ -276,6 +276,7 @@ router.post('/edps', async (req, res) => {
         total: total ? parseFloat(total) : 0,
         etapa: 1,
         montoEdp: montoEdp ? parseFloat(montoEdp) : null,
+        montoFacturado: montoFacturado ? parseFloat(montoFacturado) : null,
         observaciones: observaciones || null,
         detalles: detalles ? { create: detalles } : undefined,
         adicionales: adicionales ? { create: adicionales } : undefined
@@ -291,7 +292,7 @@ router.post('/edps', async (req, res) => {
 // PUT avanzar etapa EDP o actualizar datos
 router.put('/edps/:id', async (req, res) => {
   try {
-    const { etapa, estado, mesConsumo, valorUfCierre, subtotal, iva, total, montoEdp, observaciones, horometroSolicitado, horometroRecibido, edpEnviado, negociacionInicio, facturado, detalles, adicionales } = req.body;
+    const { etapa, estado, mesConsumo, valorUfCierre, subtotal, iva, total, montoEdp, montoFacturado, observaciones, horometroSolicitado, horometroRecibido, edpEnviado, negociacionInicio, facturado, detalles, adicionales } = req.body;
     const data = {};
     if (etapa !== undefined) data.etapa = parseInt(etapa);
     if (estado !== undefined) data.estado = estado;
@@ -301,6 +302,7 @@ router.put('/edps/:id', async (req, res) => {
     if (iva !== undefined) data.iva = parseFloat(iva);
     if (total !== undefined) data.total = parseFloat(total);
     if (montoEdp !== undefined) data.montoEdp = montoEdp !== null ? parseFloat(montoEdp) : null;
+    if (montoFacturado !== undefined) data.montoFacturado = montoFacturado !== null ? parseFloat(montoFacturado) : null;
     if (observaciones !== undefined) data.observaciones = observaciones;
     if (horometroSolicitado !== undefined) data.horometroSolicitado = horometroSolicitado ? new Date(horometroSolicitado) : null;
     if (horometroRecibido !== undefined) data.horometroRecibido = horometroRecibido ? new Date(horometroRecibido) : null;

@@ -219,6 +219,7 @@ model EDP {
   facturado           DateTime?
 
   montoEdp        Float?
+  montoFacturado  Float?
   observaciones   String?
 
   createdAt       DateTime  @default(now())
