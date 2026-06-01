@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+client/dist/
+
+# Environment variables
+.env
+**/.env
+!.env.example
+
+# Uploads (archivos subidos por usuarios)
+uploads/
+**/uploads/
+
+# Prisma generated
+server/node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Package locks (keep package-lock.json but not others)
+yarn.lock
+pnpm-lock.yaml

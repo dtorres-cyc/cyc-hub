@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TaskStatus {
+  BACKLOG
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum TaskPriority {
+  ALTA
+  MEDIA
+  BAJA
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  OPERADOR
+}
+
+model User {
+  id        String   @id @default(uuid())
+  nombre    String
+  email     String   @unique
+  password  String
+  avatar    String?
+  rol       UserRole @default(OPERADOR)
+  createdAt DateTime @default(now())
+
+  tareasResponsable Task[]        @relation("TaskResponsable")
+  comentarios       Comment[]
+  actividades       ActivityLog[]
+  adjuntos          Attachment[]
+  tareasSeguidas    Task[]        @relation("TaskFollowers")
+}
+
+model Project {
+  id          String  @id @default(uuid())
+  nombre      String
+  descripcion String?
+  color       String  @default("#3b82f6")
+  activo      Boolean @default(true)
+
+  tareas Task[]
+}
+
+model Area {
+  id     String @id @default(uuid())
+  nombre String
+  color  String @default("#6366f1")
+
+  tareas Task[]
+}
+
+model Task {
+  id           String       @id @default(uuid())
+  titulo       String
+  descripcion  String?
+  estado       TaskStatus   @default(BACKLOG)
+  prioridad    TaskPriority @default(MEDIA)
+  progreso     Int          @default(0)
+  tags         String[]     @default([])
+  fechaInicio  DateTime?
+  fechaFin     DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  proyectoId   String?
+  proyecto     Project?     @relation(fields: [proyectoId], references: [id])
+
+  areaId       String?
+  area         Area?        @relation(fields: [areaId], references: [id])
+
+  responsableId String?
+  responsable   User?       @relation("TaskResponsable", fields: [responsableId], references: [id])
+
+  seguidores    User[]      @relation("TaskFollowers")
+  subtareas     Subtask[]
+  archivos      Attachment[]
+  comentarios   Comment[]
+  actividad     ActivityLog[]
+}
+
+model Subtask {
+  id        String  @id @default(uuid())
+  texto     String
+  completada Boolean @default(false)
+  orden     Int     @default(0)
+
+  tareaId   String
+  tarea     Task    @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+}
+
+model Attachment {
+  id        String   @id @default(uuid())
+  nombre    String
+  url       String
+  tamanio   Int
+  tipo      String
+  createdAt DateTime @default(now())
+
+  tareaId   String
+  tarea     Task     @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+
+  subidoPorId String?
+  subidoPor   User?   @relation(fields: [subidoPorId], references: [id])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  texto     String
+  createdAt DateTime @default(now())
+
+  tareaId   String
+  tarea     Task     @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+
+  autorId   String
+  autor     User     @relation(fields: [autorId], references: [id])
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  accion    String
+  detalle   String?
+  createdAt DateTime @default(now())
+
+  tareaId   String
+  tarea     Task     @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+
+  usuarioId String?
+  usuario   User?    @relation(fields: [usuarioId], references: [id])
+}
