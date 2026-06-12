@@ -61,6 +61,27 @@ function switchTab(tabId, el) {
     }
 }
 
+function handleHashChange() {
+    const hash = window.location.hash;
+    if (hash === '#crm') {
+        const navEl = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick') && el.getAttribute('onclick').includes('tab-crm'));
+        if (navEl) {
+            switchTab('tab-crm', navEl);
+        }
+    } else if (hash === '#contratos') {
+        const navEl = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick') && el.getAttribute('onclick').includes('tab-arriendo'));
+        if (navEl) {
+            switchTab('tab-arriendo', navEl);
+        }
+    }
+}
+window.addEventListener('hashchange', handleHashChange);
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', handleHashChange);
+} else {
+    handleHashChange();
+}
+
 function safeLower(val) {
     return val ? val.toString().trim().toLowerCase() : '';
 }

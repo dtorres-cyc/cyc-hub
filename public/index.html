@@ -148,10 +148,10 @@
   /* ── GRID DE MÓDULOS ── */
   .modules-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
     width: 100%;
-    max-width: 900px;
+    max-width: 960px;
   }
 
   .module-card {
@@ -341,10 +341,91 @@
   .modules-grid  { animation: fadeUp 0.5s ease both 0.25s; }
   .footer        { animation: fadeUp 0.5s ease both 0.4s; }
 
+  /* ── Estilos para tarjetas de categoría / grupo ── */
+  .module-card.group-card {
+    cursor: default;
+    grid-column: span 2;
+  }
+  .module-card.group-card:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--border);
+  }
+  .module-card.group-card::before {
+    display: none;
+  }
+  .group-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+    margin-bottom: 4px;
+  }
+  .group-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .sub-modules-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .sub-module-btn {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 24px;
+    background: var(--dark-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s, transform 0.2s, background-color 0.2s;
+  }
+  .sub-module-btn:hover {
+    border-color: var(--orange);
+    background: rgba(232,101,26,0.04);
+    transform: translateY(-2px);
+  }
+  .sub-module-btn .sub-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sub-module-btn .sub-desc {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  
+  /* Badge de Próximamente */
+  .badge-soon {
+    align-self: flex-start;
+    font-size: 10px;
+    font-weight: 700;
+    color: #f59e0b;
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.25);
+    padding: 3px 9px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
   /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .modules-grid { grid-template-columns: 1fr; }
+    .module-card.group-card { grid-column: span 1; }
+    .sub-modules-grid { grid-template-columns: 1fr; }
+  }
   @media (max-width: 600px) {
     .container { padding: 40px 16px; gap: 40px; }
-    .modules-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -372,103 +453,91 @@
   <!-- MÓDULOS -->
   <div class="modules-grid">
 
-    <!-- Cotizador -->
-    <a href="/cotizador" class="module-card" id="card-cotizador">
-      <div class="accent-bar"></div>
-      <div class="card-icon">📄</div>
-      <div class="card-content">
-        <div class="card-title">Cotizador</div>
-        <div class="card-desc">
-          Genera cotizaciones profesionales en PDF, las sube automáticamente a Google Drive y las envía por correo al cliente.
-        </div>
-        <div class="card-tags">
-          <span class="tag">PDF automático</span>
-          <span class="tag">Google Drive</span>
-          <span class="tag">Email</span>
-          <span class="tag">Historial</span>
-        </div>
+    <!-- 1. COMERCIAL (Spans 2 columns) -->
+    <div class="module-card group-card" id="card-comercial">
+      <div class="group-title-wrap">
+        <div class="card-icon" style="background:rgba(232,101,26,0.15); border:1px solid rgba(232,101,26,0.3);">🤝</div>
+        <div class="group-title">Área Comercial</div>
       </div>
-      <div class="card-footer">
-        <div class="card-status">
-          <div class="status-dot"></div>
-          Activo
-        </div>
-        <div class="card-cta">Abrir módulo →</div>
-      </div>
-    </a>
+      <div class="sub-modules-grid">
+        
+        <!-- Cotizador -->
+        <a href="/cotizador" class="sub-module-btn">
+          <div class="sub-title">📄 Cotizador</div>
+          <div class="sub-desc">Generación de presupuestos en PDF, carga automática en Google Drive y envío de correos.</div>
+        </a>
+        
+        <!-- Envío de Flota -->
+        <a href="/flota" class="sub-module-btn">
+          <div class="sub-title">🚜 Envío de Flota</div>
+          <div class="sub-desc">Gestión y distribución de campañas de equipos disponibles importados desde Notion.</div>
+        </a>
 
-    <!-- Envío de Flota -->
-    <a href="/flota" class="module-card" id="card-flota">
-      <div class="accent-bar"></div>
-      <div class="card-icon">🚜</div>
-      <div class="card-content">
-        <div class="card-title">Envío de Flota</div>
-        <div class="card-desc">
-          Selecciona los equipos disponibles desde Notion y envía campañas de correo personalizadas a tu base de clientes.
-        </div>
-        <div class="card-tags">
-          <span class="tag">Notion</span>
-          <span class="tag">Campañas email</span>
-          <span class="tag">Multi-cuenta</span>
-          <span class="tag">WhatsApp CSV</span>
-        </div>
-      </div>
-      <div class="card-footer">
-        <div class="card-status">
-          <div class="status-dot"></div>
-          Activo
-        </div>
-        <div class="card-cta">Abrir módulo →</div>
-      </div>
-    </a>
+        <!-- CRM (Fuera como módulo propio) -->
+        <a href="/informe/index.html#crm" class="sub-module-btn">
+          <div class="sub-title">💼 Pipeline CRM</div>
+          <div class="sub-desc">Seguimiento de oportunidades comerciales, embudo de ventas, base de contactos y clientes.</div>
+        </a>
 
-    <!-- Informe Comercial -->
-    <a href="/informe/index.html" class="module-card" id="card-informe">
-      <div class="accent-bar"></div>
-      <div class="card-icon">📊</div>
-      <div class="card-content">
-        <div class="card-title">Informe Comercial</div>
-        <div class="card-desc">
-          Dashboard interactivo con métricas de flota, CRM, operación y cobros. Los lunes envía resumen automático por correo a gerencia.
-        </div>
-        <div class="card-tags">
-          <span class="tag">Dashboard en vivo</span>
-          <span class="tag">Correo automático</span>
-          <span class="tag">CRM</span>
-          <span class="tag">KPIs</span>
-        </div>
-      </div>
-      <div class="card-footer">
-        <div class="card-status">
-          <div class="status-dot"></div>
-          Activo
-        </div>
-        <div class="card-cta">Abrir informe →</div>
-      </div>
-    </a>
+        <!-- Informe Comercial -->
+        <a href="/informe/index.html" class="sub-module-btn">
+          <div class="sub-title">📊 Informe Comercial</div>
+          <div class="sub-desc">Panel de analíticas, KPIs, rentabilidad de arriendos y proyecciones de facturación.</div>
+        </a>
 
-    <!-- Daños y Mermas -->
-    <a href="https://cyc-inspecciones-production.up.railway.app" target="_blank" class="module-card" id="card-inspecciones">
-      <div class="accent-bar"></div>
-      <div class="card-icon">📷</div>
+      </div>
+    </div>
+
+    <!-- 2. OPERACIONES (Próximamente) -->
+    <div class="module-card coming-soon" style="grid-column: span 1; cursor: default;">
+      <div class="card-icon" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">🛠️</div>
       <div class="card-content">
-        <div class="card-title">Daños y Mermas</div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div class="card-title">Operaciones</div>
+          <span class="badge-soon">Próximamente</span>
+        </div>
         <div class="card-desc">
-          Registro fotográfico de equipos en entrega y devolución. Genera informes PDF comparativos para enviar al cliente.
+          Control de despachos, partes diarios de flota, órdenes de trabajo para mantenimiento preventivo/correctivo y bitácoras.
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. RESULTADOS Y FINANZAS (Próximamente) -->
+    <div class="module-card coming-soon" style="grid-column: span 1; cursor: default;">
+      <div class="card-icon" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">📈</div>
+      <div class="card-content">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div class="card-title">Resultados y Finanzas</div>
+          <span class="badge-soon">Próximamente</span>
+        </div>
+        <div class="card-desc">
+          Seguimiento de cobros y facturación, conciliación de estados de pago, balances financieros y control de gastos de operación.
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. TAREAS (Spans 2 columns) -->
+    <a href="https://cyc-tasks-production.up.railway.app" class="module-card" id="card-tareas" style="grid-column: span 2;">
+      <div class="accent-bar"></div>
+      <div class="card-icon" style="background:rgba(74,222,128,0.1); border:1px solid rgba(74,222,128,0.3);">✅</div>
+      <div class="card-content">
+        <div class="card-title">Gestión de Tareas</div>
+        <div class="card-desc">
+          Módulo Kanban interno para la gestión de tareas operativas, asignación de responsables y seguimiento de hitos de la gerencia.
         </div>
         <div class="card-tags">
-          <span class="tag">Inspecciones</span>
-          <span class="tag">PDF automático</span>
-          <span class="tag">Órdenes de trabajo</span>
-          <span class="tag">Contratos</span>
+          <span class="tag">Kanban Board</span>
+          <span class="tag">Asignaciones</span>
+          <span class="tag">Fechas Límite</span>
+          <span class="tag">Proyectos</span>
         </div>
       </div>
       <div class="card-footer">
         <div class="card-status">
-          <div class="status-dot"></div>
-          Activo
+          <div class="status-dot" style="background:#4ade80;"></div>
+          Listo para despliegue
         </div>
-        <div class="card-cta">Abrir módulo →</div>
+        <div class="card-cta">Abrir Tareas →</div>
       </div>
     </a>
 
