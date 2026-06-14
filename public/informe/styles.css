@@ -1,26 +1,26 @@
 :root {
-  --bg-sidebar: #1e293b;
-  --bg-main: #f4f7f6;
+  --bg-sidebar: #ffffff;
+  --bg-main: #f4f6f9;
   --bg-card: #ffffff;
   
-  --text-sidebar: #94a3b8;
-  --text-sidewhite: #f8fafc;
+  --text-sidebar: #64748b;
+  --text-sidewhite: #1e293b;
   --text-main: #1e293b;
-  --text-muted: #64748b;
+  --text-muted: #94a3b8;
   
   /* Brand Palette from CyC */
-  --c-primary: #2563eb;
-  --c-secondary: #1e40af;
-  --c-green: #16a34a;
-  --c-success: #22c55e;
-  --c-orange: #f97316;
-  --c-red: #dc2626;
+  --c-primary: #e8651a;
+  --c-secondary: #c9540d;
+  --c-green: #10b981;
+  --c-success: #10b981;
+  --c-orange: #e8651a;
+  --c-red: #ef4444;
   --c-gray: #f1f5f9;
   --c-black: #0f172a;
   
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-  --radius: 16px;
+  --shadow-sm: 0 2px 4px rgba(15,23,42,0.04);
+  --shadow-md: 0 10px 25px -5px rgba(15,23,42,0.08), 0 8px 16px -6px rgba(15,23,42,0.04);
+  --radius: 12px;
   --border: #e2e8f0;
 }
 
@@ -31,7 +31,7 @@
 }
 
 body {
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Inter', sans-serif;
   background-color: var(--bg-main);
   color: var(--text-main);
   display: flex;
@@ -42,6 +42,7 @@ body {
 .sidebar {
   width: 260px;
   background-color: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   padding: 24px;
@@ -75,12 +76,12 @@ body {
   transition: all 0.2s ease;
 }
 .nav-item:hover, .nav-item.active {
-  background-color: rgba(255,255,255,0.05);
-  color: var(--text-sidewhite);
+  background-color: rgba(232, 101, 26, 0.08);
+  color: var(--c-primary);
 }
 .user-info {
   margin-top: auto;
-  border-top: 1px solid rgba(255,255,255,0.1);
+  border-top: 1px solid var(--border);
   padding-top: 16px;
 }
 .user-info .role {
@@ -449,7 +450,7 @@ body {
 .drawer-header {
   padding: 24px 28px 20px;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  background: linear-gradient(135deg, #e8651a 0%, #c9540d 100%);
   color: white;
   flex-shrink: 0;
   position: relative;
@@ -537,7 +538,7 @@ body {
   padding: 32px; text-align: center; cursor: pointer;
   transition: all 0.2s; margin-bottom: 20px; background: var(--c-gray);
 }
-.upload-zone:hover { border-color: var(--c-primary); background: rgba(37,99,235,0.04); }
+.upload-zone:hover { border-color: var(--c-primary); background: rgba(232, 101, 26, 0.04); }
 .upload-zone .upload-icon { font-size: 32px; margin-bottom: 8px; }
 .upload-zone p { font-size: 13px; color: var(--text-muted); }
 .upload-zone input[type="file"] { display: none; }
@@ -554,7 +555,7 @@ body {
 .attachment-item a { color: var(--c-primary); text-decoration: none; font-size: 12px; font-weight: 600; }
 
 .quote-cta {
-  background: linear-gradient(135deg, #1e40af, #2563eb);
+  background: linear-gradient(135deg, var(--c-secondary), var(--c-primary));
   color: white; border-radius: 12px; padding: 20px 24px;
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 24px; gap: 16px;
@@ -723,7 +724,7 @@ body {
 }
 .edp-mini-card:hover {
   border-color: var(--c-primary);
-  background: rgba(37, 99, 235, 0.05);
+  background: rgba(232, 101, 26, 0.05);
 }
 .edp-mini-periodo {
   font-size: 11px;
@@ -759,7 +760,7 @@ body {
 }
 .contrato-btn:hover { opacity: 0.85; transform: translateY(-1px); }
 .btn-editar { background: var(--c-gray); color: var(--text-main); }
-.btn-nuevo-edp { background: rgba(37, 99, 235, 0.1); color: var(--c-primary); }
+.btn-nuevo-edp { background: rgba(232, 101, 26, 0.1); color: var(--c-primary); }
 .btn-dar-baja { background: rgba(220, 38, 38, 0.1); color: var(--c-red); }
 
 /* EDP Kanban Global */

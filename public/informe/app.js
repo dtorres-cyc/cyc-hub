@@ -350,12 +350,12 @@ function renderAnalisisGraficos(arriendo_por_tipo, peso_por_cliente) {
             datasets: [{
                 data: Object.values(arriendo_por_tipo),
                 backgroundColor: [
-                    'rgba(59,130,246,0.6)', 'rgba(249,115,22,0.6)', 'rgba(34,197,94,0.6)',
-                    'rgba(239,68,68,0.6)', 'rgba(168,85,247,0.6)', 'rgba(234,179,8,0.6)',
-                    'rgba(236,72,153,0.6)', 'rgba(6,182,212,0.6)', 'rgba(100,116,139,0.6)'
+                    'rgba(232,101,26,0.65)', 'rgba(255,122,47,0.65)', 'rgba(234,179,8,0.65)',
+                    'rgba(202,138,4,0.65)', 'rgba(194,65,12,0.65)', 'rgba(100,116,139,0.65)',
+                    'rgba(148,163,184,0.65)', 'rgba(51,65,85,0.65)', 'rgba(249,115,22,0.65)'
                 ],
                 borderColor: [
-                    '#3b82f6', '#f97316', '#22c55e', '#ef4444', '#a855f7', '#eab308', '#ec4899', '#06b6d4', '#64748b'
+                    '#e8651a', '#ff7a2f', '#eab308', '#ca8a04', '#c2410c', '#64748b', '#94a3b8', '#334155', '#f97316'
                 ],
                 borderWidth: 2,
                 hoverOffset: 12,
@@ -365,10 +365,10 @@ function renderAnalisisGraficos(arriendo_por_tipo, peso_por_cliente) {
         options: {
             responsive: true,
             plugins: {
-                legend: { position: 'right', labels: { boxWidth: 10, font: {size: 11} } },
+                legend: { position: 'right', labels: { boxWidth: 10, font: {family: 'Inter', size: 11} } },
                 datalabels: {
                     color: '#fff',
-                    font: { weight: 'bold', size: 14 },
+                    font: { family: 'Inter', weight: 'bold', size: 14 },
                     formatter: (value) => value > 0 ? value : ''
                 }
             }
@@ -386,24 +386,25 @@ function renderAnalisisGraficos(arriendo_por_tipo, peso_por_cliente) {
         type: 'line',
         label: 'Total Equipos',
         data: sortedClientes.map(item => item[1].count),
-        borderColor: '#f39c12',
-        backgroundColor: '#f39c12',
+        borderColor: '#e8651a',
+        backgroundColor: '#e8651a',
         borderWidth: 2,
+        tension: 0.4,
         yAxisID: 'y',
         order: 0,
         datalabels: {
             align: 'top',
-            color: '#f39c12',
-            font: { weight: 'bold' }
+            color: '#e8651a',
+            font: { family: 'Inter', weight: 'bold' }
         }
     });
 
     // Barras apiladas por Tipo
     const chartColors = [
-        'rgba(59,130,246,0.55)', 'rgba(249,115,22,0.55)', 'rgba(34,197,94,0.55)',
-        'rgba(239,68,68,0.55)', 'rgba(168,85,247,0.55)', 'rgba(234,179,8,0.55)', 'rgba(100,116,139,0.55)'
+        'rgba(232,101,26,0.6)', 'rgba(255,122,47,0.6)', 'rgba(234,179,8,0.6)',
+        'rgba(202,138,4,0.6)', 'rgba(194,65,12,0.6)', 'rgba(100,116,139,0.6)', 'rgba(51,65,85,0.6)'
     ];
-    const chartBorders = ['#3b82f6', '#f97316', '#22c55e', '#ef4444', '#a855f7', '#eab308', '#64748b'];
+    const chartBorders = ['#e8651a', '#ff7a2f', '#eab308', '#ca8a04', '#c2410c', '#64748b', '#334155'];
     allTipos.forEach((tipo, idx) => {
         datasets.push({
             type: 'bar',
@@ -428,7 +429,7 @@ function renderAnalisisGraficos(arriendo_por_tipo, peso_por_cliente) {
         options: {
             responsive: true,
             plugins: {
-                legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } },
+                legend: { position: 'bottom', labels: { boxWidth: 12, font: {family: 'Inter', size: 10} } },
                 tooltip: {
                     callbacks: {
                         afterBody: function(context) {
@@ -713,15 +714,15 @@ function calculateFacKPIs(facturas) {
         data: {
             labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
             datasets: [
-                { label: '2025', data: mensual_2025.map(n => Math.round(n*10)/10), backgroundColor: 'rgba(189,195,199,0.5)', borderColor: '#95a5a6', borderWidth: 1, borderRadius: 8, borderSkipped: false },
-                { label: '2026', data: mensual_2026.map(n => Math.round(n*10)/10), backgroundColor: 'rgba(37,99,168,0.55)', borderColor: '#2563a8', borderWidth: 1, borderRadius: 8, borderSkipped: false }
+                { label: '2025', data: mensual_2025.map(n => Math.round(n*10)/10), backgroundColor: 'rgba(148,163,184,0.4)', borderColor: '#94a3b8', borderWidth: 1, borderRadius: 8, borderSkipped: false },
+                { label: '2026', data: mensual_2026.map(n => Math.round(n*10)/10), backgroundColor: 'rgba(232,101,26,0.6)', borderColor: '#e8651a', borderWidth: 1, borderRadius: 8, borderSkipped: false }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: { 
-                legend: { position: 'top' },
+                legend: { position: 'top', labels: { font: { family: 'Inter' } } },
                 datalabels: { display: false } // Ocultar datalabels porque se ven mal en mensual plano
             },
             scales: { y: { beginAtZero: true } }
@@ -738,10 +739,10 @@ function calculateFacKPIs(facturas) {
             datasets: [{
                 data: tiposArr.map(t => Math.round(t.monto*10)/10),
                 backgroundColor: [
-                    'rgba(52,152,219,0.6)', 'rgba(46,204,113,0.6)', 'rgba(231,76,60,0.6)', 
-                    'rgba(241,196,15,0.6)', 'rgba(155,89,182,0.6)', 'rgba(149,165,166,0.6)'
+                    'rgba(232,101,26,0.65)', 'rgba(255,122,47,0.65)', 'rgba(234,179,8,0.65)',
+                    'rgba(202,138,4,0.65)', 'rgba(194,65,12,0.65)', 'rgba(100,116,139,0.65)'
                 ],
-                borderColor: ['#3498db', '#2ecc71', '#e74c3c', '#f1c40f', '#9b59b6', '#95a5a6'],
+                borderColor: ['#e8651a', '#ff7a2f', '#eab308', '#ca8a04', '#c2410c', '#64748b'],
                 borderWidth: 2,
                 hoverOffset: 8
             }]
@@ -749,10 +750,10 @@ function calculateFacKPIs(facturas) {
         options: {
             responsive: true,
             plugins: {
-                legend: { position: 'bottom', labels: { font: { size: 10 } } },
+                legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 10 } } },
                 datalabels: {
                     color: '#fff',
-                    font: { weight: 'bold', size: 10 },
+                    font: { family: 'Inter', weight: 'bold', size: 10 },
                     formatter: (value) => value > 0 ? value : ''
                 }
             }
@@ -775,11 +776,11 @@ function calculateFacKPIs(facturas) {
             datasets: [{
                 data: topDeuda.map(d => Math.round(d.monto * 10) / 10),
                 backgroundColor: [
-                    'rgba(231,76,60,0.6)', 'rgba(230,126,34,0.6)', 'rgba(241,196,15,0.6)',
-                    'rgba(52,152,219,0.6)', 'rgba(155,89,182,0.6)', 'rgba(46,204,113,0.6)',
-                    'rgba(26,188,156,0.6)', 'rgba(52,73,94,0.6)', 'rgba(149,165,166,0.6)', 'rgba(127,140,141,0.6)'
+                    'rgba(232,101,26,0.65)', 'rgba(255,122,47,0.65)', 'rgba(234,179,8,0.65)',
+                    'rgba(202,138,4,0.65)', 'rgba(194,65,12,0.65)', 'rgba(100,116,139,0.65)',
+                    'rgba(148,163,184,0.65)', 'rgba(51,65,85,0.65)', 'rgba(249,115,22,0.65)', 'rgba(245,158,11,0.65)'
                 ],
-                borderColor: ['#e74c3c', '#e67e22', '#f1c40f', '#3498db', '#9b59b6', '#2ecc71', '#1abc9c', '#34495e', '#95a5a6', '#7f8c8d'],
+                borderColor: ['#e8651a', '#ff7a2f', '#eab308', '#ca8a04', '#c2410c', '#64748b', '#94a3b8', '#334155', '#f97316', '#d97706'],
                 borderWidth: 2,
                 hoverOffset: 12,
                 offset: 4
