@@ -57,29 +57,53 @@ async function syncFacturacion() {
     const data = await getSheetData(SHEET_FACT_ID, "'BBDD Facturas Venta'!A:Z");
     if (!data || data.length < 2) return { ok: false, msg: 'Sin datos en la hoja' };
 
-    const rows = data.slice(1).filter(r => r[0] && r[0].trim() !== '');
+    const headers = data[0].map(h => (h || '').trim().toLowerCase());
+    
+    const getColIdx = (names, defaultIdx) => {
+      for (const name of names) {
+        const idx = headers.indexOf(name.toLowerCase());
+        if (idx !== -1) return idx;
+      }
+      return defaultIdx;
+    };
+
+    const idxFacturaId = getColIdx(['n°factura', 'factura', 'nºfactura'], 0);
+    const idxTipo      = getColIdx(['tipo'], 1);
+    const idxCliente   = getColIdx(['cliente'], 2);
+    const idxEmision   = getColIdx(['fecha de emisión', 'fecha emision', 'emision'], 3);
+    const idxVencimiento = getColIdx(['fecha de vencimiento', 'fecha vencimiento', 'vencimiento'], 4);
+    const idxMesTxt    = getColIdx(['mes'], 5);
+    const idxNeto      = getColIdx(['neto'], 7);
+    const idxSaldo     = getColIdx(['saldo pendiente', 'saldo'], 11);
+    const idxEstado    = getColIdx(['estado'], 13);
+    const idxAlerta    = getColIdx(['alerta'], 14);
+    const idxDiasVencida = getColIdx(['días vencida', 'dias vencida'], 16);
+    const idxMesEmi    = getColIdx(['mes emision', 'mesemi', 'mes emisión'], 18);
+    const idxAnioEmi   = getColIdx(['año emisión', 'anioemi', 'año emision', 'anio emision'], 19);
+
+    const rows = data.slice(1).filter(r => r[idxFacturaId] && r[idxFacturaId].trim() !== '');
     let count = 0;
 
     for (const row of rows) {
-      const facturaId = (row[0] || '').trim();
+      const facturaId = (row[idxFacturaId] || '').trim();
       if (!facturaId) continue;
 
-      const neto  = parseFloat((row[7]  || '0').replace(/\./g, '').replace(/,/g, '.')) || 0;
-      const saldo = parseFloat((row[11] || '0').replace(/\./g, '').replace(/,/g, '.')) || 0;
+      const neto  = parseFloat((row[idxNeto]  || '0').replace(/\./g, '').replace(/,/g, '.')) || 0;
+      const saldo = parseFloat((row[idxSaldo] || '0').replace(/\./g, '').replace(/,/g, '.')) || 0;
 
       const payload = {
-        tipo:        row[1] || null,
-        cliente:     row[2] || null,
-        emision:     row[3] || null,
-        vencimiento: row[4] || null,
-        mesTxt:      row[5] || null,
+        tipo:        row[idxTipo] || null,
+        cliente:     row[idxCliente] || null,
+        emision:     row[idxEmision] || null,
+        vencimiento: row[idxVencimiento] || null,
+        mesTxt:      row[idxMesTxt] || null,
         neto,
         saldo,
-        estado:      (row[13] || '').trim().toLowerCase() || null,
-        alerta:      (row[14] || '').trim().toLowerCase() || null,
-        diasVencida: parseInt(row[16]) || 0,
-        mesEmi:      parseInt(row[18]) || 0,
-        anioEmi:     parseInt(row[19]) || 0,
+        estado:      (row[idxEstado] || '').trim().toLowerCase() || null,
+        alerta:      (row[idxAlerta] || '').trim().toLowerCase() || null,
+        diasVencida: parseInt(row[idxDiasVencida]) || 0,
+        mesEmi:      parseInt(row[idxMesEmi]) || 0,
+        anioEmi:     parseInt(row[idxAnioEmi]) || 0,
         syncedAt:    new Date(),
       };
 

@@ -53,6 +53,10 @@ function switchTab(tabId, el) {
     document.getElementById(tabId).style.display = 'block';
     document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
     el.classList.add('active');
+    
+    // Guardar la pestaña activa en localStorage para persistencia al recargar
+    localStorage.setItem('activeInformeTab', tabId);
+
     if (tabId === 'tab-alertas' && !_alertasLoaded) loadAlertas();
     if (tabId === 'tab-facturacion') {
         setTimeout(() => {
@@ -67,11 +71,22 @@ function handleHashChange() {
         const navEl = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick') && el.getAttribute('onclick').includes('tab-crm'));
         if (navEl) {
             switchTab('tab-crm', navEl);
+            return;
         }
     } else if (hash === '#contratos') {
         const navEl = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick') && el.getAttribute('onclick').includes('tab-arriendo'));
         if (navEl) {
             switchTab('tab-arriendo', navEl);
+            return;
+        }
+    }
+    
+    // Si no hay hash específico, restaurar la pestaña guardada de localStorage
+    const savedTab = localStorage.getItem('activeInformeTab');
+    if (savedTab) {
+        const navEl = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick') && el.getAttribute('onclick').includes(savedTab));
+        if (navEl) {
+            switchTab(savedTab, navEl);
         }
     }
 }

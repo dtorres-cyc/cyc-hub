@@ -148,21 +148,45 @@ async function getFacturacionData() {
         const data = await getSheetData(SHEET_FACT_ID, "'BBDD Facturas Venta'!A:Z");
         if (!data || data.length < 2) return REPORT_DATA.facturacion;
 
-        const rows = data.slice(1).filter(r => r[0] && r[0].trim() !== '');
+        const headers = data[0].map(h => (h || '').trim().toLowerCase());
+        
+        const getColIdx = (names, defaultIdx) => {
+          for (const name of names) {
+            const idx = headers.indexOf(name.toLowerCase());
+            if (idx !== -1) return idx;
+          }
+          return defaultIdx;
+        };
+
+        const idxFacturaId = getColIdx(['n°factura', 'factura', 'nºfactura'], 0);
+        const idxTipo      = getColIdx(['tipo'], 1);
+        const idxCliente   = getColIdx(['cliente'], 2);
+        const idxEmision   = getColIdx(['fecha de emisión', 'fecha emision', 'emision'], 3);
+        const idxVencimiento = getColIdx(['fecha de vencimiento', 'fecha vencimiento', 'vencimiento'], 4);
+        const idxMesTxt    = getColIdx(['mes'], 5);
+        const idxNeto      = getColIdx(['neto'], 7);
+        const idxSaldo     = getColIdx(['saldo pendiente', 'saldo'], 11);
+        const idxEstado    = getColIdx(['estado'], 13);
+        const idxAlerta    = getColIdx(['alerta'], 14);
+        const idxDiasVencida = getColIdx(['días vencida', 'dias vencida'], 16);
+        const idxMesEmi    = getColIdx(['mes emision', 'mesemi', 'mes emisión'], 18);
+        const idxAnioEmi   = getColIdx(['año emisión', 'anioemi', 'año emision', 'anio emision'], 19);
+
+        const rows = data.slice(1).filter(r => r[idxFacturaId] && r[idxFacturaId].trim() !== '');
         const facturas = rows.map(row => ({
-            id:          row[0] || '',
-            tipo:        row[1] || '',
-            cliente:     row[2] || '',
-            emision:     row[3] || '',
-            vencimiento: row[4] || '',
-            mes_txt:     row[5] || '',
-            neto:        parseFloat((row[7]  || '0').replace(/\./g, '').replace(/,/g, '.')) || 0,
-            saldo:       parseFloat((row[11] || '0').replace(/\./g, '').replace(/,/g, '.')) || 0,
-            estado:      safeLower(row[13]),
-            alerta:      safeLower(row[14]),
-            dias_vencida: parseInt(row[16]) || 0,
-            mes_emi:     parseInt(row[18]) || 0,
-            anio_emi:    parseInt(row[19]) || 0,
+            id:          row[idxFacturaId] || '',
+            tipo:        row[idxTipo] || '',
+            cliente:     row[idxCliente] || '',
+            emision:     row[idxEmision] || '',
+            vencimiento: row[idxVencimiento] || '',
+            mes_txt:     row[idxMesTxt] || '',
+            neto:        parseFloat((row[idxNeto]  || '0').replace(/\./g, '').replace(/,/g, '.')) || 0,
+            saldo:       parseFloat((row[idxSaldo] || '0').replace(/\./g, '').replace(/,/g, '.')) || 0,
+            estado:      safeLower(row[idxEstado]),
+            alerta:      safeLower(row[idxAlerta]),
+            dias_vencida: parseInt(row[idxDiasVencida]) || 0,
+            mes_emi:     parseInt(row[idxMesEmi]) || 0,
+            anio_emi:    parseInt(row[idxAnioEmi]) || 0,
             _fromDb:     false,
         }));
 
