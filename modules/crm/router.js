@@ -106,12 +106,30 @@ router.get('/api/contacts', async (req, res) => {
 // Crear un contacto
 router.post('/api/contacts', async (req, res) => {
     try {
-        const { firstName, lastName, email, phone, role, status, companyId, type } = req.body;
+        const { firstName, lastName, email, phone, role, status, companyId, newCompanyName, type } = req.body;
+        
+        let finalCompanyId = companyId ? parseInt(companyId) : null;
+        
+        if (newCompanyName && (!finalCompanyId || isNaN(finalCompanyId))) {
+            const trimmedName = newCompanyName.trim();
+            if (trimmedName) {
+                let comp = await prisma.company.findFirst({
+                    where: { name: { equals: trimmedName } }
+                });
+                if (!comp) {
+                    comp = await prisma.company.create({
+                        data: { name: trimmedName }
+                    });
+                }
+                finalCompanyId = comp.id;
+            }
+        }
+
         const newContact = await prisma.contact.create({
             data: {
                 firstName, lastName, email, phone, role, status,
                 type: type || "Normal",
-                companyId: companyId ? parseInt(companyId) : null
+                companyId: finalCompanyId
             }
         });
         res.json(newContact);
@@ -145,13 +163,31 @@ router.post('/api/contacts/bulk', async (req, res) => {
 router.put('/api/contacts/:id', async (req, res) => {
     try {
         const id = parseInt(req.params.id);
-        const { firstName, lastName, email, phone, role, status, companyId, type } = req.body;
+        const { firstName, lastName, email, phone, role, status, companyId, newCompanyName, type } = req.body;
+        
+        let finalCompanyId = companyId ? parseInt(companyId) : null;
+        
+        if (newCompanyName && (!finalCompanyId || isNaN(finalCompanyId))) {
+            const trimmedName = newCompanyName.trim();
+            if (trimmedName) {
+                let comp = await prisma.company.findFirst({
+                    where: { name: { equals: trimmedName } }
+                });
+                if (!comp) {
+                    comp = await prisma.company.create({
+                        data: { name: trimmedName }
+                    });
+                }
+                finalCompanyId = comp.id;
+            }
+        }
+
         const updatedContact = await prisma.contact.update({
             where: { id },
             data: {
                 firstName, lastName, email, phone, role, status,
                 type: type || undefined,
-                companyId: companyId ? parseInt(companyId) : null
+                companyId: finalCompanyId
             }
         });
         res.json(updatedContact);
@@ -211,26 +247,46 @@ router.post('/api/opportunities', async (req, res) => {
 
         let finalCompanyId = companyId ? parseInt(companyId) : null;
         
-        // Creación rápida de empresa si se solicita
+        // Creación rápida de empresa si se solicita (con chequeo de duplicados)
         if (newCompanyName && (!finalCompanyId || isNaN(finalCompanyId))) {
-            const newComp = await prisma.company.create({
-                data: { name: newCompanyName }
-            });
-            finalCompanyId = newComp.id;
+            const trimmedName = newCompanyName.trim();
+            if (trimmedName) {
+                let comp = await prisma.company.findFirst({
+                    where: { name: { equals: trimmedName } }
+                });
+                if (!comp) {
+                    comp = await prisma.company.create({
+                        data: { name: trimmedName }
+                    });
+                }
+                finalCompanyId = comp.id;
+            }
         }
 
         let finalContactId = contactId ? parseInt(contactId) : null;
 
-        // Creación rápida de contacto si se solicita
+        // Creación rápida de contacto si se solicita (con chequeo de duplicados)
         if (newContactFirstName && (!finalContactId || isNaN(finalContactId))) {
-            const newCont = await prisma.contact.create({
-                data: { 
-                    firstName: newContactFirstName, 
-                    lastName: newContactLastName || '',
-                    companyId: finalCompanyId 
+            const trimmedFirstName = newContactFirstName.trim();
+            if (trimmedFirstName) {
+                let cont = await prisma.contact.findFirst({
+                    where: {
+                        firstName: { equals: trimmedFirstName },
+                        lastName: { equals: newContactLastName ? newContactLastName.trim() : '' },
+                        companyId: finalCompanyId
+                    }
+                });
+                if (!cont) {
+                    cont = await prisma.contact.create({
+                        data: {
+                            firstName: trimmedFirstName,
+                            lastName: newContactLastName ? newContactLastName.trim() : '',
+                            companyId: finalCompanyId
+                        }
+                    });
                 }
-            });
-            finalContactId = newCont.id;
+                finalContactId = cont.id;
+            }
         }
 
         const newOpp = await prisma.opportunity.create({
@@ -273,7 +329,56 @@ router.patch('/api/opportunities/:id/stage', async (req, res) => {
 router.put('/api/opportunities/:id', async (req, res) => {
     try {
         const id = parseInt(req.params.id);
-        const { name, amount, stage, probability, priority, expectedClose, businessType, companyId, contactId } = req.body;
+        const { 
+            name, amount, stage, probability, priority, expectedClose, businessType, 
+            companyId, newCompanyName, 
+            contactId, newContactFirstName, newContactLastName 
+        } = req.body;
+
+        let finalCompanyId = companyId ? parseInt(companyId) : null;
+        
+        // Creación rápida de empresa si se solicita (con chequeo de duplicados)
+        if (newCompanyName && (!finalCompanyId || isNaN(finalCompanyId))) {
+            const trimmedName = newCompanyName.trim();
+            if (trimmedName) {
+                let comp = await prisma.company.findFirst({
+                    where: { name: { equals: trimmedName } }
+                });
+                if (!comp) {
+                    comp = await prisma.company.create({
+                        data: { name: trimmedName }
+                    });
+                }
+                finalCompanyId = comp.id;
+            }
+        }
+
+        let finalContactId = contactId ? parseInt(contactId) : null;
+
+        // Creación rápida de contacto si se solicita (con chequeo de duplicados)
+        if (newContactFirstName && (!finalContactId || isNaN(finalContactId))) {
+            const trimmedFirstName = newContactFirstName.trim();
+            if (trimmedFirstName) {
+                let cont = await prisma.contact.findFirst({
+                    where: {
+                        firstName: { equals: trimmedFirstName },
+                        lastName: { equals: newContactLastName ? newContactLastName.trim() : '' },
+                        companyId: finalCompanyId
+                    }
+                });
+                if (!cont) {
+                    cont = await prisma.contact.create({
+                        data: {
+                            firstName: trimmedFirstName,
+                            lastName: newContactLastName ? newContactLastName.trim() : '',
+                            companyId: finalCompanyId
+                        }
+                    });
+                }
+                finalContactId = cont.id;
+            }
+        }
+
         const updatedOpp = await prisma.opportunity.update({
             where: { id },
             data: { 
@@ -284,8 +389,8 @@ router.put('/api/opportunities/:id', async (req, res) => {
                 priority, 
                 expectedClose: expectedClose ? new Date(expectedClose) : null,
                 businessType,
-                companyId: companyId ? parseInt(companyId) : null,
-                contactId: contactId ? parseInt(contactId) : null
+                companyId: finalCompanyId,
+                contactId: finalContactId
             }
         });
         res.json(updatedOpp);

@@ -951,6 +951,12 @@ function renderCrmViews() {
         renderKanban();
         renderContacts();
         renderCompanies();
+        if (crmCurrentTab === 'opportunities' && oppCurrentView === 'table') {
+            renderOpportunitiesTable();
+        }
+        if (crmCurrentTab === 'dashboard') {
+            renderCrmDashboard();
+        }
     }
 }
 
@@ -958,15 +964,37 @@ function switchCrmTab(tab) {
     crmCurrentTab = tab;
     
     // UI Tabs
-    document.querySelectorAll('.crm-tab').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
+    document.querySelectorAll('.crm-tab').forEach(t => {
+        t.classList.remove('active');
+        if (t.getAttribute('onclick') && t.getAttribute('onclick').includes(tab)) {
+            t.classList.add('active');
+        }
+    });
     
     document.getElementById('view-opportunities').style.display = 'none';
     document.getElementById('view-contacts').style.display = 'none';
     document.getElementById('view-bbdd').style.display = 'none';
     document.getElementById('view-companies').style.display = 'none';
+    document.getElementById('view-dashboard').style.display = 'none';
     
     document.getElementById(`view-${tab}`).style.display = 'block';
+
+    const btnBulkDelete = document.getElementById('btn-bulk-delete');
+    if (btnBulkDelete) btnBulkDelete.style.display = 'none';
+    document.querySelectorAll('.data-table th input[type="checkbox"]').forEach(cb => cb.checked = false);
+
+    const btnNuevo = document.getElementById('btn-nuevo');
+    if (btnNuevo) {
+        if (tab === 'dashboard' || tab === 'bbdd') {
+            btnNuevo.style.display = 'none';
+        } else {
+            btnNuevo.style.display = 'block';
+        }
+    }
+
+    if (tab === 'dashboard') {
+        renderCrmDashboard();
+    }
 }
 
 function renderKanban() {
@@ -1257,21 +1285,20 @@ function openCrmModal(editData = null) {
         `;
     } else if (crmCurrentTab === 'contacts') {
         title.textContent = editData ? 'Editar Contacto' : 'Nuevo Contacto';
-        const compOptions = globalCompanies.map(c => `<option value="${c.id}" ${editData && editData.companyId === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
+        const selComp = editData?.companyId || '';
         fields.innerHTML = `
             <div class="form-group"><label>Nombre</label><input type="text" name="firstName" value="${editData ? (editData.firstName || '') : ''}" required></div>
             <div class="form-group"><label>Apellido</label><input type="text" name="lastName" value="${editData ? (editData.lastName || '') : ''}"></div>
             <div class="form-group"><label>Cargo</label><input type="text" name="role" value="${editData ? (editData.role || '') : ''}"></div>
             <div class="form-group"><label>Teléfono</label><input type="text" name="phone" value="${editData ? (editData.phone || '') : ''}"></div>
             <div class="form-group"><label>Email</label><input type="email" name="email" value="${editData ? (editData.email || '') : ''}"></div>
-            <div class="form-group"><label>Empresa</label>
-                <select name="companyId" onchange="showCompanyInfoCard(this.value)"><option value="">Ninguna</option>${compOptions}</select>
+            <div class="form-group" style="position:relative;"><label>Empresa</label>
+                <input type="text" id="contact-company-search" name="newCompanyName" placeholder="Buscar o escribir nueva empresa..." autocomplete="off"
+                    value="${editData?.company?.name || ''}" oninput="filterContactCompany()">
+                <input type="hidden" name="companyId" id="contact-company-id" value="${selComp}">
+                <div id="contact-company-dropdown" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid var(--border); border-radius:6px; max-height:160px; overflow-y:auto; z-index:9999; display:none; box-shadow:0 4px 12px rgba(0,0,0,0.1); color:#333;"></div>
             </div>
-            <div id="company-info-card" style="display:none; margin-top:10px; padding:10px; background:var(--bg-card); border:1px solid var(--border); border-radius:4px; font-size:12px;"></div>
         `;
-        if (editData && editData.companyId) {
-            setTimeout(() => showCompanyInfoCard(editData.companyId), 50);
-        }
     } else if (crmCurrentTab === 'opportunities') {
         title.textContent = editData ? 'Editar Oportunidad' : 'Nueva Oportunidad';
         const selComp = editData?.companyId || '';
@@ -1301,44 +1328,301 @@ function openCrmModal(editData = null) {
             <div style="border-top:1px solid var(--border); padding-top:15px; margin-top:15px;">
                 <h4 style="font-size:13px; margin-bottom:10px; color:var(--text-main);">Empresa</h4>
                 <div class="form-group" style="position:relative;">
-                    <input type="text" id="opp-company-search" placeholder="Buscar empresa..." autocomplete="off"
+                    <input type="text" id="opp-company-search" name="newCompanyName" placeholder="Buscar o escribir nueva empresa..." autocomplete="off"
                         value="${editData?.company?.name || ''}" oninput="filterOppCompany()">
                     <input type="hidden" name="companyId" id="opp-company-id" value="${selComp}">
-                    <div id="opp-company-dropdown" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid var(--border); border-radius:6px; max-height:160px; overflow-y:auto; z-index:9999; display:none; box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+                    <div id="opp-company-dropdown" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid var(--border); border-radius:6px; max-height:160px; overflow-y:auto; z-index:9999; display:none; box-shadow:0 4px 12px rgba(0,0,0,0.1); color:#333;"></div>
                 </div>
             </div>
 
             <div style="border-top:1px solid var(--border); padding-top:15px; margin-top:5px;">
                 <h4 style="font-size:13px; margin-bottom:10px; color:var(--text-main);">Contacto</h4>
                 <div class="form-group" style="position:relative;">
-                    <input type="text" id="opp-contact-search" placeholder="Buscar contacto..." autocomplete="off"
+                    <input type="text" id="opp-contact-search" name="newContactFirstName" placeholder="Buscar contacto..." autocomplete="off"
                         value="${editData?.contact ? editData.contact.firstName+' '+(editData.contact.lastName||'') : ''}" oninput="filterOppContact()">
                     <input type="hidden" name="contactId" id="opp-contact-id" value="${selCont}">
-                    <div id="opp-contact-dropdown" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid var(--border); border-radius:6px; max-height:160px; overflow-y:auto; z-index:9999; display:none; box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+                    <div id="opp-contact-dropdown" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid var(--border); border-radius:6px; max-height:160px; overflow-y:auto; z-index:9999; display:none; box-shadow:0 4px 12px rgba(0,0,0,0.1); color:#333;"></div>
                 </div>
             </div>
         `;
     }
 
     document.getElementById('crm-modal-backdrop').style.display = 'block';
-    if(crmCurrentTab === 'opportunities') {
-        toggleNewCompany();
-        toggleNewContact();
+}
+
+let oppCurrentView = 'kanban';
+
+function switchOppView(view) {
+    oppCurrentView = view;
+    
+    const btnKanban = document.getElementById('btn-opp-kanban');
+    const btnTable = document.getElementById('btn-opp-table');
+    const kanbanView = document.getElementById('opp-kanban-view');
+    const tableView = document.getElementById('opp-table-view');
+    const tableControls = document.getElementById('opp-table-controls');
+    
+    if (view === 'kanban') {
+        btnKanban.classList.add('active');
+        btnKanban.style.background = 'var(--c-primary)';
+        btnKanban.style.color = 'white';
+        
+        btnTable.classList.remove('active');
+        btnTable.style.background = 'transparent';
+        btnTable.style.color = 'var(--text-muted)';
+        
+        kanbanView.style.display = 'block';
+        tableView.style.display = 'none';
+        tableControls.style.display = 'none';
+    } else {
+        btnTable.classList.add('active');
+        btnTable.style.background = 'var(--c-primary)';
+        btnTable.style.color = 'white';
+        
+        btnKanban.classList.remove('active');
+        btnKanban.style.background = 'transparent';
+        btnKanban.style.color = 'var(--text-muted)';
+        
+        kanbanView.style.display = 'none';
+        tableView.style.display = 'block';
+        tableControls.style.display = 'flex';
+        
+        renderOpportunitiesTable();
     }
 }
 
-function toggleNewCompany() {
-    const select = document.getElementById('opp-comp-select');
-    const newDiv = document.getElementById('opp-comp-new');
-    if(select && newDiv) {
-        if(select.value === '') {
-            newDiv.style.display = 'block';
+function renderOpportunitiesTable() {
+    const tbody = document.getElementById('table-opportunities-body');
+    if (!tbody) return;
+    
+    const q = (document.getElementById('filter-opps')?.value || '').toLowerCase();
+    const sort = document.getElementById('sort-opps')?.value || 'name_az';
+    
+    let list = [...globalOpportunities];
+    
+    if (q) {
+        list = list.filter(o => 
+            (o.name || '').toLowerCase().includes(q) ||
+            (o.company?.name || '').toLowerCase().includes(q) ||
+            (o.contact ? `${o.contact.firstName} ${o.contact.lastName || ''}`.toLowerCase().includes(q) : false) ||
+            (o.stage || '').toLowerCase().includes(q)
+        );
+    }
+    
+    if (sort === 'name_az') {
+        list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es'));
+    } else if (sort === 'amount_desc') {
+        list.sort((a, b) => (b.amount || 0) - (a.amount || 0));
+    } else if (sort === 'expected_close') {
+        list.sort((a, b) => {
+            if (!a.expectedClose) return 1;
+            if (!b.expectedClose) return -1;
+            return new Date(a.expectedClose) - new Date(b.expectedClose);
+        });
+    } else if (sort === 'priority') {
+        const priorityWeight = { 'Alta': 3, 'Media': 2, 'Baja': 1 };
+        list.sort((a, b) => (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0));
+    }
+    
+    tbody.innerHTML = '';
+    if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--text-muted);">Sin resultados para "${q}"</td></tr>`;
+        return;
+    }
+    
+    list.forEach(o => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--border)';
+        tr.onclick = () => openOppDrawer(o);
+        
+        const priorityColor = o.priority === 'Alta' ? 'var(--c-red)' : (o.priority === 'Media' ? 'var(--c-orange)' : 'var(--text-muted)');
+        const stageColor = o.stage === 'Ganado' ? 'var(--c-green)' : (o.stage === 'Perdido' ? 'var(--c-red)' : 'var(--text-main)');
+        
+        tr.innerHTML = `
+            <td style="padding:10px;"><strong>${o.name}</strong></td>
+            <td style="padding:10px;">${o.company ? o.company.name : '-'}</td>
+            <td style="padding:10px;">${o.contact ? `${o.contact.firstName} ${o.contact.lastName || ''}` : '-'}</td>
+            <td style="padding:10px; text-align:right; font-weight:bold;">$${(o.amount || 0).toLocaleString('es-CL')}</td>
+            <td style="padding:10px; text-align:center;"><span style="color:${stageColor}; font-weight:600;">${o.stage}</span></td>
+            <td style="padding:10px; text-align:center;"><span style="color:${priorityColor}; font-weight:bold;">${o.priority}</span></td>
+            <td style="padding:10px; text-align:center;">${o.expectedClose ? new Date(o.expectedClose).toLocaleDateString('es-CL') : '-'}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+let chartCrmStages = null;
+let chartCrmPriority = null;
+
+function renderCrmDashboard() {
+    let pipelineTotal = 0;
+    let wonTotal = 0;
+    let lostTotal = 0;
+    let wonCount = 0;
+    let lostCount = 0;
+    
+    let stageAmounts = {
+        'Prospecto': 0,
+        'Calificado': 0,
+        'Cotización Enviada': 0,
+        'Negociación': 0,
+        'Ganado': 0,
+        'Perdido': 0
+    };
+    
+    let priorityCounts = {
+        'Baja': 0,
+        'Media': 0,
+        'Alta': 0
+    };
+    
+    globalOpportunities.forEach(o => {
+        const amt = o.amount || 0;
+        if (o.stage === 'Ganado') {
+            wonTotal += amt;
+            wonCount++;
+        } else if (o.stage === 'Perdido') {
+            lostTotal += amt;
+            lostCount++;
         } else {
-            newDiv.style.display = 'none';
-            const i = document.querySelector('input[name="newCompanyName"]');
-            if(i) i.value = '';
+            pipelineTotal += amt;
+        }
+        
+        if (stageAmounts[o.stage] !== undefined) {
+            stageAmounts[o.stage] += amt;
+        }
+        
+        const prio = o.priority || 'Media';
+        if (priorityCounts[prio] !== undefined) {
+            priorityCounts[prio]++;
+        }
+    });
+    
+    const fmt = (val) => '$' + val.toLocaleString('es-CL');
+    document.getElementById('crm-db-pipeline-total').textContent = fmt(pipelineTotal);
+    document.getElementById('crm-db-won-total').textContent = fmt(wonTotal);
+    document.getElementById('crm-db-lost-total').textContent = fmt(lostTotal);
+    
+    const totalDecided = wonCount + lostCount;
+    const rate = totalDecided > 0 ? Math.round((wonCount / totalDecided) * 100) : 0;
+    document.getElementById('crm-db-conversion-rate').textContent = `${rate}%`;
+    
+    if (chartCrmStages) chartCrmStages.destroy();
+    const ctxStages = document.getElementById('chart-crm-stages-amount')?.getContext('2d');
+    if (ctxStages) {
+        chartCrmStages = new Chart(ctxStages, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(stageAmounts),
+                datasets: [{
+                    label: 'Monto Total ($)',
+                    data: Object.values(stageAmounts),
+                    backgroundColor: [
+                        'rgba(148,163,184,0.65)',
+                        'rgba(59,130,246,0.65)',
+                        'rgba(234,179,8,0.65)',
+                        'rgba(249,115,22,0.65)',
+                        'rgba(34,197,94,0.65)',
+                        'rgba(239,68,68,0.65)'
+                    ],
+                    borderColor: [
+                        '#94a3b8', '#3b82f6', '#eab308', '#f97316', '#22c55e', '#ef4444'
+                    ],
+                    borderWidth: 1.5,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        color: '#1e293b',
+                        font: { weight: 'bold', size: 10 },
+                        formatter: (val) => val > 0 ? '$' + Math.round(val / 1000).toLocaleString() + 'k' : '',
+                        anchor: 'end',
+                        align: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (value) => '$' + Math.round(value / 1000000) + 'M'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    if (chartCrmPriority) chartCrmPriority.destroy();
+    const ctxPriority = document.getElementById('chart-crm-priority-count')?.getContext('2d');
+    if (ctxPriority) {
+        chartCrmPriority = new Chart(ctxPriority, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(priorityCounts),
+                datasets: [{
+                    data: Object.values(priorityCounts),
+                    backgroundColor: [
+                        'rgba(59,130,246,0.65)',
+                        'rgba(249,115,22,0.65)',
+                        'rgba(239,68,68,0.65)'
+                    ],
+                    borderColor: ['#3b82f6', '#f97316', '#ef4444'],
+                    borderWidth: 2,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { family: 'Inter', size: 11 } } },
+                    datalabels: {
+                        color: '#fff',
+                        font: { weight: 'bold', size: 12 },
+                        formatter: (val) => val > 0 ? val : ''
+                    }
+                }
+            }
+        });
+    }
+}
+
+function filterContactCompany() {
+    const q = document.getElementById('contact-company-search')?.value.toLowerCase() || '';
+    const drop = document.getElementById('contact-company-dropdown');
+    if (!drop) return;
+
+    const currentId = document.getElementById('contact-company-id').value;
+    if (currentId) {
+        const comp = globalCompanies.find(c => c.id == currentId);
+        if (!comp || comp.name.toLowerCase() !== q) {
+            document.getElementById('contact-company-id').value = '';
         }
     }
+
+    if (!q) { drop.style.display = 'none'; return; }
+
+    const hits = globalCompanies.filter(c => c.name.toLowerCase().includes(q)).slice(0, 8);
+    if (!hits.length) { drop.style.display = 'none'; return; }
+
+    drop.innerHTML = hits.map(c => `
+        <div onclick="selectContactCompany(${c.id}, '${c.name.replace(/'/g,"\'")}')" 
+             style="padding:8px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid #f1f5f9; color:#333;">
+            <strong>${c.name}</strong>${c.industry ? ` <span style="color:#94a3b8; font-size:11px;">&bull; ${c.industry}</span>` : ''}
+        </div>
+    `).join('');
+    drop.querySelectorAll('div').forEach(d => { d.onmouseover = () => d.style.background='#f8fafc'; d.onmouseout = () => d.style.background=''; });
+    drop.style.display = 'block';
+}
+
+function selectContactCompany(id, name) {
+    document.getElementById('contact-company-search').value = name;
+    document.getElementById('contact-company-id').value = id;
+    document.getElementById('contact-company-dropdown').style.display = 'none';
 }
 
 function filterOppCompany() {
@@ -1346,14 +1630,22 @@ function filterOppCompany() {
     const drop = document.getElementById('opp-company-dropdown');
     if (!drop) return;
 
-    if (!q) { drop.style.display = 'none'; document.getElementById('opp-company-id').value = ''; return; }
+    const currentId = document.getElementById('opp-company-id').value;
+    if (currentId) {
+        const comp = globalCompanies.find(c => c.id == currentId);
+        if (!comp || comp.name.toLowerCase() !== q) {
+            document.getElementById('opp-company-id').value = '';
+        }
+    }
+
+    if (!q) { drop.style.display = 'none'; return; }
 
     const hits = globalCompanies.filter(c => c.name.toLowerCase().includes(q)).slice(0, 8);
     if (!hits.length) { drop.style.display = 'none'; return; }
 
     drop.innerHTML = hits.map(c => `
         <div onclick="selectOppCompany(${c.id}, '${c.name.replace(/'/g,"\'")}')" 
-             style="padding:8px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid #f1f5f9; hover:background:#f8fafc;">
+             style="padding:8px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid #f1f5f9; color:#333;">
             <strong>${c.name}</strong>${c.industry ? ` <span style="color:#94a3b8; font-size:11px;">&bull; ${c.industry}</span>` : ''}
         </div>
     `).join('');
@@ -1372,7 +1664,18 @@ function filterOppContact() {
     const drop = document.getElementById('opp-contact-dropdown');
     if (!drop) return;
 
-    if (!q) { drop.style.display = 'none'; document.getElementById('opp-contact-id').value = ''; return; }
+    const currentId = document.getElementById('opp-contact-id').value;
+    if (currentId) {
+        const cont = globalContacts.find(c => c.id == currentId);
+        if (cont) {
+            const fullName = `${cont.firstName} ${cont.lastName||''}`.trim().toLowerCase();
+            if (fullName !== q) {
+                document.getElementById('opp-contact-id').value = '';
+            }
+        }
+    }
+
+    if (!q) { drop.style.display = 'none'; return; }
 
     const hits = globalContacts.filter(c => {
         const name = `${c.firstName} ${c.lastName||''}`.toLowerCase();
@@ -1383,7 +1686,7 @@ function filterOppContact() {
 
     drop.innerHTML = hits.map(c => `
         <div onclick="selectOppContact(${c.id}, '${(c.firstName+' '+(c.lastName||'')).trim().replace(/'/g,"\'")}')" 
-             style="padding:8px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid #f1f5f9;">
+             style="padding:8px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid #f1f5f9; color:#333;">
             <strong>${c.firstName} ${c.lastName||''}</strong>${c.company ? ` <span style="color:#94a3b8; font-size:11px;">&bull; ${c.company.name}</span>` : ''}
         </div>
     `).join('');
@@ -1407,12 +1710,14 @@ async function handleFormSubmit(e) {
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
 
-    // Para oportunidades, los IDs vienen de hidden inputs (autocomplete)
     if (crmCurrentTab === 'opportunities') {
         const companyId = document.getElementById('opp-company-id')?.value;
         const contactId = document.getElementById('opp-contact-id')?.value;
         if (companyId) data.companyId = companyId;
         if (contactId) data.contactId = contactId;
+    } else if (crmCurrentTab === 'contacts') {
+        const companyId = document.getElementById('contact-company-id')?.value;
+        if (companyId) data.companyId = companyId;
     }
 
     let endpoint = '';
@@ -1435,6 +1740,23 @@ async function handleFormSubmit(e) {
         alert("Ocurrió un error al guardar.");
     }
 }
+
+// Cierre de dropdowns de autocompletado al hacer click fuera
+document.addEventListener('click', (e) => {
+    const oppCompDrop = document.getElementById('opp-company-dropdown');
+    const oppContDrop = document.getElementById('opp-contact-dropdown');
+    const contactCompDrop = document.getElementById('contact-company-dropdown');
+    
+    if (oppCompDrop && !e.target.closest('#opp-company-search') && !e.target.closest('#opp-company-dropdown')) {
+        oppCompDrop.style.display = 'none';
+    }
+    if (oppContDrop && !e.target.closest('#opp-contact-search') && !e.target.closest('#opp-contact-dropdown')) {
+        oppContDrop.style.display = 'none';
+    }
+    if (contactCompDrop && !e.target.closest('#contact-company-search') && !e.target.closest('#contact-company-dropdown')) {
+        contactCompDrop.style.display = 'none';
+    }
+});
 
 function handleCSVUpload(event) {
     const file = event.target.files[0];

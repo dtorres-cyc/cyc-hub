@@ -388,12 +388,88 @@
             <div class="crm-tab" onclick="switchCrmTab('contacts')">Contactos</div>
             <div class="crm-tab" onclick="switchCrmTab('bbdd')">BBDD Masiva</div>
             <div class="crm-tab" onclick="switchCrmTab('companies')">Empresas</div>
+            <div class="crm-tab" onclick="switchCrmTab('dashboard')">Dashboard CRM</div>
           </div>
 
           <!-- VISTA: OPORTUNIDADES -->
           <div id="view-opportunities">
-            <div class="kanban-board" id="kanban-board">
-              <!-- Generado por JS -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+              <div style="display:flex; background:var(--c-gray); border-radius:8px; border:1px solid var(--border); overflow:hidden;">
+                <button class="view-toggle-btn active" id="btn-opp-kanban" onclick="switchOppView('kanban')" style="padding:6px 12px; border:none; background:var(--c-primary); color:white; font-size:12px; cursor:pointer; font-weight:600; outline:none; transition:all 0.2s;">🗂️ Kanban</button>
+                <button class="view-toggle-btn" id="btn-opp-table" onclick="switchOppView('table')" style="padding:6px 12px; border:none; background:transparent; color:var(--text-muted); font-size:12px; cursor:pointer; font-weight:600; outline:none; transition:all 0.2s;">📋 Tabla</button>
+              </div>
+              
+              <div id="opp-table-controls" style="display:none; flex:1; justify-content:flex-end; gap:10px; align-items:center;">
+                <input type="text" id="filter-opps" placeholder="🔍 Buscar negocios..." oninput="renderOpportunitiesTable()" style="max-width:200px; padding:6px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:12px; background:var(--bg-card); color:var(--text-main);">
+                <select id="sort-opps" onchange="renderOpportunitiesTable()" style="padding:6px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:12px; background:var(--bg-card); color:var(--text-main); cursor:pointer;">
+                  <option value="name_az">Nombre A→Z</option>
+                  <option value="amount_desc">Monto Mayor→Menor</option>
+                  <option value="expected_close">Fecha Cierre</option>
+                  <option value="priority">Prioridad</option>
+                </select>
+              </div>
+            </div>
+            
+            <div id="opp-kanban-view">
+              <div class="kanban-board" id="kanban-board">
+                <!-- Generado por JS -->
+              </div>
+            </div>
+            
+            <div id="opp-table-view" style="display:none;">
+              <div class="table-container">
+                <table class="data-table" style="width:100%; text-align:left;">
+                  <thead>
+                    <tr style="background:var(--c-gray);">
+                      <th style="padding:10px;">Nombre del Negocio</th>
+                      <th style="padding:10px;">Empresa</th>
+                      <th style="padding:10px;">Contacto</th>
+                      <th style="padding:10px; text-align:right;">Monto</th>
+                      <th style="padding:10px; text-align:center;">Etapa</th>
+                      <th style="padding:10px; text-align:center;">Prioridad</th>
+                      <th style="padding:10px; text-align:center;">Fecha Cierre</th>
+                    </tr>
+                  </thead>
+                  <tbody id="table-opportunities-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- VISTA: DASHBOARD CRM -->
+          <div id="view-dashboard" style="display: none;">
+            <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+              <div class="kpi-card card-blue">
+                <span class="kpi-label">Pipeline Activo</span>
+                <span class="kpi-value" id="crm-db-pipeline-total">$0</span>
+              </div>
+              <div class="kpi-card card-green">
+                <span class="kpi-label">Cerrado Ganado</span>
+                <span class="kpi-value" id="crm-db-won-total">$0</span>
+              </div>
+              <div class="kpi-card card-red">
+                <span class="kpi-label">Cerrado Perdido</span>
+                <span class="kpi-value" id="crm-db-lost-total">$0</span>
+              </div>
+              <div class="kpi-card card-orange">
+                <span class="kpi-label">Conversión</span>
+                <span class="kpi-value" id="crm-db-conversion-rate">0%</span>
+              </div>
+            </div>
+            
+            <div class="charts-row">
+              <div class="chart-container">
+                <h3>Oportunidades por Etapa (Monto CLP)</h3>
+                <div style="height: 280px; position: relative;">
+                  <canvas id="chart-crm-stages-amount"></canvas>
+                </div>
+              </div>
+              <div class="chart-container">
+                <h3>Distribución por Prioridad (Negocios)</h3>
+                <div style="height: 280px; position: relative;">
+                  <canvas id="chart-crm-priority-count"></canvas>
+                </div>
+              </div>
             </div>
           </div>
 
