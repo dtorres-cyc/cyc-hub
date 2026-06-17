@@ -547,7 +547,7 @@ function renderTabla(equipos) {
 }
 
 function initFilters(equipos) {
-    const selects = document.querySelectorAll('.col-filter-multi');
+    const selects = document.querySelectorAll('select.col-filter-multi');
     const colsData = [
         equipos.map(e => e.id || e.patente).filter(Boolean),
         equipos.map(e => e.tipo).filter(Boolean),
@@ -598,7 +598,7 @@ function initFilters(equipos) {
 }
 
 function filterTable() {
-    const selects = document.querySelectorAll('.col-filter-multi');
+    const selects = document.querySelectorAll('select.col-filter-multi');
     const rows = document.querySelectorAll('#table-equipos-body tr');
     
     const filters = Array.from(selects).map(sel => sel.tomselect ? sel.tomselect.getValue() : []);
