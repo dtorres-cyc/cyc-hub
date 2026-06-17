@@ -110,7 +110,12 @@ function populateFilters(equipos) {
     
     // Inicializar TomSelect
     if (selectTipo.tomselect) {
-        selectTipo.tomselect.destroy();
+        try {
+            selectTipo.tomselect.destroy();
+        } catch (err) {
+            console.warn('Error al destruir TomSelect en filter-tipo:', err);
+        }
+        delete selectTipo.tomselect;
     }
     
     new TomSelect(selectTipo, {
@@ -558,21 +563,32 @@ function initFilters(equipos) {
     ];
 
     selects.forEach((select, i) => {
-        // Guardar valores previos si existen
-        const prevValues = select.tomselect ? select.tomselect.getValue() : [];
+        // Guardar valores previos si existen (de forma segura convirtiendo a array)
+        let prevValues = [];
+        if (select.tomselect) {
+            try {
+                const val = select.tomselect.getValue();
+                prevValues = Array.isArray(val) ? val : (typeof val === 'string' && val ? val.split(',') : (val ? [val] : []));
+            } catch (err) {
+                console.warn('Error al obtener valor de TomSelect:', err);
+            }
+            
+            try {
+                select.tomselect.destroy();
+            } catch (err) {
+                console.warn('Error al destruir TomSelect:', err);
+            }
+            delete select.tomselect;
+        }
         
         const uniqueValues = [...new Set(colsData[i])].sort();
-        
-        if (select.tomselect) {
-            select.tomselect.destroy();
-        }
         
         select.innerHTML = uniqueValues.map(v => `<option value="${v}">${v}</option>`).join('');
         
         new TomSelect(select, {
             plugins: ['remove_button'],
             maxOptions: 50,
-            items: prevValues, // Restaurar selecciones
+            items: prevValues, // Restaurar selecciones (pasando array)
             placeholder: 'Filtrar...',
             onChange: function() {
                 filterTable();
