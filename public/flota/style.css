@@ -311,3 +311,31 @@ textarea.form-input { resize: vertical; line-height: 1.6; }
 .toast.success { border-left-color: var(--green); }
 .toast.error { border-left-color: var(--red); }
 @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+
+/* Estandarización botón volver al hub */
+.btn-volver-hub {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(232, 101, 26, 0.1);
+  color: #E8651A !important;
+  border: 1px solid rgba(232, 101, 26, 0.3);
+  border-radius: 20px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+.btn-volver-hub:hover {
+  background: #E8651A;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(232, 101, 26, 0.2);
+  transform: translateY(-1px);
+}
+.btn-volver-hub svg {
+  stroke: currentColor;
+  flex-shrink: 0;
+}

@@ -178,6 +178,34 @@
 
   /* nota UF */
   .uf-note{font-size:10px;color:var(--g3);font-style:italic;margin-top:2px;}
+
+  /* Estandarización botón volver al hub */
+  .btn-volver-hub {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: rgba(232, 101, 26, 0.1);
+    color: #E8651A !important;
+    border: 1px solid rgba(232, 101, 26, 0.3);
+    border-radius: 20px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    line-height: 1;
+  }
+  .btn-volver-hub:hover {
+    background: #E8651A;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(232, 101, 26, 0.2);
+    transform: translateY(-1px);
+  }
+  .btn-volver-hub svg {
+    stroke: currentColor;
+    flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -233,7 +261,10 @@
 <!-- TOPBAR -->
 <header class="topbar">
   <div style="display:flex;align-items:center;gap:12px;">
-    <a href="/" style="font-size:13px;color:var(--text-muted,#888);text-decoration:none;padding:4px 10px;border:1px solid currentColor;border-radius:6px;line-height:1;">← Inicio</a>
+    <a href="https://cyc-hub-production.up.railway.app" class="btn-volver-hub">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      Volver al Hub
+    </a>
     <div><div class="brand">TRANSPORTES CYC</div>
       <div class="brand-sub">Sistema de Cotizaciones</div></div>
   </div>

@@ -917,3 +917,31 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
+
+/* Estandarización botón volver al hub */
+.btn-volver-hub {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(232, 101, 26, 0.1);
+  color: #E8651A !important;
+  border: 1px solid rgba(232, 101, 26, 0.3);
+  border-radius: 20px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+.btn-volver-hub:hover {
+  background: #E8651A;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(232, 101, 26, 0.2);
+  transform: translateY(-1px);
+}
+.btn-volver-hub svg {
+  stroke: currentColor;
+  flex-shrink: 0;
+}

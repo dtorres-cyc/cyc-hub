@@ -13,6 +13,7 @@ const flotaRouter     = require('./modules/flota/router');
 const informeRouter   = require('./modules/informe/router');
 const crmRouter       = require('./modules/crm/router');
 const arriendoRouter  = require('./modules/arriendo/router');
+const marketingRouter = require('./modules/marketing/router');
 
 
 // ── Cron Jobs ─────────────────────────────────────────────────────────────────
@@ -37,6 +38,7 @@ app.use('/flota',     flotaRouter);
 app.use('/informe',   informeRouter);
 app.use('/crm',       crmRouter);
 app.use('/arriendo',  arriendoRouter);
+app.use('/marketing', marketingRouter);
 
 
 // ── Arranque ──────────────────────────────────────────────────────────────────
@@ -52,6 +54,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`  📊  Informe:    http://localhost:${PORT}/informe/index.html`);
   console.log(`  🤝  CRM:        http://localhost:${PORT}/crm`);
   console.log(`  📅  Arriendo:   http://localhost:${PORT}/arriendo`);
+  console.log(`  🎯  Marketing:  http://localhost:${PORT}/marketing/index.html`);
 
   console.log('═══════════════════════════════════════════════════');
   console.log('');

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYC - Dashboard de Marketing Digital</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="marketing.css">
+  
+  <!-- ChartJS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">Transportes <span>CYC</span></div>
+    <nav class="nav-links">
+      <a href="/" class="nav-item">🏠 Portal Hub</a>
+      <a href="/informe/index.html#alertas" class="nav-item">🔔 Alertas</a>
+      <a href="/informe/index.html#flota" class="nav-item">🚛 Estado Arriendo</a>
+      <a href="/informe/index.html#arriendo" class="nav-item">📄 Gestión Contratos</a>
+      <a href="/informe/index.html#danos" class="nav-item">🔧 Daños & Mermas</a>
+      <a href="/informe/index.html#facturacion" class="nav-item">💳 Facturación</a>
+      <a href="/informe/index.html#crm" class="nav-item">🤝 Pipeline CRM</a>
+      <a href="/marketing/index.html" class="nav-item active">🎯 Mktg. Digital</a>
+    </nav>
+    <div class="user-info">
+      <p class="role">Gerencia Comercial</p>
+      <p class="updated">Actualizado: <span id="sync-timestamp">Sincronizando...</span></p>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dashboard">
+    
+    <!-- Header -->
+    <header class="header">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <a href="https://cyc-hub-production.up.railway.app" class="btn-volver-hub">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          Volver al Hub
+        </a>
+        <div>
+          <h1>Dashboard de Marketing Digital</h1>
+          <p class="subtitle">Análisis integrado de pauta digital y redes sociales orgánicas</p>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <!-- Indicador de tipo de datos -->
+        <div id="datasource-indicator" class="datasource-badge datasource-demo">
+          <span class="pulse-dot"></span>
+          <span id="datasource-text">Datos Demo</span>
+        </div>
+        
+        <!-- Period Selector -->
+        <div class="period-selector">
+          <button class="period-btn" data-days="7" onclick="changePeriod(7)">7D</button>
+          <button class="period-btn active" data-days="30" onclick="changePeriod(30)">30D</button>
+          <button class="period-btn" data-days="90" onclick="changePeriod(90)">90D</button>
+        </div>
+        
+        <!-- Sync button -->
+        <button class="action-btn" id="sync-btn" onclick="syncData()">
+          <span>↻</span> Sincronizar
+        </button>
+      </div>
+    </header>
+
+    <!-- KPI Cards Grid -->
+    <section class="kpi-grid">
+      
+      <!-- Gasto publicitario -->
+      <div class="kpi-card card-primary">
+        <div class="kpi-label">
+          <span>Inversión Total</span>
+          <span>💳</span>
+        </div>
+        <div class="kpi-value" id="kpi-spend">--</div>
+        <div class="kpi-trend positive" id="kpi-spend-trend">--</div>
+      </div>
+      
+      <!-- Conversiones / Leads -->
+      <div class="kpi-card card-green">
+        <div class="kpi-label">
+          <span>Leads Totales</span>
+          <span>🎯</span>
+        </div>
+        <div class="kpi-value" id="kpi-leads">--</div>
+        <div class="kpi-trend positive" id="kpi-leads-trend">--</div>
+      </div>
+      
+      <!-- Cost per Lead -->
+      <div class="kpi-card card-red">
+        <div class="kpi-label">
+          <span>Costo por Lead (CPL)</span>
+          <span>🏷️</span>
+        </div>
+        <div class="kpi-value" id="kpi-cpl">--</div>
+        <div class="kpi-trend negative" id="kpi-cpl-trend">--</div>
+      </div>
+      
+      <!-- Cost per Click -->
+      <div class="kpi-card card-blue">
+        <div class="kpi-label">
+          <span>Costo por Clic (CPC)</span>
+          <span>🖱️</span>
+        </div>
+        <div class="kpi-value" id="kpi-cpc">--</div>
+        <div class="kpi-trend negative" id="kpi-cpc-trend">--</div>
+      </div>
+      
+      <!-- Click-through rate -->
+      <div class="kpi-card card-dark">
+        <div class="kpi-label">
+          <span>CTR Promedio</span>
+          <span>📈</span>
+        </div>
+        <div class="kpi-value" id="kpi-ctr">--</div>
+        <div class="kpi-trend positive" id="kpi-ctr-trend">--</div>
+      </div>
+
+      <!-- ROAS -->
+      <div class="kpi-card card-green">
+        <div class="kpi-label">
+          <span>ROAS Estimado</span>
+          <span>💰</span>
+        </div>
+        <div class="kpi-value" id="kpi-roas">--</div>
+        <div class="kpi-trend positive" id="kpi-roas-trend">--</div>
+      </div>
+
+    </section>
+
+    <!-- Charts Section -->
+    <section class="charts-grid">
+      
+      <!-- Line chart for trends -->
+      <div class="chart-card">
+        <h3>Inversión vs Leads Generados (Histórico)</h3>
+        <div class="chart-wrapper">
+          <canvas id="chart-trends"></canvas>
+        </div>
+      </div>
+      
+      <!-- Doughnut chart for spend share -->
+      <div class="chart-card">
+        <h3>Distribución de Inversión</h3>
+        <div class="chart-wrapper">
+          <canvas id="chart-spend-share"></canvas>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Campaigns Performance Table -->
+    <section class="campaigns-card">
+      <h3>Rendimiento de Campañas Activas (Pauta)</h3>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Campaña</th>
+              <th>Plataforma</th>
+              <th>Estado</th>
+              <th>Gasto</th>
+              <th>Impresiones</th>
+              <th>Clics</th>
+              <th>CTR</th>
+              <th>Leads / Conv.</th>
+              <th>CPA / CPL</th>
+            </tr>
+          </thead>
+          <tbody id="campaigns-table-body">
+            <tr>
+              <td colspan="9" style="text-align: center; color: var(--text-muted);">Cargando campañas...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Header Social Orgánico -->
+    <div style="margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 8px;">
+      <h2 style="font-size: 18px; font-weight: 800; color: var(--text-main);">📱 Redes Sociales Orgánicas (Branding & Audiencia)</h2>
+    </div>
+
+    <!-- Social Organic Metrics Grid -->
+    <section class="social-section">
+      
+      <!-- Facebook -->
+      <div class="social-card">
+        <div class="social-card-header">
+          <span class="social-title facebook-title">📘 Facebook</span>
+          <span class="badge-platform badge-meta">FB Organic</span>
+        </div>
+        <div class="social-metrics-row">
+          <div class="social-metric">
+            <span class="social-metric-label">Seguidores</span>
+            <span class="social-metric-value" id="fb-followers">--</span>
+            <span class="social-metric-growth" id="fb-growth">--</span>
+          </div>
+          <div class="social-metric">
+            <span class="social-metric-label">Engagement</span>
+            <span class="social-metric-value" id="fb-engagement">--</span>
+          </div>
+        </div>
+        <div class="social-metrics-row">
+          <div class="social-metric" style="grid-column: span 2;">
+            <span class="social-metric-label">Alcance Mensual</span>
+            <span class="social-metric-value" id="fb-reach" style="font-size: 16px;">--</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Instagram -->
+      <div class="social-card">
+        <div class="social-card-header">
+          <span class="social-title instagram-title">📸 Instagram</span>
+          <span class="badge-platform badge-meta">IG Organic</span>
+        </div>
+        <div class="social-metrics-row">
+          <div class="social-metric">
+            <span class="social-metric-label">Seguidores</span>
+            <span class="social-metric-value" id="ig-followers">--</span>
+            <span class="social-metric-growth" id="ig-growth">--</span>
+          </div>
+          <div class="social-metric">
+            <span class="social-metric-label">Engagement</span>
+            <span class="social-metric-value" id="ig-engagement">--</span>
+          </div>
+        </div>
+        <div class="social-metrics-row">
+          <div class="social-metric" style="grid-column: span 2;">
+            <span class="social-metric-label">Alcance Mensual</span>
+            <span class="social-metric-value" id="ig-reach" style="font-size: 16px;">--</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- LinkedIn -->
+      <div class="social-card">
+        <div class="social-card-header">
+          <span class="social-title linkedin-title">💼 LinkedIn</span>
+          <span class="badge-platform badge-linkedin">LI Page</span>
+        </div>
+        <div class="social-metrics-row">
+          <div class="social-metric">
+            <span class="social-metric-label">Seguidores</span>
+            <span class="social-metric-value" id="li-followers">--</span>
+            <span class="social-metric-growth" id="li-growth">--</span>
+          </div>
+          <div class="social-metric">
+            <span class="social-metric-label">Engagement</span>
+            <span class="social-metric-value" id="li-engagement">--</span>
+          </div>
+        </div>
+        <div class="social-metrics-row">
+          <div class="social-metric" style="grid-column: span 2;">
+            <span class="social-metric-label">Visualizaciones Página</span>
+            <span class="social-metric-value" id="li-views" style="font-size: 16px;">--</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Social Organic Followers Growth Chart -->
+    <section class="charts-grid" style="grid-template-columns: 1fr;">
+      <div class="chart-card">
+        <h3>Crecimiento Histórico de Seguidores (Redes Sociales)</h3>
+        <div class="chart-wrapper" style="min-height: 250px;">
+          <canvas id="chart-followers"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Top Posts Header -->
+    <div style="margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 8px;">
+      <h2 style="font-size: 18px; font-weight: 800; color: var(--text-main);">🏆 Publicaciones Destacadas (Mayor Engagement)</h2>
+    </div>
+
+    <!-- Organic Top Posts Cards Grid -->
+    <section class="posts-grid" id="top-posts-grid">
+      <!-- Creado dinámicamente por JS -->
+      <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 20px;">
+        Cargando publicaciones destacadas...
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Script del frontend -->
+  <script src="marketing.js"></script>
+</body>
+</html>
