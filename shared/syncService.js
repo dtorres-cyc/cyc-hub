@@ -25,7 +25,7 @@ async function syncFlota() {
         horometro:      (row[8]  || '').trim() || null,
         fechaHorometro: (row[9]  || '').trim() || null,
         ubicacion:      (row[13] || '').trim() || null,
-        arrendado:      (row[14] || '').trim() || null,
+        arrendado:      (row[15] || '').trim() || null,
         cliente:        (row[15] || '').trim() || null,
         propietario:    (row[16] || '').trim() || null,
         operativo:      (row[17] || '').trim() || null,

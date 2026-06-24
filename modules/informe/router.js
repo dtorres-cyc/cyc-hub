@@ -89,7 +89,7 @@ async function getFlotaData() {
             horometro:      (row[8]  || '').trim(),
             fecha_horometro:(row[9]  || '').trim(),
             ubicacion:      (row[13] || '').trim(),
-            arrendado:      (row[14] || '').trim(),
+            arrendado:      (row[15] || '').trim(),
             cliente:        (row[15] || '').trim(),
             propietario:    (row[16] || '').trim(),
             operativo:      (row[17] || '').trim(),
