@@ -265,6 +265,9 @@ model FlotaSyncEquipo {
   equipoId        String   @unique
   patente         String?
   tipo            String?
+  marca           String?
+  modelo          String?
+  anio            String?
   horometro       String?
   fechaHorometro  String?
   ubicacion       String?

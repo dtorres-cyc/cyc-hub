@@ -22,6 +22,9 @@ async function syncFlota() {
       const payload = {
         patente:        (row[1]  || '').trim() || null,
         tipo:           (row[3]  || 'Otros').trim(),
+        anio:           (row[4]  || '').trim() || null,
+        marca:          (row[5]  || '').trim() || null,
+        modelo:         (row[6]  || '').trim() || null,
         horometro:      (row[8]  || '').trim() || null,
         fechaHorometro: (row[9]  || '').trim() || null,
         ubicacion:      (row[14] || '').trim() || null,
