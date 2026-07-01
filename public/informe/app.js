@@ -1012,99 +1012,131 @@ function switchCrmTab(tab) {
     }
 }
 
+// Colores y pesos compartidos del pipeline
+const STAGE_COLORS = {
+    'Prospecto': '#94a3b8',
+    'Calificado': '#3b82f6',
+    'Cotización Enviada': '#eab308',
+    'Negociación': '#f97316',
+    'Ganado': '#22c55e',
+    'Perdido': '#ef4444'
+};
+const PRIORITY_PASTEL = { 'Alta': '#fee2e2', 'Media': '#fef3c7', 'Baja': '#e0f2fe' };
+const PRIORITY_WEIGHT = { 'Alta': 3, 'Media': 2, 'Baja': 1 };
+
+// Etapas expandidas del accordion (por defecto todas retraídas)
+let expandedStages = new Set();
+
+// Ordenar oportunidades: mayor prioridad primero, luego mayor monto
+function sortByPriority(list) {
+    return [...list].sort((a, b) =>
+        (PRIORITY_WEIGHT[b.priority] || 0) - (PRIORITY_WEIGHT[a.priority] || 0) ||
+        (b.amount || 0) - (a.amount || 0)
+    );
+}
+
+function toggleStage(stage) {
+    if (expandedStages.has(stage)) expandedStages.delete(stage);
+    else expandedStages.add(stage);
+    renderKanban();
+}
+
+function buildOppCard(opp) {
+    const card = document.createElement('div');
+    card.className = 'kanban-card';
+    card.draggable = true;
+    card.dataset.id = opp.id;
+
+    // Color pastel de prioridad
+    if (opp.priority && PRIORITY_PASTEL[opp.priority]) {
+        card.style.backgroundColor = PRIORITY_PASTEL[opp.priority];
+    }
+
+    card.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', opp.id);
+    });
+    card.addEventListener('click', e => {
+        // Evitar abrir el drawer al arrastrar
+        if (!e.defaultPrevented) openOppDrawer(opp);
+    });
+    card.style.cursor = 'pointer';
+
+    card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span style="font-size:10px; background:rgba(255,255,255,0.6); padding:2px 6px; border-radius:4px;">${new Date(opp.createdAt).toLocaleDateString()}</span>
+            <span style="font-size:10px; font-weight:bold; color: ${opp.priority === 'Alta' ? '#b91c1c' : (opp.priority === 'Media' ? '#b45309' : '#0369a1')}">${opp.priority}</span>
+        </div>
+        <div class="title">${opp.name}</div>
+        <div class="company" style="margin-bottom:4px;">🏢 ${opp.company ? opp.company.name : 'Sin empresa'}</div>
+        <div class="company">👤 ${opp.contact ? (opp.contact.firstName + ' ' + (opp.contact.lastName || '')) : 'Sin contacto'}</div>
+        <div class="amount">$${opp.amount.toLocaleString('es-CL')}</div>
+        ${opp.expectedClose ? `<div style="font-size:11px; margin-top:8px; color:var(--text-muted);">Cierre est: ${new Date(opp.expectedClose).toLocaleDateString()}</div>` : ''}
+    `;
+    return card;
+}
+
 function renderKanban() {
     const board = document.getElementById('kanban-board');
     if(!board) return;
     board.innerHTML = '';
 
-    const stageColors = {
-        'Prospecto': '#94a3b8',
-        'Calificado': '#3b82f6',
-        'Cotización Enviada': '#eab308',
-        'Negociación': '#f97316',
-        'Ganado': '#22c55e',
-        'Perdido': '#ef4444'
-    };
-
-    const priorityColors = {
-        'Alta': '#fee2e2',
-        'Media': '#fef3c7',
-        'Baja': '#e0f2fe'
-    };
+    // Resumen del pipeline (contadores) se refresca junto al tablero
+    renderPipelineSummary();
 
     STAGES.forEach(stage => {
-        const col = document.createElement('div');
-        col.className = 'kanban-column';
-        col.style.borderTop = `4px solid ${stageColors[stage] || '#ccc'}`;
-        
-        const h3 = document.createElement('h3');
-        h3.textContent = stage;
-        col.appendChild(h3);
-        
-        const cardsContainer = document.createElement('div');
-        cardsContainer.className = 'kanban-cards';
-        cardsContainer.dataset.stage = stage;
-        
-        cardsContainer.addEventListener('dragover', e => {
-            e.preventDefault();
-            cardsContainer.style.background = 'rgba(0,0,0,0.05)';
-        });
-        cardsContainer.addEventListener('dragleave', e => {
-            cardsContainer.style.background = 'transparent';
-        });
-        cardsContainer.addEventListener('drop', handleDrop);
+        const opps = sortByPriority(globalOpportunities.filter(o => o.stage === stage));
+        const total = opps.reduce((s, o) => s + (o.amount || 0), 0);
+        const isOpen = expandedStages.has(stage);
+        const color = STAGE_COLORS[stage] || '#ccc';
 
-        const opps = globalOpportunities.filter(o => o.stage === stage);
-        opps.forEach(opp => {
-            const card = document.createElement('div');
-            card.className = 'kanban-card';
-            card.draggable = true;
-            card.dataset.id = opp.id;
-            
-            // Color pastel de prioridad
-            if (opp.priority && priorityColors[opp.priority]) {
-                card.style.backgroundColor = priorityColors[opp.priority];
-            }
-            
-            card.addEventListener('dragstart', e => {
-                e.dataTransfer.setData('text/plain', opp.id);
-            });
-            card.addEventListener('click', e => {
-                // Evitar abrir el drawer al arrastrar
-                if (!e.defaultPrevented) openOppDrawer(opp);
-            });
-            card.style.cursor = 'pointer';
+        const section = document.createElement('div');
+        section.className = 'pipeline-stage' + (isOpen ? ' open' : '');
+        section.style.borderLeft = `5px solid ${color}`;
 
-            card.innerHTML = `
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    <span style="font-size:10px; background:rgba(255,255,255,0.6); padding:2px 6px; border-radius:4px;">${new Date(opp.createdAt).toLocaleDateString()}</span>
-                    <span style="font-size:10px; font-weight:bold; color: ${opp.priority === 'Alta' ? '#b91c1c' : (opp.priority === 'Media' ? '#b45309' : '#0369a1')}">${opp.priority}</span>
-                </div>
-                <div class="title">${opp.name}</div>
-                <div class="company" style="margin-bottom:4px;">🏢 ${opp.company ? opp.company.name : 'Sin empresa'}</div>
-                <div class="company">👤 ${opp.contact ? (opp.contact.firstName + ' ' + (opp.contact.lastName || '')) : 'Sin contacto'}</div>
-                <div class="amount">$${opp.amount.toLocaleString('es-CL')}</div>
-                ${opp.expectedClose ? `<div style="font-size:11px; margin-top:8px; color:var(--text-muted);">Cierre est: ${new Date(opp.expectedClose).toLocaleDateString()}</div>` : ''}
-            `;
-            cardsContainer.appendChild(card);
-        });
+        // Cabecera clickeable (retraer/expandir)
+        const header = document.createElement('div');
+        header.className = 'pipeline-stage-header';
+        header.addEventListener('click', () => toggleStage(stage));
+        header.innerHTML = `
+            <span class="stage-arrow">▶</span>
+            <span class="stage-dot" style="background:${color}"></span>
+            <span class="stage-name">${stage}</span>
+            <span class="stage-count">${opps.length}</span>
+            <span class="stage-total">$${total.toLocaleString('es-CL')}</span>
+        `;
+        // Permitir soltar sobre la cabecera (aunque esté retraída)
+        header.addEventListener('dragover', e => { e.preventDefault(); header.classList.add('drag-over'); });
+        header.addEventListener('dragleave', () => header.classList.remove('drag-over'));
+        header.addEventListener('drop', e => { header.classList.remove('drag-over'); handleStageDrop(e, stage); });
+        section.appendChild(header);
 
-        col.appendChild(cardsContainer);
-        board.appendChild(col);
+        // Cuerpo con las tarjetas (oculto si está retraído)
+        const body = document.createElement('div');
+        body.className = 'pipeline-stage-body';
+        body.dataset.stage = stage;
+        body.style.display = isOpen ? 'grid' : 'none';
+        body.addEventListener('dragover', e => { e.preventDefault(); body.classList.add('drag-over'); });
+        body.addEventListener('dragleave', () => body.classList.remove('drag-over'));
+        body.addEventListener('drop', e => { body.classList.remove('drag-over'); handleStageDrop(e, stage); });
+
+        if (!opps.length) {
+            body.innerHTML = `<div class="stage-empty">Sin oportunidades en esta etapa.</div>`;
+        } else {
+            opps.forEach(opp => body.appendChild(buildOppCard(opp)));
+        }
+        section.appendChild(body);
+        board.appendChild(section);
     });
 }
 
-async function handleDrop(e) {
+async function handleStageDrop(e, newStage) {
     e.preventDefault();
-    this.style.background = 'transparent';
     const oppId = e.dataTransfer.getData('text/plain');
-    const newStage = this.dataset.stage;
-    
     const opp = globalOpportunities.find(o => o.id == oppId);
     if(opp && opp.stage !== newStage) {
         opp.stage = newStage;
-        renderKanban(); 
-        
+        renderKanban();
+
         try {
             await fetch(`/crm/api/opportunities/${oppId}/stage`, {
                 method: 'PATCH',
@@ -1113,9 +1145,143 @@ async function handleDrop(e) {
             });
         } catch(err) {
             console.error("Error al actualizar etapa", err);
-            fetchCrmData(); 
+            fetchCrmData();
         }
     }
+}
+
+// ==========================================
+// RESUMEN DEL PIPELINE (contadores + drill-down)
+// ==========================================
+function renderPipelineSummary() {
+    const el = document.getElementById('crm-pipeline-summary');
+    if (!el) return;
+
+    const stageCounts = {};
+    const altaByStage = {};
+    STAGES.forEach(s => { stageCounts[s] = 0; altaByStage[s] = 0; });
+
+    globalOpportunities.forEach(o => {
+        if (stageCounts[o.stage] !== undefined) stageCounts[o.stage]++;
+        if (o.priority === 'Alta' && altaByStage[o.stage] !== undefined) altaByStage[o.stage]++;
+    });
+
+    // Negocios ganados en las últimas 2 semanas
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    const wonRecent = globalOpportunities.filter(o =>
+        o.stage === 'Ganado' && o.updatedAt && new Date(o.updatedAt) >= twoWeeksAgo
+    );
+    const wonRecentAmount = wonRecent.reduce((s, o) => s + (o.amount || 0), 0);
+
+    // Etapas con al menos una oportunidad de prioridad Alta
+    const altaStages = STAGES.filter(s => altaByStage[s] > 0);
+    const altaTotal = altaStages.reduce((s, st) => s + altaByStage[st], 0);
+
+    const stageBox = (stage) => `
+        <div class="summary-box" onclick="openSummaryModal('stage', '${stage.replace(/'/g, "\\'")}')" title="Ver oportunidades en ${stage}">
+            <span class="summary-dot" style="background:${STAGE_COLORS[stage]}"></span>
+            <span class="summary-num">${stageCounts[stage]}</span>
+            <span class="summary-label">${stage}</span>
+        </div>`;
+
+    const altaBox = (stage) => `
+        <div class="summary-box alta" onclick="openSummaryModal('alta', '${stage.replace(/'/g, "\\'")}')" title="Oportunidades Alta en ${stage}">
+            <span class="summary-num">🔴 ${altaByStage[stage]}</span>
+            <span class="summary-label">${stage}</span>
+        </div>`;
+
+    el.innerHTML = `
+        <div class="summary-group">
+            <div class="summary-group-title">Oportunidades por etapa</div>
+            <div class="summary-boxes">${STAGES.map(stageBox).join('')}</div>
+        </div>
+        <div class="summary-group">
+            <div class="summary-group-title">Prioridad Alta por etapa <span class="summary-group-count">${altaTotal}</span></div>
+            <div class="summary-boxes">
+                ${altaStages.length ? altaStages.map(altaBox).join('') : '<div class="summary-empty">Sin oportunidades de prioridad Alta.</div>'}
+            </div>
+        </div>
+        <div class="summary-group">
+            <div class="summary-group-title">Cerrados (últimas 2 semanas)</div>
+            <div class="summary-boxes">
+                <div class="summary-box won" onclick="openSummaryModal('won2w')" title="Negocios ganados en las últimas 2 semanas">
+                    <span class="summary-num">🏆 ${wonRecent.length}</span>
+                    <span class="summary-label">$${wonRecentAmount.toLocaleString('es-CL')}</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function openSummaryModal(type, key) {
+    let title = '';
+    let list = [];
+
+    if (type === 'stage') {
+        title = `Oportunidades · ${key}`;
+        list = globalOpportunities.filter(o => o.stage === key);
+    } else if (type === 'alta') {
+        title = `Prioridad Alta · ${key}`;
+        list = globalOpportunities.filter(o => o.stage === key && o.priority === 'Alta');
+    } else if (type === 'won2w') {
+        const twoWeeksAgo = new Date();
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+        title = 'Negocios cerrados (últimas 2 semanas)';
+        list = globalOpportunities.filter(o =>
+            o.stage === 'Ganado' && o.updatedAt && new Date(o.updatedAt) >= twoWeeksAgo
+        );
+    }
+
+    list = sortByPriority(list);
+    const total = list.reduce((s, o) => s + (o.amount || 0), 0);
+
+    const rows = list.length ? list.map(o => {
+        const priorityColor = o.priority === 'Alta' ? 'var(--c-red)' : (o.priority === 'Media' ? 'var(--c-orange)' : 'var(--text-muted)');
+        return `
+            <tr style="border-bottom:1px solid var(--border); cursor:pointer;" onclick="openOppFromSummary(${o.id})">
+                <td style="padding:10px;"><strong>${o.name}</strong></td>
+                <td style="padding:10px;">${o.company ? o.company.name : '-'}</td>
+                <td style="padding:10px;">${o.contact ? `${o.contact.firstName} ${o.contact.lastName || ''}` : '-'}</td>
+                <td style="padding:10px; text-align:right; font-weight:bold;">$${(o.amount || 0).toLocaleString('es-CL')}</td>
+                <td style="padding:10px; text-align:center;">${o.stage}</td>
+                <td style="padding:10px; text-align:center; color:${priorityColor}; font-weight:bold;">${o.priority}</td>
+                <td style="padding:10px; text-align:center;">${o.expectedClose ? new Date(o.expectedClose).toLocaleDateString('es-CL') : '-'}</td>
+            </tr>`;
+    }).join('') : `<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--text-muted);">Sin oportunidades.</td></tr>`;
+
+    document.getElementById('crm-summary-modal-title').textContent = title;
+    document.getElementById('crm-summary-modal-subtitle').textContent = `${list.length} oportunidad${list.length === 1 ? '' : 'es'} · Total $${total.toLocaleString('es-CL')}`;
+    document.getElementById('crm-summary-modal-body').innerHTML = `
+        <div class="table-container" style="max-height:55vh; overflow-y:auto;">
+            <table class="data-table" style="width:100%; text-align:left;">
+                <thead>
+                    <tr style="background:var(--c-gray);">
+                        <th style="padding:10px;">Negocio</th>
+                        <th style="padding:10px;">Empresa</th>
+                        <th style="padding:10px;">Contacto</th>
+                        <th style="padding:10px; text-align:right;">Monto</th>
+                        <th style="padding:10px; text-align:center;">Etapa</th>
+                        <th style="padding:10px; text-align:center;">Prioridad</th>
+                        <th style="padding:10px; text-align:center;">Cierre</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+    document.getElementById('crm-summary-modal-backdrop').style.display = 'block';
+}
+
+function closeSummaryModal() {
+    document.getElementById('crm-summary-modal-backdrop').style.display = 'none';
+}
+
+function openOppFromSummary(oppId) {
+    const opp = globalOpportunities.find(o => o.id == oppId);
+    if (!opp) return;
+    closeSummaryModal();
+    openOppDrawer(opp);
 }
 
 function renderContacts() {
@@ -1973,6 +2139,15 @@ function closeOppDrawer() {
     document.getElementById('opp-drawer-overlay').classList.remove('open');
     document.getElementById('opp-drawer').classList.remove('open');
     currentOppId = null;
+}
+
+// Editar la oportunidad completa (nombre, empresa, contacto, monto, fecha, etapa, prioridad)
+function editOppFromDrawer() {
+    const opp = globalOpportunities.find(o => o.id === currentOppId);
+    if (!opp) return;
+    closeOppDrawer();
+    crmCurrentTab = 'opportunities'; // asegura que el modal arme el formulario de oportunidad
+    openCrmModal(opp);
 }
 
 function switchDrawerTab(tab) {

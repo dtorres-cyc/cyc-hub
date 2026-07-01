@@ -396,6 +396,9 @@
 
           <!-- VISTA: OPORTUNIDADES -->
           <div id="view-opportunities">
+            <!-- Resumen del pipeline (contadores clickeables) -->
+            <div id="crm-pipeline-summary"></div>
+
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
               <div style="display:flex; background:var(--c-gray); border-radius:8px; border:1px solid var(--border); overflow:hidden;">
                 <button class="view-toggle-btn active" id="btn-opp-kanban" onclick="switchOppView('kanban')" style="padding:6px 12px; border:none; background:var(--c-primary); color:white; font-size:12px; cursor:pointer; font-weight:600; outline:none; transition:all 0.2s;">🗂️ Kanban</button>
@@ -414,7 +417,7 @@
             </div>
             
             <div id="opp-kanban-view">
-              <div class="kanban-board" id="kanban-board">
+              <div class="pipeline-accordion" id="kanban-board">
                 <!-- Generado por JS -->
               </div>
             </div>
@@ -731,6 +734,7 @@
   <div id="opp-drawer">
     <div class="drawer-header">
       <button class="drawer-close-btn" onclick="closeOppDrawer()">✕</button>
+      <button class="drawer-edit-btn" onclick="editOppFromDrawer()">✏️ Editar</button>
       <div class="opp-stage-badge" id="drawer-stage">—</div>
       <h2 id="drawer-name">Oportunidad</h2>
       <div class="drawer-amount" id="drawer-amount">$0</div>
@@ -786,6 +790,16 @@
         </div>
         <div class="quote-list" id="quote-list"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- ═══════ MODAL RESUMEN PIPELINE (drill-down) ═══════ -->
+  <div id="crm-summary-modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2500;">
+    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-card); border-radius:var(--radius); padding:28px; width:94%; max-width:900px; max-height:88vh; overflow-y:auto; box-shadow:var(--shadow-md);">
+      <button type="button" onclick="closeSummaryModal()" style="position:absolute; top:18px; right:20px; background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:20px;">✖</button>
+      <h2 id="crm-summary-modal-title" style="margin-bottom:4px; color:var(--c-primary); font-size:18px;">Resumen</h2>
+      <p id="crm-summary-modal-subtitle" style="margin-bottom:18px; color:var(--text-muted); font-size:13px;"></p>
+      <div id="crm-summary-modal-body"></div>
     </div>
   </div>
 
